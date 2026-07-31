@@ -198,7 +198,6 @@ body.radius-sharp .et-set-panel {
   border-color: var(--accent-color);
 }
 
-
 .st-action-btn {
   padding: var(--sp-2) var(--sp-4);
   border-radius: var(--r-sm);
@@ -411,18 +410,6 @@ body.radius-sharp .et-set-panel {
   color: var(--text-dim);
 }
 
-.cursor-preview {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  flex-shrink: 0;
-}
-
 .preset-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -500,11 +487,6 @@ body.radius-sharp .et-set-panel {
   padding: var(--sp-2);
 }
 
-.preset-share-row {
-  display: flex;
-  gap: var(--sp-2);
-}
-
 .st-color {
   width: 48px;
   height: 32px;
@@ -548,9 +530,7 @@ body.radius-sharp .et-set-panel {
   background-position: center;
   background-color: rgba(127, 127, 127, 0.18);
 }
-
-/* Video entries showed the literal word "Video". A play glyph reads as a video
-   without a poster frame, which would mean decoding the file for a 72px tile. */
+ 
 .wp-gallery-thumb.is-video {
   background-color: #1e293b;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff' opacity='0.75'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E");

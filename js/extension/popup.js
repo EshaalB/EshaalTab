@@ -2,7 +2,6 @@
 'use strict';
 
 var $ = window.$ || (id => document.getElementById(id));
-const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function collectBoards(d) {
   if (!d) return [];

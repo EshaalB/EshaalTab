@@ -805,7 +805,7 @@
   justify-content: center;
   border-radius: 50%;
   background: var(--accent-color, #6366f1);
-  color: #fff;
+  color: var(--accent-contrast, #fff);
   font-size: 14px;
   font-weight: 700;
 }
@@ -820,30 +820,6 @@
 
 .workspace-icon img.is-fallback {
   display: none;
-}
-
-.pinned-pop-item {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-2);
-  border-radius: var(--r-sm);
-  text-decoration: none;
-  color: var(--board-text, #fff);
-  font-size: var(--fs-sm);
-  background: rgba(var(--board-rgb, 255, 255, 255), 0.04);
-  transition: background var(--dur-1) var(--ease-out);
-}
-
-.pinned-pop-item:hover {
-  background: rgba(var(--board-rgb, 255, 255, 255), 0.09);
-}
-
-.pinned-pop-item img {
-  width: 18px;
-  height: 18px;
-  border-radius: var(--r-sm);
-  object-fit: contain;
 }
 
 .pinned-pop-empty, .todo-pop-empty {
@@ -1821,13 +1797,6 @@ body.theme-light .search-result-item.kb-active {
   margin-top: var(--sp-2);
 }
 
-.nsb-eng-icon {
-  display: block;
-}
-.nsb-eng-opt-icon {
-  flex-shrink: 0;
-}
-
 .et-custom-tooltip {
   position: fixed;
   z-index: 99999;
@@ -1889,17 +1858,6 @@ body[data-preset="cyberpunk"] .et-custom-tooltip {
   border-radius: var(--r-sm);
 }
 .et-board-card-header { cursor: pointer; }
-
-button[disabled],
-input[disabled],
-select[disabled],
-textarea[disabled],
-.is-disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  pointer-events: none;
-  filter: grayscale(0.35);
-}
 
 .st-action-btn:active:not([disabled]),
 .et-modal-btn:active:not([disabled]),

@@ -433,14 +433,10 @@ const SettingsRenderer = (() => {
       `;
 
       body.innerHTML = html;
-      const prev = $('cursorPreview');
-      if (prev && typeof settings.cursorUrl === 'string' && settings.cursorUrl.startsWith('data:image/')) {
-        prev.style.backgroundImage = `url("${settings.cursorUrl}")`;
-      }
       bindThemeEvents();
     } else if (activeTab === 'widgets') {
       const w = settings.widgets || {};
-      const enabledEngs = settings.enabledEngines || ['default', 'google', 'duckduckgo', 'bing', 'chatgpt', 'github', 'youtube'];
+      const enabledEngs = settings.enabledEngines || StorageManager.DEFAULT_SETTINGS.enabledEngines;
       body.innerHTML = `
         <div class="st-container">
           <div class="st-group-title">Identity</div>
@@ -2014,49 +2010,6 @@ const SettingsRenderer = (() => {
     }
   }
 
-  const CURSOR_MAX_PX = 128;
-  const CURSOR_MAX_BYTES = 512 * 1024;
-
-  function toCursorDataUrl(src) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        if (!img.width || !img.height) return reject(new Error('empty image'));
-        const scale = Math.min(1, CURSOR_MAX_PX / Math.max(img.width, img.height));
-        const w = Math.max(1, Math.round(img.width * scale));
-        const h = Math.max(1, Math.round(img.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-
-        try { resolve(canvas.toDataURL('image/png')); }
-        catch (e) { reject(e); }
-      };
-      img.onerror = () => reject(new Error('could not load image'));
-      img.src = src;
-    });
-  }
-
-  async function cursorFromUrl(url) {
-    if (!/^https?:\/\//i.test(url)) throw new Error('Only http(s) image URLs are supported.');
-    await ensureHostAccess(url);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Server returned ${res.status}`);
-    const blob = await res.blob();
-    if (!/^image\//.test(blob.type)) throw new Error('That URL is not an image.');
-    if (blob.size > CURSOR_MAX_BYTES) throw new Error('Image is larger than 512 KB.');
-    const objectUrl = URL.createObjectURL(blob);
-    try { return await toCursorDataUrl(objectUrl); }
-    finally { URL.revokeObjectURL(objectUrl); }
-  }
-
-  function cursorFromFile(file) {
-    if (!/^image\//.test(file.type)) return Promise.reject(new Error('That file is not an image.'));
-    if (file.size > CURSOR_MAX_BYTES) return Promise.reject(new Error('Image is larger than 512 KB.'));
-    const objectUrl = URL.createObjectURL(file);
-    return toCursorDataUrl(objectUrl).finally(() => URL.revokeObjectURL(objectUrl));
-  }
-
   function applyCursor() {
     const url = StorageManager.getSettings().cursorUrl;
     const root = document.documentElement.style;
@@ -2064,13 +2017,6 @@ const SettingsRenderer = (() => {
     if (ok) root.setProperty('--app-cursor', `url("${url}") 0 0, auto`);
     else root.removeProperty('--app-cursor');
     document.body.classList.toggle('has-custom-cursor', ok);
-  }
-
-  function setCursor(dataUrl) {
-    const s = StorageManager.getSettings();
-    s.cursorUrl = dataUrl || '';
-    StorageManager.save();
-    applyCursor();
   }
 
   function hexToRgb(hex) {

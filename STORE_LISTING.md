@@ -65,7 +65,7 @@ commands you keep re-typing.
 
 MAKE IT YOURS
 Colour palettes generated from a single accent, image and video wallpapers,
-custom cursors, corner radius and font controls. Share a look as a preset code.
+corner radius and font controls. Share a look as a preset code.
 
 ━━━ PRIVACY ━━━
 
@@ -82,8 +82,8 @@ Three optional features can reach the network, none of them on by default:
 • Remote favicons — off by default, because turning it on reveals your saved
   domains to Google and DuckDuckGo. Left off, icons come from your browser's own
   local cache.
-• A wallpaper or cursor set from a URL — downloaded once, with your permission
-  for that one site, then stored on your device.
+• A wallpaper set from a URL — downloaded once, with your permission for that
+  one site, then stored on your device.
 
 Your boards, notes, to-dos and wallpapers stay in local browser storage. Only
 appearance settings sync between your own devices, through your own Chrome
@@ -150,10 +150,10 @@ organising, launching and searching the links the user saves.
 ```
 EshaalTab requests no host permissions at install. The optional https://*/*
 entry is never requested wholesale. When the user pastes an image URL to set a
-wallpaper or a custom mouse cursor, the extension asks for access to that one
-origin only, downloads the image once, and stores it on the device — so the
-image is not refetched from that host on every new tab. If the user declines,
-the feature falls back to using the URL directly.
+wallpaper, the extension asks for access to that one origin only, downloads the
+image once, and stores it on the device — so the image is not refetched from
+that host on every new tab. If the user declines, the feature falls back to
+using the URL directly.
 ```
 
 **Content script host access** (chatgpt.com, claude.ai, gemini.google.com)

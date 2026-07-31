@@ -25,11 +25,10 @@ Three optional features can reach the network, none of them on by default:
 - **Remote favicons** — fetches icons from Google/DuckDuckGo, which reveals your
   bookmarked domains to them. Left off, icons come from your browser's own local
   cache via the `favicon` permission.
-- **A wallpaper or cursor set from a URL** — EshaalTab asks for access to that
-  one site, downloads the image once, and stores it locally, so it is not
-  refetched on every new tab. Decline, and the URL is used directly, meaning the
-  host sees your IP each time you open a tab. Video wallpapers always stay
-  remote.
+- **A wallpaper set from a URL** — EshaalTab asks for access to that one site,
+  downloads the image once, and stores it locally, so it is not refetched on
+  every new tab. Decline, and the URL is used directly, meaning the host sees
+  your IP each time you open a tab. Video wallpapers always stay remote.
 
 Everything else — boards, notes, to-dos, wallpapers — stays in
 `chrome.storage.local` on your device. A settings-only subset (theme, colours,
@@ -66,7 +65,7 @@ Survives a refresh.
 clipboard vault for commands you keep re-typing.
 
 **Themes & wallpapers** — HSL-derived palettes, image/video wallpapers, custom
-cursors, corner-radius and font controls. Shareable preset codes.
+corner-radius and font controls. Shareable preset codes.
 
 ---
 
@@ -104,7 +103,7 @@ Each one is requested for a single, specific feature:
 | `history` | Searching history from the command palette. Matched locally. |
 | `favicon` | Site icons from the browser's local cache, avoiding third-party requests. |
 | `contextMenus` | The "Save to EshaalTab" right-click item. |
-| `https://*/*` (optional) | Never requested wholesale. When you paste an image URL for a wallpaper or cursor, access to **that one origin** is requested so the image can be downloaded once and stored locally. |
+| `https://*/*` (optional) | Never requested wholesale. When you paste an image URL for a wallpaper, access to **that one origin** is requested so the image can be downloaded once and stored locally. |
 
 ---
 

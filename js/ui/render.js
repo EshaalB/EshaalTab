@@ -563,10 +563,6 @@ const ViewController = (() => {
   return { init, show };
 })();
 
-function escapeHtml(str) {
-  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 function showPrompt(title, labelText, defaultVal, onSave) {
   showCustomModal(title, `
     <div class="dialog-field">

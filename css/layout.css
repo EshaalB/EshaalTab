@@ -632,45 +632,7 @@ body:not(.solid-mode) .dock-pin-label {
   .dock-pin-label { font-size: 10px; max-width: 60px; }
 }
 
-.et-add-board-fab {
-  position: fixed;
-  bottom: var(--sp-6);
-  right: var(--sp-6);
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  min-height: 44px;                 /* accessible touch target */
-  padding: var(--sp-3) var(--sp-5);
-  border-radius: var(--r-pill);
-  border: 1px solid var(--accent-color);
-  background: var(--accent-fill);
-  color: var(--accent-contrast);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semi);
-  line-height: var(--lh-ui);
-  cursor: pointer;
-  opacity: 1;
-  box-shadow: var(--e2);
-  transition: filter var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out);
-  user-select: none;
-}
-
-.et-add-board-fab:hover {
-  filter: brightness(1.1);
-  box-shadow: var(--e3);
-}
-
 @media (max-height: 720px) {
-  .et-add-board-fab {
-    bottom: var(--sp-4);
-    right: var(--sp-4);
-    padding: var(--sp-2) var(--sp-4);
-  }
-}
-
-.et-add-board-fab:active {
-  transform: scale(0.94);
 }
 
 .et-toast-container {

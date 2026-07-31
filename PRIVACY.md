@@ -23,7 +23,7 @@ Held in `chrome.storage.local`, on your computer:
 * Bookmark titles and URLs, if you use the one-off "Import browser bookmarks"
 * Titles and URLs of open tabs, if you use "Stash all open tabs" or save a page
 * Notes, clipboard snippets, to-do items and Pomodoro session counts
-* Appearance, layout, font and cursor settings
+* Appearance, layout and font settings
 * Image and video wallpapers you upload, and images you set by URL
 * An optional display name (24 characters maximum)
 * An optional weather city, and the most recent forecast retrieved for it
@@ -65,7 +65,7 @@ favicons, EshaalTab requests icons from Google and DuckDuckGo, which reveals the
 domains you have saved to those services. That is precisely why it is off by
 default.
 
-**3. Wallpapers and cursors set from a URL**
+**3. Wallpapers set from a URL**
 If you paste an image URL, EshaalTab asks your permission for that one website,
 downloads the image once, and stores it on your device, so it is not refetched
 every time you open a new tab. If you decline, the URL is used directly, meaning
@@ -85,7 +85,7 @@ nothing else from the page and transmits nothing of its own.
 
 A trimmed copy of your **appearance settings only** is written to
 `chrome.storage.sync`, which Chrome syncs through your own Google account, and
-only if you have Chrome sync enabled. Wallpapers, cursors, boards, saved links,
+only if you have Chrome sync enabled. Wallpapers, boards, saved links,
 notes and to-do items are explicitly excluded and never sync. We operate no
 synchronisation server and cannot see synced data.
 

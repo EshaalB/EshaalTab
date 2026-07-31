@@ -9,6 +9,18 @@ if (typeof window.$$ === 'undefined') {
   window.$$ = sel => document.querySelectorAll(sel);
 }
 
+/* One shared escaper. CustomTooltip, CustomSelect and render.js each carried a
+   near-identical private copy; this is the strictest of the three (it also
+   escapes the apostrophe), so every caller gets equal or safer output. */
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function safeHref(url) {
   if (!url) return '#';
   const s = String(url).trim();
@@ -82,17 +94,27 @@ function wireFavicons(root) {
   if (!root) return;
   const imgs = root.matches && root.matches('img[data-fav]') ? [root] : [];
   root.querySelectorAll && root.querySelectorAll('img[data-fav]').forEach(i => imgs.push(i));
+  /* Mark the wrapper as well as the image. The app-launcher tile hides the
+     broken <img> via `.workspace-icon img.is-fallback` and draws a lettered
+     circle via `.workspace-icon.is-fallback::before` -- but the class only ever
+     landed on the image, so the icon was hidden and the letter never appeared:
+     an empty tile for every app whose favicon is not in the local cache. */
+  const markFallback = (img) => {
+    img.classList.add('is-fallback');
+    img.parentElement?.classList.add('is-fallback');
+  };
+
   imgs.forEach(img => {
     if (img.__faviconWired) return;
     img.__faviconWired = true;
-    if (!img.getAttribute('src')) { img.src = FAVICON_FALLBACK; img.classList.add('is-fallback'); return; }
+    if (!img.getAttribute('src')) { img.src = FAVICON_FALLBACK; markFallback(img); return; }
     const fbs = (img.getAttribute('data-fav-fallbacks') || '').split('|').filter(Boolean);
     let i = 0;
     img.addEventListener('error', function onErr() {
       if (i < fbs.length) { img.src = fbs[i++]; return; }
       img.removeEventListener('error', onErr);
       img.src = FAVICON_FALLBACK;
-      img.classList.add('is-fallback');
+      markFallback(img);
     });
   });
 }
@@ -115,15 +137,6 @@ const CustomTooltip = (() => {
   function formatTooltipText(text) {
     if (!text) return '';
     return escapeHtml(text).replace(/\(([^)]+)\)$/, '<kbd>$1</kbd>');
-  }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
   }
 
   function isIconOnly(el) {
@@ -197,11 +210,13 @@ const CustomTooltip = (() => {
       hide();
     };
 
-    document.addEventListener('mouseover', handleOver, { passive: true });
+    /* pointerover/pointerout already cover mouse, pen and touch. Listening for
+       mouseover as well meant every hover ran handleOver twice, each doing a
+       closest() walk up the tree -- pure duplicate work on a page that is mostly
+       hoverable tiles. */
     document.addEventListener('pointerover', handleOver, { passive: true });
     document.addEventListener('focusin', handleOver, { passive: true });
 
-    document.addEventListener('mouseout', handleOut, { passive: true });
     document.addEventListener('pointerout', handleOut, { passive: true });
     document.addEventListener('focusout', hide, { passive: true });
 
@@ -213,14 +228,6 @@ const CustomTooltip = (() => {
 })();
 
 const CustomSelect = (() => {
-  function escapeHtml(str) {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
   function render({ id = '', name = '', value = '', options = [], className = '', style = '' }) {
     const normOptions = options.map(o => (typeof o === 'object' && o !== null ? o : { value: o, label: String(o) }));
     const selectedOpt = normOptions.find(o => String(o.value) === String(value)) || normOptions[0] || { value: '', label: '' };

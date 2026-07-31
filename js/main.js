@@ -42,8 +42,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') flushAll();
     });
+    /* pagehide + visibilitychange already cover every path out of the page. A
+       beforeunload listener adds nothing here and disqualifies the page from
+       the back/forward cache just by existing. */
     window.addEventListener('pagehide', flushAll);
-    window.addEventListener('beforeunload', flushAll);
 
     document.addEventListener('visibilitychange', () => {
       const v = $('video-bg');
