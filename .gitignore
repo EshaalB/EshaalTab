@@ -1,0 +1,12 @@
+# Build artifacts — these were previously committed and got bundled into the
+# published package by the release workflow.
+*.zip
+dist/
+
+node_modules/
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Local QA scratch
+dev/.*

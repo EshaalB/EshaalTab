@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "EshaalTab — New Tab & Bookmark Boards",
+  "version": "2.0.46",
+  "description": "A new tab built around your own boards: pin the links you use, save any page in one click, search everything with Ctrl+K.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Quick Save to EshaalTab",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "js/extension/background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'none'"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://*.chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://*.claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://*.gemini.google.com/*"
+      ],
+      "js": ["js/extension/ai-autosend.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "bookmarks",
+    "tabs",
+    "activeTab",
+    "favicon",
+    "history",
+    "contextMenus"
+  ],
+  "commands": {
+    "save-current-tab": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "Save the current page to EshaalTab Inbox"
+    }
+  },
+  "optional_host_permissions": [
+    "https://*/*"
+  ]
+}

@@ -1,0 +1,66 @@
+/* Loaded last. Cross-cutting accent mapping, press-feedback, solid-mode tweaks
+   and reduced-motion, all of which win over component rules cleanly. */
+
+.et-topbar-btn.is-active, .et-topbar-btn.active {
+  background: transparent;
+  color: var(--text);
+  border: none;
+  opacity: 1;
+  transform: scale(1.08);
+}
+.et-topbar-btn.is-active svg, .et-topbar-btn.active svg {
+  stroke: #ffffff;
+}
+body.theme-light .et-topbar-btn.is-active {
+  color: var(--accent-color, #000);
+  opacity: 1;
+}
+
+body.theme-light .et-topbar-btn.is-active svg {
+  stroke: var(--accent-color, #000);
+}
+
+.et-add-board-fab, .et-notes-export-btn, .et-clip-add-btn {
+  background: var(--accent-fill);
+  color: var(--accent-contrast);
+  border-color: var(--accent-color);
+}
+
+.et-main-tab.active, .et-set-tab.active {
+  background: var(--accent-fill);
+  color: var(--accent-contrast);
+  border-color: var(--accent-color);
+  box-shadow: none;
+}/* Micro-interaction feedback */
+button, .et-main-tab, .et-topbar-btn, .et-set-tab, .et-add-board-fab {
+  transition: transform var(--dur-2) cubic-bezier(0.2, 0.8, 0.2, 1), background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+}button:active, .et-main-tab:active, .et-topbar-btn:active, .et-set-tab:active, .et-add-board-fab:active {
+  transform: scale(0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body.solid-mode .et-topbar-btn {
+  color: var(--accent-color);
+  background: transparent;
+  border: none;
+}
+
+body.solid-mode .et-topbar-btn svg {
+  stroke: var(--accent-color);
+}
+
+body.solid-mode .et-search-btn:not(.et-search-submit) {
+  color: var(--accent-color);
+}
+
+body.solid-mode .et-search-btn:not(.et-search-submit) svg {
+  stroke: var(--accent-color);
+}

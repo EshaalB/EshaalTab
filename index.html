@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="msapplication-navbutton-color" content="#0d1117" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>New Tab</title>
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon32.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="icons/icon48.png" />
+  <link rel="icon" type="image/png" sizes="128x128" href="icons/icon128.png" />
+  <!-- Blocking, and first: sets the painted background before any CSS renders. -->
+  <script src="js/core/boot.js"></script>
+  <!-- Caveat is bundled in fonts/ and declared in tokens.css. This page makes no
+       network requests at all: no fonts, no CDNs, no analytics. -->
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/settings.css" />
+  <link rel="stylesheet" href="css/overrides.css" />
+</head>
+<body>
+
+<video id="video-bg" autoplay loop muted playsinline></video>
+<div id="photo-bg"></div>
+
+<div class="app">
+  <div class="et-topbar">
+    <div class="et-top-left" id="topLeft">
+      <button class="et-topbar-btn" id="todoWidgetBtn" title="Todo list">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </button>
+      <button class="et-topbar-btn et-pomo-toggle-btn" id="pomoToggleBtn" title="Pomodoro Focus Timer">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/><path d="M20.2 7.8l-1.4-1.4"/></svg>
+        <span class="pomo-toggle-count" id="pomoToggleCount" style="display:none">0</span>
+      </button>
+    </div>
+    <nav class="et-main-tabs" id="mainTabs">
+      <button class="et-main-tab" data-tab="home">Home</button>
+      <button class="et-main-tab" data-tab="boards">Boards</button>
+      <button class="et-main-tab" data-tab="notes">Notes</button>
+    </nav>
+
+    <div class="et-top-right" id="topRight">
+      <button class="et-topbar-btn" id="searchSideBtn" title="Command Palette & Quick Search (Ctrl+K)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
+      </button>
+      <button class="et-topbar-btn" id="workspaceBtn" title="Google Workspace">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      </button>
+      <button class="et-topbar-btn" id="topSettingsBtn" title="Settings">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <section class="et-view et-view-home" id="homeView">
+    <div class="et-home-center">
+      <div class="et-home-widgets" id="homeWidgets">
+        <div class="et-home-clock" id="clockWidget">
+          <div class="et-home-greeting" id="clockGreeting"></div>
+          <!-- Empty, not "--:--": the box below reserves its height, so the real
+               time appears without a placeholder flashing first. -->
+          <div class="et-home-time" id="clockTime"></div>
+          <div class="et-home-date-row">
+            <span class="et-home-date" id="clockDate"></span>
+            <span class="et-weather-inline" id="weatherWidget" style="display:none" title="Click to set city"></span>
+          </div>
+        </div>
+      </div>
+      <div id="navSearchBar"></div>
+      <div class="et-home-pinned" id="homePinned"></div>
+    </div>
+  </section>
+  <section class="et-view et-view-boards" id="boardsView">
+    <div class="et-boards-area" id="boardsArea"></div>
+  </section>
+
+  <section class="et-view et-view-notes" id="notesView">
+    <div class="et-notes-grid">
+      <!-- Left Column: Uncluttered Notepad -->
+      <div class="et-notes-notepad-col">
+        <div class="et-notes-binder-strip">
+          <span class="et-notes-binder-hole"></span>
+          <span class="et-notes-binder-hole"></span>
+          <span class="et-notes-binder-hole"></span>
+          <span class="et-notes-binder-hole"></span>
+          <span class="et-notes-binder-hole"></span>
+          <span class="et-notes-binder-hole"></span>
+          <span class="et-notes-binder-hole"></span>
+          <span class="et-notes-binder-hole"></span>
+          <span class="et-notes-binder-hole"></span>
+          <span class="et-notes-binder-hole"></span>
+        </div>
+        <div class="et-notes-header">
+          <div class="notes-title-wrap">
+            <span class="et-notes-title">Notepad</span>
+            <span class="et-notes-stats" id="notesStatsBadge">0 words</span>
+          </div>
+          <button class="et-notes-export-btn" id="notesExportBtn" title="Export notes as a .txt file" data-no-tooltip>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export .txt
+          </button>
+        </div>
+        <textarea class="et-notes-area" id="notesArea" placeholder="Write something…" spellcheck="true"></textarea>
+      </div>
+
+      <!-- Right Column: Clipboard & Command Vault -->
+      <div class="et-notes-clipboard-col">
+        <div class="et-clip-header">
+          <div class="clip-title-wrap">
+            <span class="et-clip-title">Clipboard & Snippets</span>
+            <span class="et-clip-count" id="clipCountBadge">0 saved</span>
+          </div>
+        </div>
+        <div class="et-clip-add-wrap" style="display:flex; flex-direction:column; gap:6px;">
+          <input type="text" class="et-clip-input" id="clipTitleInput" placeholder="Title (optional, e.g. Docker build)" style="width:100%;" />
+          <div style="display:flex; gap:6px;">
+            <input type="text" class="et-clip-input" id="clipTextInput" placeholder="Paste command, text, or link…" style="flex:1;" />
+            <button class="et-clip-add-btn" id="clipAddBtn" title="Save snippet" data-no-tooltip>+ Add</button>
+          </div>
+        </div>
+        <div class="et-clip-list" id="clipList"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="et-pop-todo" id="todoPopover">
+  <div class="et-pop-header">
+    <div class="todo-pop-title-wrap">
+      <span class="et-pop-title">Todo Tasks</span>
+      <span class="et-pop-badge" id="todoPopBadge">0</span>
+    </div>
+    <button class="et-pop-clear-btn" id="todoClearDone" title="Clear completed tasks" data-no-tooltip>Clear</button>
+  </div>
+  <div class="et-pop-list" id="todoPopList"></div>
+  <div class="et-pop-input-wrap">
+    <input type="text" class="et-pop-input" id="todoPopInput" placeholder="Add a task" autocomplete="off" />
+  </div>
+</div>
+
+<div class="et-pop-workspace" id="workspacePopover">
+  <div class="et-workspace-header">Google Apps</div>
+  <div class="et-workspace-grid" id="workspaceGrid"></div>
+</div>
+
+
+<div class="et-search-overlay" id="searchOverlay" role="dialog" aria-modal="true" aria-label="Search tabs, bookmarks and history">
+  <div class="et-search-modal">
+    <div class="et-search-input-wrap">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="Search tabs, bookmarks and history, or / for commands" autocomplete="off" spellcheck="false" />
+      <kbd class="et-search-esc-hint">Esc</kbd>
+    </div>
+    <div class="et-search-results" id="searchResults"></div>
+  </div>
+</div>
+
+<div class="et-set-overlay" id="sidesheetOverlay" role="dialog" aria-modal="true" aria-labelledby="sidesheetTitle">
+  <div class="et-set-panel" id="sidesheetPanel">
+    <div class="et-set-header">
+      <span class="et-set-title" id="sidesheetTitle">Settings & Customization</span>
+      <button class="et-set-close-btn" id="sidesheetCloseBtn" aria-label="Close settings">×</button>
+    </div>
+    <div class="et-set-tabs">
+      <button class="et-set-tab active" data-tab="theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.75 1.7-1.7 0-.42-.16-.8-.43-1.09-.27-.29-.43-.68-.43-1.11 0-.92.75-1.7 1.7-1.7h2.46c2.76 0 5-2.24 5-5 0-4.97-4.48-9-10-9z"/></svg>
+        <span>Theme</span>
+      </button>
+      <button class="et-set-tab" data-tab="widgets">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Widgets</span>
+      </button>
+      <button class="et-set-tab" data-tab="data">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        <span>Data</span>
+      </button>
+      <button class="et-set-tab" data-tab="help">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Help</span>
+      </button>
+    </div>
+    <div class="et-set-body" id="sidesheetBody"></div>
+    <input type="file" id="fileInput" accept="image/*,video/mp4" aria-label="Wallpaper image or video file" style="display:none;" />
+  </div>
+</div>
+
+<div class="et-pomo-overlay" id="pomodoroOverlay" role="dialog" aria-modal="true" aria-label="Pomodoro focus timer">
+  <button class="et-pomo-close-btn" id="pomodoroCloseBtn" data-tooltip="Close (Esc)" aria-label="Close focus timer">&times;</button>
+  <button class="et-pomo-reset-fab" id="pomoResetBtn" title="Reset (R)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+  </button>
+
+  <div class="et-pomo-preset-row" id="pomoPresetRow">
+    <button class="et-pomo-preset-btn" data-mins="15">15</button>
+    <button class="et-pomo-preset-btn active" data-mins="25">25</button>
+    <button class="et-pomo-preset-btn" data-mins="45">45</button>
+    <button class="et-pomo-preset-btn" data-mins="60">60</button>
+  </div>
+
+  <div class="et-flip-container" id="pomoFlipClock" data-no-tooltip>
+    <div class="et-flip-card">
+      <div class="et-flip-top"><span id="pomoMinTop">25</span></div>
+      <div class="et-flip-bottom"><span id="pomoMinBottom">25</span></div>
+      <div class="et-flip-seam"></div>
+    </div>
+    <span class="et-flip-colon">:</span>
+    <div class="et-flip-card">
+      <div class="et-flip-top"><span id="pomoSecTop">00</span></div>
+      <div class="et-flip-bottom"><span id="pomoSecBottom">00</span></div>
+      <div class="et-flip-seam"></div>
+    </div>
+  </div>
+
+  <span class="et-pomo-status-badge" id="pomoStatusText">Press space to start</span>
+  <span class="et-pomo-sessions-badge" id="pomoSessionsCount">No sessions yet today</span>
+</div>
+
+<div class="et-toast-container" id="toastContainer"></div>
+
+<script src="js/core/platform.js" defer></script>
+<script src="js/core/storage.js" defer></script>
+<script src="js/core/data.js" defer></script>
+<script src="js/ui/render.js" defer></script>
+<script src="js/ui/widgets.js" defer></script>
+<script src="js/core/browserext.js" defer></script>
+<script src="js/ui/search.js" defer></script>
+<script src="js/ui/settings.js" defer></script>
+<script src="js/main.js" defer></script>
+</body>
+</html>

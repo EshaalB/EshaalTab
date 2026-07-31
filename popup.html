@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Quick Save to EshaalTab</title>
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <style>
+    /* Defaults only -- popup.js overwrites these from the saved settings so the
+       popup matches the new tab instead of being permanently dark + purple. */
+    :root {
+      --accent-color: #6366f1;
+      --accent-contrast: #ffffff;
+      --bg: #0d1117;
+      --text: #ffffff;
+      --text-dim: rgba(255,255,255,0.5);
+      --line: rgba(255,255,255,0.1);
+      --field: rgba(255,255,255,0.08);
+      --field-line: rgba(255,255,255,0.16);
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      width: 320px;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 12px;
+    }
+    .qs-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px;
+    }
+    .qs-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .qs-subtitle { font-size: 11px; color: var(--text-dim); }
+
+    .tab-card {
+      display: flex; gap: 10px; align-items: center;
+      background: transparent; border: none;
+      padding: 4px 0; margin-bottom: 12px;
+    }
+    .tab-icon { width: 24px; height: 24px; border-radius: 4px; flex-shrink: 0; }
+    .tab-info { overflow: hidden; flex: 1; }
+    .tab-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tab-url { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .field-group { margin-bottom: 10px; }
+    .field-label { font-size: 11px; font-weight: 500; color: var(--text-dim); margin-bottom: 4px; display: block; }
+    .qs-input {
+      width: 100%;
+      background: var(--field);
+      border: 1px solid var(--field-line);
+      border-radius: calc(var(--radius) - 2px);
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+    }
+    .qs-input:focus-visible, .qs-save-btn:focus-visible {
+      outline: 2px solid var(--accent-color); outline-offset: 2px;
+    }
+
+    .qs-save-btn {
+      width: 100%;
+      background: var(--accent-color);
+      border: none;
+      color: var(--accent-contrast);
+      padding: 10px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-color) 40%, transparent);
+      transition: filter 0.15s;
+      margin-top: 4px;
+    }
+    .qs-save-btn:hover { filter: brightness(1.12); }
+    .qs-save-btn[disabled] { opacity: 0.6; cursor: default; }
+    .qs-success {
+      display: none;
+      text-align: center;
+      padding: 12px 0;
+      color: #10b981;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .qs-error {
+      display: none;
+      text-align: center;
+      padding: 10px 0 0;
+      color: #ef4444;
+      font-size: 12px;
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+<div class="qs-header">
+  <span class="qs-title">EshaalTab</span>
+  <span class="qs-subtitle">1-Click Bookmark</span>
+</div>
+
+<div class="tab-card">
+  <img id="tabFavicon" class="tab-icon" src="" alt="" />
+  <div class="tab-info">
+    <div id="tabTitle" class="tab-name">Loading active tab...</div>
+    <div id="tabUrl" class="tab-url"></div>
+  </div>
+</div>
+
+<div class="field-group" id="manualFields" style="display:none;">
+  <label class="field-label" for="manualTitle">Title</label>
+  <input type="text" id="manualTitle" class="qs-input" placeholder="Page title" />
+  <label class="field-label" for="manualUrl" style="margin-top:8px;">URL</label>
+  <input type="text" id="manualUrl" class="qs-input" placeholder="https://example.com" />
+</div>
+
+<div class="field-group">
+  <label class="field-label">Target Board</label>
+  <div id="boardSelectContainer"></div>
+</div>
+
+<div class="field-group">
+  <label class="field-label">Tags (comma separated)</label>
+  <input type="text" id="tagInput" class="qs-input" placeholder="e.g. dev, reading, video" />
+</div>
+
+<button id="saveBtn" class="qs-save-btn">Save Bookmark</button>
+<div id="successMsg" class="qs-success">Saved to EshaalTab!</div>
+<div id="errorMsg" class="qs-error" role="alert"></div>
+
+<script src="js/core/platform.js"></script>
+<script src="js/extension/popup.js"></script>
+</body>
+</html>
