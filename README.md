@@ -1,4 +1,4 @@
-# EshaalTab — New Tab & Bookmark Boards
+# EshaalTab : New Tab & Bookmark Boards
 
 Replace the new tab page with boards you actually built: pin the links you use,
 save any page in one click, and search every open tab, bookmark and history entry
