@@ -10,3 +10,7 @@ Thumbs.db
 
 # Local QA scratch
 dev/.*
+
+# Local editor and Claude metadata
+.claude/
+.vscode/
