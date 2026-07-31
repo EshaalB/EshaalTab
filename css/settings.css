@@ -23,8 +23,9 @@
   border-radius: var(--r-lg, 16px);
   background: var(--panel);
   box-shadow: var(--e-sheet);
-  backdrop-filter: var(--glass-lg);
-  -webkit-backdrop-filter: var(--glass-lg);
+  /* No backdrop-filter: this sits on the fully opaque var(--panel), so the
+     blur was composited and then completely covered -- full-viewport GPU
+     work for zero visible pixels, on the panels opened most often. */
   display: flex;
   flex-direction: column;
   animation: slideLeft var(--dur-3) var(--ease-out);

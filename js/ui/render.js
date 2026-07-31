@@ -453,10 +453,6 @@ const BoardRenderer = (() => {
           <label class="dialog-label">URL</label>
           <input type="text" id="bmUrlInp" class="dialog-input" placeholder="https://github.com" />
         </div>
-        <div class="dialog-field">
-          <label class="dialog-label">Tags (Optional)</label>
-          <input type="text" id="bmTagsInp" class="dialog-input" placeholder="code, git, dev" />
-        </div>
       </div>`, () => {
       const titleEl = $('bmTitleInp');
       const urlEl = $('bmUrlInp');
@@ -467,11 +463,12 @@ const BoardRenderer = (() => {
         showModalError(!title && !url ? 'Title and URL are required.' : !title ? 'Title is required.' : 'URL is required.');
         return false;
       }
-      const rawTags = $('bmTagsInp').value;
       let finalUrl = url;
       if (!/^https?:\/\//i.test(finalUrl)) finalUrl = 'https://' + finalUrl;
-      const tags = rawTags.split(',').map(t => t.trim()).filter(Boolean);
-      if (BookmarkManager.add(boardId, title, finalUrl, tags)) {
+      /* Tags are set from the Edit Link dialog instead -- adding a link is the
+         hot path and the extra field slowed it down for something most links
+         never use. */
+      if (BookmarkManager.add(boardId, title, finalUrl, [])) {
         renderBoards();
         HomeRenderer.renderPinned();
       }

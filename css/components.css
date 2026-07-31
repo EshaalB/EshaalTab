@@ -93,8 +93,9 @@
   min-width: 190px;
   max-height: 340px;
   overflow-y: auto;
-  backdrop-filter: var(--glass-lg);
-  -webkit-backdrop-filter: var(--glass-lg);
+  /* No backdrop-filter: this sits on the fully opaque var(--panel), so the
+     blur was composited and then completely covered -- full-viewport GPU
+     work for zero visible pixels, on the panels opened most often. */
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75) !important;
   opacity: 0;
   visibility: hidden;
@@ -624,8 +625,9 @@
   padding: var(--sp-2);
   min-width: calc(190px * var(--ui-scale));
   z-index: 200;
-  backdrop-filter: var(--glass-lg);
-  -webkit-backdrop-filter: var(--glass-lg);
+  /* No backdrop-filter: this sits on the fully opaque var(--panel), so the
+     blur was composited and then completely covered -- full-viewport GPU
+     work for zero visible pixels, on the panels opened most often. */
   box-shadow: var(--e3);
   transform-origin: top left;
   animation: board-menu-pop var(--dur-1) ease;
@@ -686,8 +688,9 @@
   border-radius: var(--r-lg);
   padding: var(--sp-4) var(--sp-2) var(--sp-4) var(--sp-4);
   box-shadow: var(--e4);
-  backdrop-filter: var(--glass-lg);
-  -webkit-backdrop-filter: var(--glass-lg);
+  /* No backdrop-filter: this sits on the fully opaque var(--panel), so the
+     blur was composited and then completely covered -- full-viewport GPU
+     work for zero visible pixels, on the panels opened most often. */
   transform: translateZ(0);
   contain: layout style;
 }
@@ -1246,7 +1249,9 @@
   border-radius: var(--r-md);
   padding: var(--sp-6);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  backdrop-filter: var(--glass-lg);
+  /* No backdrop-filter: this sits on the fully opaque var(--panel), so the
+     blur was composited and then completely covered -- full-viewport GPU
+     work for zero visible pixels, on the panels opened most often. */
 }
 
 .dialog-modal-title {
