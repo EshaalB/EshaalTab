@@ -11,7 +11,8 @@ telemetry.
 
 ## Privacy
 
-EshaalTab collects nothing. There is no account, no backend, and no analytics.
+There is no account, no backend of ours, and no analytics. We receive no data
+about you.
 
 **Out of the box, the new tab page makes zero network requests.** Fonts are
 bundled with the extension rather than pulled from Google Fonts, so opening a tab
@@ -19,13 +20,16 @@ does not tell anyone, us included, that you opened it.
 
 Three optional features can reach the network, none of them on by default:
 
-- **Weather** — sends only a city name to [Open-Meteo](https://open-meteo.com/).
+- **Weather** — sends the city you type, and the coordinates returned for it, to
+  [Open-Meteo](https://open-meteo.com/). Nothing identifies you.
 - **Remote favicons** — fetches icons from Google/DuckDuckGo, which reveals your
   bookmarked domains to them. Left off, icons come from your browser's own local
   cache via the `favicon` permission.
-- **A wallpaper set from a URL** — your browser refetches that link on every new
-  tab, so the host sees your IP each time. Upload the image instead and it is
-  stored locally with no request at all.
+- **A wallpaper or cursor set from a URL** — EshaalTab asks for access to that
+  one site, downloads the image once, and stores it locally, so it is not
+  refetched on every new tab. Decline, and the URL is used directly, meaning the
+  host sees your IP each time you open a tab. Video wallpapers always stay
+  remote.
 
 Everything else — boards, notes, to-dos, wallpapers — stays in
 `chrome.storage.local` on your device. A settings-only subset (theme, colours,
@@ -97,11 +101,10 @@ Each one is requested for a single, specific feature:
 | `storage`, `unlimitedStorage` | Saving your data locally; the quota lift is for wallpapers. |
 | `bookmarks` | Reading your bookmark tree **only** during an explicit import. Never modified. |
 | `tabs` | Listing open tabs for `Ctrl+K` and "Stash all tabs". |
-| `activeTab` | Reading the current page's title/URL when you save it. |
 | `history` | Searching history from the command palette. Matched locally. |
 | `favicon` | Site icons from the browser's local cache, avoiding third-party requests. |
 | `contextMenus` | The "Save to EshaalTab" right-click item. |
-| `https://*/*` (optional) | Only requested if you enable remote favicons. |
+| `https://*/*` (optional) | Never requested wholesale. When you paste an image URL for a wallpaper or cursor, access to **that one origin** is requested so the image can be downloaded once and stored locally. |
 
 ---
 

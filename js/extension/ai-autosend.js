@@ -106,7 +106,7 @@
   function tick() {
     attempts++;
     let success = false;
-    if (hostname.includes('chatgpt.com') || hostname.includes('openai.com')) {
+    if (hostname.includes('chatgpt.com')) {
       success = trySubmitChatGPT();
     } else if (hostname.includes('claude.ai')) {
       success = trySubmitClaude();

@@ -33,10 +33,17 @@ const SettingsRenderer = (() => {
     const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return HEX6.test(v) ? v : fallback;
   }
+  /* The colour picker must show what the USER picked, not what the theme
+     resolved to. applyTheme may darken --accent-color so it stays visible
+     against the page, and reading that back into the picker would silently
+     persist the adjusted value -- the accent would drift a little darker every
+     time the settings sheet was opened. Stored value wins; the live var is
+     only a fallback for themes that never stored one. */
   function effectiveAccent() {
     const s = StorageManager.getSettings();
     if (HEX6.test(s.accentOverride || '')) return s.accentOverride;
-    return liveVar('--accent-color', HEX6.test(s.accentColor || '') ? s.accentColor : '#6366f1');
+    if (HEX6.test(s.accentColor || '')) return s.accentColor;
+    return liveVar('--accent-color', '#6366f1');
   }
 
   async function ensureHostAccess(url) {
@@ -975,12 +982,17 @@ const SettingsRenderer = (() => {
   }
 
   function bindWidgetEvents() {
-    const s = StorageManager.getSettings();
+    /* Read the settings object at event time, never at bind time. A reload
+       triggered by another surface (popup, service worker, a second new tab)
+       swaps the object out from under us, and a captured reference would then
+       be a detached orphan: the toggle would appear to work and silently
+       revert on the next open. */
+    const live = () => StorageManager.getSettings();
 
     const nameInp = $('stDisplayName');
     if (nameInp) {
       const saveName = () => {
-        s.displayName = nameInp.value.trim();
+        live().displayName = nameInp.value.trim();
         StorageManager.saveSettings();
         WidgetsRenderer.updateClock(true);
       };
@@ -988,27 +1000,21 @@ const SettingsRenderer = (() => {
       nameInp.addEventListener('change', saveName);
     }
 
-    $('wClockToggle')?.addEventListener('change', (e) => {
-      s.widgets.clock = e.target.checked;
-      StorageManager.save(); WidgetsRenderer.applyWidgetVisibility();
-    });
-    $('wSearchToggle')?.addEventListener('change', (e) => {
-      s.widgets.navSearch = e.target.checked;
-      StorageManager.save(); WidgetsRenderer.applyWidgetVisibility();
-    });
-    $('wTodoToggle')?.addEventListener('change', (e) => {
-      s.widgets.todo = e.target.checked;
-      StorageManager.save(); WidgetsRenderer.applyWidgetVisibility();
-    });
-    $('wWorkspaceToggle')?.addEventListener('change', (e) => {
-      s.widgets.workspace = e.target.checked;
-      StorageManager.save(); WidgetsRenderer.applyWidgetVisibility();
-    });
-    $('wWeatherToggle')?.addEventListener('change', (e) => {
-      s.widgets.weather = e.target.checked;
-      StorageManager.save(); WidgetsRenderer.applyWidgetVisibility();
-    });
+    const bindWidgetToggle = (id, key) => {
+      $(id)?.addEventListener('change', (e) => {
+        live().widgets[key] = e.target.checked;
+        StorageManager.save();
+        WidgetsRenderer.applyWidgetVisibility();
+      });
+    };
+    bindWidgetToggle('wClockToggle', 'clock');
+    bindWidgetToggle('wSearchToggle', 'navSearch');
+    bindWidgetToggle('wTodoToggle', 'todo');
+    bindWidgetToggle('wWorkspaceToggle', 'workspace');
+    bindWidgetToggle('wWeatherToggle', 'weather');
+
     $('wPinnedLinksToggle')?.addEventListener('change', (e) => {
+      const s = live();
       s.hidePinnedOnHome = !e.target.checked;
       StorageManager.save();
       WidgetsRenderer.applyWidgetVisibility();
@@ -1016,14 +1022,14 @@ const SettingsRenderer = (() => {
       ToastSystem.success(s.hidePinnedOnHome ? 'Pinned links hidden on Home' : 'Pinned links visible on Home');
     });
     $('stClockPos')?.addEventListener('change', (e) => {
-      s.clockPosition = e.target.value;
+      live().clockPosition = e.target.value;
       StorageManager.save();
       WidgetsRenderer.applyWidgetVisibility();
       ToastSystem.success(`Clock position updated`);
     });
 
     $('stSearchEngine')?.addEventListener('change', (e) => {
-      s.searchEngine = e.target.value;
+      live().searchEngine = e.target.value;
       StorageManager.save();
       WidgetsRenderer.initNavSearch();
       ToastSystem.success('Default search engine saved');
@@ -1035,13 +1041,14 @@ const SettingsRenderer = (() => {
         $$('.st-eng-chk').forEach(c => {
           if (c.checked) engs.push(c.dataset.engKey);
         });
-        s.enabledEngines = engs.length ? engs : ['default'];
+        live().enabledEngines = engs.length ? engs : ['default'];
         StorageManager.saveSettings();
         WidgetsRenderer.initNavSearch();
       });
     });
 
     $('stWeatherApplyBtn')?.addEventListener('click', () => {
+      const s = live();
       s.weatherCity = $('stWeatherCity').value.trim();
       s.weatherUnit = $('stWeatherUnit').value;
       StorageManager.save();
@@ -1758,10 +1765,16 @@ const SettingsRenderer = (() => {
       if (photoBg) { photoBg.style.backgroundImage = 'none'; photoBg.style.backgroundColor = p.bg; photoBg.classList.add('active'); }
       solidBgColor = p.bg;
 
-      const accRgb = hexToRgb(accent);
-      el.setProperty('--accent-color', accent);
-      el.setProperty('--accent-contrast', contrastText(accent));
-      applyAccent2(el, accent);
+      /* A legible accent is left completely alone -- it is the user's choice.
+         Presets set solidSeed and accentColor to the same value, so only those
+         get adjusted, and then everything painted in the accent (fills, borders,
+         the active tab chip, icons) becomes visible at once. */
+      const { ui, ink } = accentTokens(accent, p.bg);
+      const accRgb = hexToRgb(ui);
+      el.setProperty('--accent-color', ui);
+      el.setProperty('--accent-ink', ink);
+      el.setProperty('--accent-contrast', contrastText(ui));
+      applyAccent2(el, ui);
       el.setProperty('--accent-rgb', `${accRgb.r}, ${accRgb.g}, ${accRgb.b}`);
 
       const sRgb = hexToRgb(p.surface);
@@ -1779,10 +1792,15 @@ const SettingsRenderer = (() => {
       document.body.classList.toggle('theme-dark', !isLight);
 
       const accent = settings.accentOverride || settings.accentColor || '#6366f1';
-      const accRgb = hexToRgb(accent);
-      el.setProperty('--accent-color', accent);
-      el.setProperty('--accent-contrast', contrastText(accent));
-      applyAccent2(el, accent);
+
+      /* Over a wallpaper there is no single page colour to measure, so judge the
+         accent against the scrim the UI actually sits on. */
+      const { ui, ink } = accentTokens(accent, isLight ? "#ffffff" : "#0d1117");
+      const accRgb = hexToRgb(ui);
+      el.setProperty('--accent-color', ui);
+      el.setProperty('--accent-ink', ink);
+      el.setProperty('--accent-contrast', contrastText(ui));
+      applyAccent2(el, ui);
       el.setProperty('--accent-rgb', `${accRgb.r}, ${accRgb.g}, ${accRgb.b}`);
 
       const a = hexToRgb(accent);
@@ -2064,6 +2082,67 @@ const SettingsRenderer = (() => {
     const parsed = parseInt(c, 16);
     const num = Number.isNaN(parsed) ? 0xffffff : parsed;
     return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+  }
+
+  function relLuminance(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const lin = [r, g, b].map(v => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+  }
+
+  function contrastRatio(a, b) {
+    const L1 = relLuminance(a), L2 = relLuminance(b);
+    return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+  }
+
+  /* Applying a preset sets solidSeed AND accentColor to the same value, so the
+     page background and the accent end up identical -- on Pastel Pink both were
+     literally #f9c8d6, a contrast ratio of 1.00, which made every icon painted
+     in the accent disappear against the page.
+
+     --accent-color still drives fills and borders, where it is paired with
+     --accent-contrast and works fine. This derives a separate FOREGROUND colour:
+     same hue, lightness walked away from the background until it clears WCAG AA.
+     CSS uses var(--accent-ink, var(--accent-color)) so nothing breaks if it is
+     ever unset. */
+  const INK_MIN_CONTRAST = 4.5;   // WCAG AA for text and icons
+  const FILL_MIN_CONTRAST = 2.0;  // enough for a filled chip to read as a shape
+
+  /* Resolves the two accent tokens for a given background:
+       ui  -> --accent-color: fills, borders, chips. Only needs to be a visible
+              shape against the page, so a mid-tone accent is left untouched.
+       ink -> --accent-ink: text, icons, carets. Must clear AA.
+     Both are measured against the real page background, so this works the same
+     way in light and dark mode -- readableInk walks lightness in whichever
+     direction moves away from that background. */
+  function accentTokens(accent, bg) {
+    /* Always derived from the user's own accent, so the hue is preserved in
+       every theme. Substituting the palette's accent was tried and dropped: on
+       a near-black seed it comes back a generic grey-blue and turned the default
+       indigo theme grey, and the hand-picked preset accents do not clear AA
+       against their own backgrounds anyway. */
+    const ink = contrastRatio(accent, bg) >= INK_MIN_CONTRAST ? accent : readableInk(accent, bg);
+    const ui = contrastRatio(accent, bg) >= FILL_MIN_CONTRAST ? accent : ink;
+    return { ui, ink };
+  }
+
+  function readableInk(accent, bg) {
+    if (contrastRatio(accent, bg) >= INK_MIN_CONTRAST) return accent;
+    const { h, s } = hexToHsl(accent);
+    /* Lift washed-out pastels so they still read as a colour -- but never invent
+       one. A grey accent has hue 0 and no chroma, so a blanket floor would turn
+       the Pastel Silver preset reddish-brown. Leave achromatic seeds grey. */
+    const sat = s < 0.08 ? s : Math.max(s, 0.35);
+    const goDarker = relLuminance(bg) > 0.4;
+    for (let i = 0; i < 24; i++) {
+      const l = goDarker ? 0.46 - i * 0.02 : 0.54 + i * 0.02;
+      const cand = hslToHex(h, sat, Math.max(0.04, Math.min(0.96, l)));
+      if (contrastRatio(cand, bg) >= INK_MIN_CONTRAST) return cand;
+    }
+    return goDarker ? '#14151a' : '#ffffff';
   }
 
   function contrastText(color) {

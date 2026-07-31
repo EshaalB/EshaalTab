@@ -90,7 +90,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
           if (area !== 'local') return;
           if (!changes.data && !changes.settings) return;
-          if (changes.writer && changes.writer.newValue === StorageManager.getWriterId()) return;
+          /* Our own writes carry a stamp that starts with this page's writer id.
+             Anything else -- the popup, the service worker, another new tab --
+             is a genuine external change worth reloading for. */
+          if (StorageManager.isOwnWriter(changes.writer?.newValue)) return;
 
           const ae = document.activeElement;
           const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable);

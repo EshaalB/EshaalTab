@@ -16,7 +16,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "  [IO.File]::WriteAllText($path, $out, [Text.UTF8Encoding]::new($false));" ^
   "  $dest = '%NAME%-v' + $ver + '.zip';" ^
   "  if (Test-Path $dest) { Remove-Item $dest -Force };" ^
-  "  $exclude = @('.git','.github','.claude','node_modules', $dest, '*.zip', 'build-zip.bat');" ^
+  "  $exclude = @('.git','.github','.claude','.gitignore','node_modules','dev', $dest, '*.zip', 'build-zip.bat','*.md');" ^
   "  $items = Get-ChildItem -Force | Where-Object { $ex = $_.Name; -not ($exclude | Where-Object { $ex -like $_ }) };" ^
   "  Compress-Archive -Path $items.FullName -DestinationPath $dest -Force;" ^
   "  Write-Host ('Successfully built ' + $dest + ' (version ' + $ver + ')');" ^

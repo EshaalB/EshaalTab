@@ -12,12 +12,12 @@
   stroke: #ffffff;
 }
 body.theme-light .et-topbar-btn.is-active {
-  color: var(--accent-color, #000);
+  color: var(--accent-ink, var(--accent-color, #000));
   opacity: 1;
 }
 
 body.theme-light .et-topbar-btn.is-active svg {
-  stroke: var(--accent-color, #000);
+  stroke: var(--accent-ink, var(--accent-color, #000));
 }
 
 .et-add-board-fab, .et-notes-export-btn, .et-clip-add-btn {
@@ -48,19 +48,19 @@ button, .et-main-tab, .et-topbar-btn, .et-set-tab, .et-add-board-fab {
 }
 
 body.solid-mode .et-topbar-btn {
-  color: var(--accent-color);
+  color: var(--accent-ink, var(--accent-color));
   background: transparent;
   border: none;
 }
 
 body.solid-mode .et-topbar-btn svg {
-  stroke: var(--accent-color);
+  stroke: var(--accent-ink, var(--accent-color));
 }
 
 body.solid-mode .et-search-btn:not(.et-search-submit) {
-  color: var(--accent-color);
+  color: var(--accent-ink, var(--accent-color));
 }
 
 body.solid-mode .et-search-btn:not(.et-search-submit) svg {
-  stroke: var(--accent-color);
+  stroke: var(--accent-ink, var(--accent-color));
 }

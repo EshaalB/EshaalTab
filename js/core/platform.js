@@ -2,15 +2,6 @@
    Works on Chrome, Edge, Opera, Brave, Vivaldi (chrome.*) and Firefox / Safari (browser.*). */
 'use strict';
 
-if (typeof chrome !== 'undefined' && chrome.runtime) {
-  try {
-    const _ignore = () => { try { const _ = chrome.runtime.lastError; } catch { } };
-    if (chrome.runtime.onMessage && chrome.runtime.onMessage.addListener) {
-      chrome.runtime.onMessage.addListener(() => { _ignore(); return false; });
-    }
-  } catch { }
-}
-
 if (typeof window.$ === 'undefined') {
   window.$ = id => document.getElementById(id);
 }

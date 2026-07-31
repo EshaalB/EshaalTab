@@ -23,7 +23,6 @@ const ICONS = {
   link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
   incognito: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
   pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
-  mic: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>',
   grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
   check: '<polyline points="20 6 9 17 4 12"/>',
   search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
@@ -89,7 +88,11 @@ const StorageManager = (() => {
     wallpaperMuted: true,
     wallpaperVolume: 0.5,
     dualAccent: true,
-    enabledEngines: ['default', 'google', 'duckduckgo', 'bing', 'chatgpt', 'github', 'youtube'],
+    /* Must match the keys in WidgetsRenderer.ENGINES. The old list named
+       google/bing/github, which do not exist, and omitted claude, gemini,
+       research and perplexity -- so every new install silently hid four of the
+       engines the store listing advertises. */
+    enabledEngines: ['default', 'duckduckgo', 'youtube', 'chatgpt', 'claude', 'gemini', 'research', 'perplexity'],
     lastSettingsTab: 'theme',
     boardWidth: 260,
     searchEngine: 'default',
@@ -111,7 +114,18 @@ const StorageManager = (() => {
 
   const WRITER_ID = uuid();
 
-  let data = null, settings = null, saveTimeout = null, lastPersist = 0;
+  /* The writer stamp MUST change on every write. storage.onChanged only reports
+     keys whose value actually changed, so writing a constant WRITER_ID meant
+     `changes.writer` was absent from the second write onwards -- and the
+     "is this my own write?" guard in main.js then treated our own save as a
+     foreign one, reloaded state, and detached every settings object the open
+     side sheet was still holding. That is what made the second widget toggle
+     you flipped silently revert. */
+  let writeSeq = 0;
+  const nextWriterStamp = () => WRITER_ID + ':' + (++writeSeq);
+  const isOwnWriter = (v) => typeof v === 'string' && v.slice(0, WRITER_ID.length) === WRITER_ID;
+
+  let data = null, settings = null, saveTimeout = null;
   const chromeAvailable = HAS_EXT;
 
   const MEDIA_PREFIX = 'wpmedia:';
@@ -270,6 +284,17 @@ const StorageManager = (() => {
     });
   }
 
+  /* Refill the live object rather than replacing it. Renderers capture
+     getSettings()/getData() once at bind time; swapping in a new object left
+     them holding a detached orphan, so their writes went nowhere and the
+     setting appeared to revert. Keeping identity stable kills that whole class
+     of bug at the source, instead of auditing every caller. */
+  function refill(target, source) {
+    if (!target || typeof target !== 'object') return source;
+    Object.keys(target).forEach(k => delete target[k]);
+    return Object.assign(target, source);
+  }
+
   function deepClone(obj) {
     if (typeof structuredClone === 'function') {
       try { return structuredClone(obj); } catch { }
@@ -291,16 +316,16 @@ const StorageManager = (() => {
         rawSettings = JSON.parse(localStorage.getItem('markmez_settings') || 'null');
         rawData = JSON.parse(localStorage.getItem('markmez_data') || 'null');
       }
-      settings = { ...DEFAULT_SETTINGS, ...(rawSettings || {}),
-        widgets: { ...DEFAULT_SETTINGS.widgets, ...((rawSettings || {}).widgets || {}) } };
+      settings = refill(settings, { ...DEFAULT_SETTINGS, ...(rawSettings || {}),
+        widgets: { ...DEFAULT_SETTINGS.widgets, ...((rawSettings || {}).widgets || {}) } });
       if (rawSettings && rawSettings.theme && !rawSettings.mode) {
         settings.mode = rawSettings.theme === 'light' ? 'light' : 'dark';
       }
-      data = rawData ? migrate(rawData) : deepClone(DEFAULT_DATA);
+      data = refill(data, rawData ? migrate(rawData) : deepClone(DEFAULT_DATA));
     } catch (e) {
       console.warn('Storage load failed, using defaults:', e);
-      settings = deepClone(DEFAULT_SETTINGS);
-      data = deepClone(DEFAULT_DATA);
+      settings = refill(settings, deepClone(DEFAULT_SETTINGS));
+      data = refill(data, deepClone(DEFAULT_DATA));
     }
     if (!['home', 'boards', 'notes'].includes(settings.activeTab)) settings.activeTab = 'home';
     ['accentColor', 'accent2', 'boardColor', 'solidSeed', 'accentOverride'].forEach(k => {
@@ -333,10 +358,9 @@ const StorageManager = (() => {
   }
 
   const SYNC_MIN_INTERVAL = 10000;
-  let lastSyncWrite = 0, syncTimer = null;
+  let syncTimer = null;
 
   function writeSyncNow() {
-    lastSyncWrite = Date.now();
     syncTimer = null;
     try {
       Promise.resolve(EXT.storage.sync.set({ settings: trimForSync(settings) }))
@@ -347,15 +371,16 @@ const StorageManager = (() => {
   function queueSync() {
     if (!chromeAvailable || !EXT.storage.sync) return;
     if (syncTimer) clearTimeout(syncTimer);        // coalesce: reset the timer on every call
-    const wait = Math.max(SYNC_MIN_INTERVAL - (Date.now() - lastSyncWrite), SYNC_MIN_INTERVAL);
-    syncTimer = setTimeout(writeSyncNow, wait);
+    /* ponytail: plain debounce. The old Math.max(INTERVAL - elapsed, INTERVAL)
+       could never return anything but INTERVAL, so the elapsed-time term was
+       dead arithmetic dressed up as a rate limiter. Same behaviour, visibly. */
+    syncTimer = setTimeout(writeSyncNow, SYNC_MIN_INTERVAL);
   }
 
   function persist() {
-    lastPersist = Date.now();
     mirrorBootState();
     if (chromeAvailable) {
-      Promise.resolve(EXT.storage.local.set({ data, settings, writer: WRITER_ID })).catch(e => console.warn('local save:', e));
+      Promise.resolve(EXT.storage.local.set({ data, settings, writer: nextWriterStamp() })).catch(e => console.warn('local save:', e));
       queueSync();
     } else {
       localStorage.setItem('markmez_settings', JSON.stringify(settings));
@@ -364,10 +389,9 @@ const StorageManager = (() => {
   }
 
   function persistSettings() {
-    lastPersist = Date.now();
     mirrorBootState();
     if (chromeAvailable) {
-      Promise.resolve(EXT.storage.local.set({ settings, writer: WRITER_ID })).catch(e => console.warn('local save:', e));
+      Promise.resolve(EXT.storage.local.set({ settings, writer: nextWriterStamp() })).catch(e => console.warn('local save:', e));
       queueSync();
     } else {
       localStorage.setItem('markmez_settings', JSON.stringify(settings));
@@ -464,8 +488,8 @@ const StorageManager = (() => {
         if (!imported || typeof imported !== 'object' || (!imported.data && !imported.settings)) {
           onDone && onDone(false); return;
         }
-        if (imported.data) data = migrate(imported.data);
-        if (imported.settings) settings = sanitizeSettings(imported.settings);
+        if (imported.data) data = refill(data, migrate(imported.data));
+        if (imported.settings) settings = refill(settings, sanitizeSettings(imported.settings));
         saveImmediate();
         onDone && onDone(true);
       } catch { onDone && onDone(false); }
@@ -475,8 +499,8 @@ const StorageManager = (() => {
   }
 
   function resetAll() {
-    data = deepClone(DEFAULT_DATA);
-    settings = deepClone(DEFAULT_SETTINGS);
+    data = refill(data, deepClone(DEFAULT_DATA));
+    settings = refill(settings, deepClone(DEFAULT_SETTINGS));
     settings.activeTab = 'home';
     saveImmediate();
     pruneMedia();
@@ -484,5 +508,5 @@ const StorageManager = (() => {
 
   return { load, save, saveSettings, saveImmediate, flush, getData, getSettings, exportJSON, importJSON, resetAll,
            putMedia, getMedia, delMedia, resolveMedia, pruneMedia, isMediaRef, refId, sanitizeSettings, setBootBg,
-           getLastPersist: () => lastPersist, getWriterId: () => WRITER_ID, DEFAULT_SETTINGS, DEFAULT_DATA };
+           getWriterId: () => WRITER_ID, isOwnWriter, DEFAULT_SETTINGS, DEFAULT_DATA };
 })();

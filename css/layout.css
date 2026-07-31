@@ -620,7 +620,7 @@ body:not(.solid-mode) .dock-pin-label {
   color: var(--text-dim);
 }
 .dock-pin-add:hover .dock-pin-icon {
-  color: var(--accent-color);
+  color: var(--accent-ink, var(--accent-color));
 }
 .dock-pin-add .dock-pin-label { color: var(--text-dim); font-weight: 500; }
 

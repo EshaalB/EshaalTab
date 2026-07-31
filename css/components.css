@@ -34,7 +34,7 @@
   font-size: var(--fs-base);
   font-weight: 500;
   font-family: inherit;
-  caret-color: var(--accent-color);
+  caret-color: var(--accent-ink, var(--accent-color));
   color: var(--text);
 }
 
@@ -488,7 +488,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-color, #6366f1);
+  color: var(--accent-ink, var(--accent-color, #6366f1));
   opacity: 0.9;
   flex-shrink: 0;
   pointer-events: none;
@@ -732,7 +732,7 @@
   font-family: inherit;
   font-size: var(--fs-xs);
   font-weight: 600;
-  color: var(--accent-color);
+  color: var(--accent-ink, var(--accent-color));
   transition: opacity var(--dur-1) var(--ease-out);
 }
 
@@ -932,7 +932,7 @@
 }
 
 .todo-pop-pin.active {
-  color: var(--accent-color);
+  color: var(--accent-ink, var(--accent-color));
 }
 
 .et-pop-input-wrap {
@@ -1114,7 +1114,7 @@
   font-size: var(--fs-md);
   line-height: 1.6;
   padding: var(--sp-5) var(--sp-6);
-  caret-color: var(--accent-color);
+  caret-color: var(--accent-ink, var(--accent-color));
   background: transparent;
 }
 
@@ -1359,6 +1359,15 @@
 }
  
 .et-pomo-overlay {
+  /* ponytail: focus mode is always a black surface, so rebind the theme vars it
+     consumes here instead of hunting the individual rules that leaked light-mode
+     ink onto it. Any future var(--text) inside the overlay is correct by
+     default. */
+  --text: rgba(255, 255, 255, 0.95);
+  --text-dim: rgba(255, 255, 255, 0.65);
+  --text-faint: rgba(255, 255, 255, 0.35);
+  color-scheme: dark;
+
   position: fixed;
   inset: 0;
   z-index: 3500;
@@ -2162,7 +2171,7 @@ body[data-preset="cyberpunk"] .et-home-greeting:hover::after,
 }
 .et-add-board-tile:hover {
   border-color: var(--accent-color);
-  color: var(--accent-color);
+  color: var(--accent-ink, var(--accent-color));
   background: color-mix(in srgb, var(--accent-color) 12%, transparent);
   transform: translateY(-1px);
 }
