@@ -796,3 +796,42 @@ body:not(.solid-mode) .dock-pin-label {
   background: var(--accent-color);
   color: var(--accent-contrast);
 }
+
+/* Responsive Polish for Various Desktop Screen & Split-Screen Sizes */
+@media (max-width: 1024px) {
+  .et-topbar {
+    padding: var(--sp-2) var(--sp-4);
+  }
+  .et-pop-workspace, .et-pop-todo, .et-pop-pinned {
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@media (max-width: 768px) {
+  .et-topbar-center {
+    display: none;
+  }
+  .et-clock {
+    font-size: clamp(3rem, 10vw, 5.5rem);
+  }
+  .et-greeting {
+    font-size: var(--fs-md);
+  }
+  .et-boards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--sp-3);
+  }
+}
+
+@media (max-height: 720px) {
+  .et-home-hero {
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+  }
+  .et-clock {
+    font-size: clamp(3.2rem, 8vh, 5rem);
+  }
+  .et-workspace-grid {
+    max-height: 320px;
+  }
+}
