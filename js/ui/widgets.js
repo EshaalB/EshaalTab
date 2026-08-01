@@ -608,10 +608,15 @@ const WidgetsRenderer = (() => {
   async function fetchWeather(city, unit) {
     const weatherEl = $('weatherWidget');
     if (!weatherEl) return;
+    const cleanCity = String(city || '').trim();
+    if (!cleanCity) {
+      weatherEl.innerHTML = `${icon('weatherSun', 16)} <span>Set City in Settings</span>`;
+      return;
+    }
     try {
-      let coords = weatherCache.coordsFor(city);
+      let coords = weatherCache.coordsFor(cleanCity);
       if (!coords) {
-        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanCity)}&count=1&language=en&format=json`);
         const geoData = await geoRes.json();
         if (!geoData.results || !geoData.results.length) {
           weatherEl.innerHTML = `${icon('weatherSun', 16)} <span>City Not Found</span>`;
@@ -619,7 +624,7 @@ const WidgetsRenderer = (() => {
         }
         const { latitude, longitude, name } = geoData.results[0];
 
-        coords = { city, lat: latitude, lon: longitude, name, data: null, time: 0 };
+        coords = { city: cleanCity, lat: latitude, lon: longitude, name, data: null, time: 0 };
         weatherCache.write(coords);
       }
 
@@ -687,84 +692,194 @@ const WidgetsRenderer = (() => {
 
 const WorkspaceWidget = (() => {
   const APPS = [
+    ['Account', 'https://myaccount.google.com'],
     ['Search', 'https://www.google.com'],
-    ['Gmail', 'https://mail.google.com'],
     ['Maps', 'https://maps.google.com'],
     ['YouTube', 'https://www.youtube.com'],
     ['News', 'https://news.google.com'],
+    ['Gmail', 'https://mail.google.com'],
     ['Meet', 'https://meet.google.com'],
     ['Chat', 'https://chat.google.com'],
     ['Contacts', 'https://contacts.google.com'],
     ['Drive', 'https://drive.google.com'],
     ['Calendar', 'https://calendar.google.com'],
+    ['Play', 'https://play.google.com'],
     ['Translate', 'https://translate.google.com'],
     ['Photos', 'https://photos.google.com'],
+    ['Shopping', 'https://shopping.google.com'],
+    ['Finance', 'https://www.google.com/finance'],
     ['Docs', 'https://docs.google.com'],
     ['Sheets', 'https://sheets.google.com'],
     ['Slides', 'https://slides.google.com'],
+    ['Books', 'https://books.google.com'],
+    ['Blogger', 'https://www.blogger.com'],
     ['Keep', 'https://keep.google.com'],
+    ['Earth', 'https://earth.google.com'],
+    ['Saved', 'https://www.google.com/save'],
+    ['Arts & Culture', 'https://artsandculture.google.com'],
+    ['Google Ads', 'https://ads.google.com'],
+    ['Travel', 'https://www.google.com/travel'],
     ['Forms', 'https://forms.google.com'],
     ['Classroom', 'https://classroom.google.com'],
     ['Gemini', 'https://gemini.google.com'],
-    ['Earth', 'https://earth.google.com'],
-    ['Play', 'https://play.google.com'],
-    ['Finance', 'https://www.google.com/finance'],
-    ['Shopping', 'https://shopping.google.com'],
+    ['AI Studio', 'https://aistudio.google.com'],
+    ['NotebookLM', 'https://notebooklm.google.com'],
+    ['Wallet', 'https://wallet.google.com'],
+    ['Colab', 'https://colab.research.google.com'],
+    ['Scholar', 'https://scholar.google.com'],
+    ['Analytics', 'https://analytics.google.com'],
+    ['Search Console', 'https://search.google.com/search-console'],
+    ['Firebase', 'https://console.firebase.google.com'],
+    ['Passwords', 'https://passwords.google.com'],
+    ['Fonts', 'https://fonts.google.com'],
     ['Tasks', 'https://tasks.google.com'],
     ['Cloud', 'https://cloud.google.com'],
-    ['Account', 'https://myaccount.google.com']
+    ['YouTube Music', 'https://music.youtube.com'],
+    ['Store', 'https://store.google.com']
   ];
 
   const APP_ICONS = {
+    'Account': 'https://www.gstatic.com/images/branding/product/2x/avatar_square_blue_120dp.png',
     'Search': 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png',
-    'Gmail': 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico',
     'Maps': 'https://www.gstatic.com/images/branding/product/2x/maps_2020q4_48dp.png',
     'YouTube': 'https://www.gstatic.com/images/branding/product/2x/youtube_48dp.png',
     'News': 'https://www.gstatic.com/images/branding/product/2x/news_48dp.png',
+    'Gmail': 'https://www.gstatic.com/images/branding/product/2x/gmail_2020q4_48dp.png',
     'Meet': 'https://www.gstatic.com/images/branding/product/2x/meet_2020q4_48dp.png',
     'Chat': 'https://www.gstatic.com/images/branding/product/2x/chat_2020q4_48dp.png',
     'Contacts': 'https://www.gstatic.com/images/branding/product/2x/contacts_2022_48dp.png',
     'Drive': 'https://www.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png',
     'Calendar': 'https://www.gstatic.com/images/branding/product/2x/calendar_2020q4_48dp.png',
+    'Play': 'https://www.gstatic.com/images/branding/product/2x/play_prism_48dp.png',
     'Translate': 'https://www.gstatic.com/images/branding/product/2x/translate_24dp.png',
     'Photos': 'https://www.gstatic.com/images/branding/product/2x/photos_48dp.png',
+    'Shopping': 'https://www.gstatic.com/images/branding/product/2x/shopping_48dp.png',
+    'Finance': 'https://www.gstatic.com/images/branding/product/2x/finance_48dp.png',
     'Docs': 'https://www.gstatic.com/images/branding/product/2x/docs_2020q4_48dp.png',
     'Sheets': 'https://www.gstatic.com/images/branding/product/2x/sheets_2020q4_48dp.png',
     'Slides': 'https://www.gstatic.com/images/branding/product/2x/slides_2020q4_48dp.png',
+    'Books': 'https://www.gstatic.com/images/branding/product/2x/books_48dp.png',
+    'Blogger': 'https://www.gstatic.com/images/branding/product/2x/blogger_48dp.png',
     'Keep': 'https://www.gstatic.com/images/branding/product/2x/keep_2020q4_48dp.png',
     'Forms': 'https://www.gstatic.com/images/branding/product/2x/forms_2020q4_48dp.png',
     'Classroom': 'https://www.gstatic.com/images/branding/product/2x/classroom_48dp.png',
     'Gemini': 'https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d473d53066913e2f07f87.svg',
+    'AI Studio': 'https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d473d53066913e2f07f87.svg',
+    'NotebookLM': 'https://www.gstatic.com/images/branding/product/2x/notebooklm_48dp.png',
+    'Wallet': 'https://www.gstatic.com/images/branding/product/2x/wallet_48dp.png',
+    'Colab': 'https://colab.research.google.com/img/colab_favicon_256px.png',
+    'Scholar': 'https://scholar.google.com/favicon.ico',
+    'Analytics': 'https://www.gstatic.com/images/branding/product/2x/analytics_48dp.png',
+    'Search Console': 'https://www.gstatic.com/images/branding/product/2x/search_console_48dp.png',
+    'Firebase': 'https://www.gstatic.com/mobilesdk/160503_mobilesdk/logo/2x/firebase_28dp.png',
+    'Passwords': 'https://www.gstatic.com/images/branding/product/2x/password_manager_48dp.png',
+    'Fonts': 'https://www.gstatic.com/images/branding/product/2x/google_fonts_48dp.png',
     'Earth': 'https://www.gstatic.com/images/branding/product/2x/earth_48dp.png',
-    'Play': 'https://www.gstatic.com/images/branding/product/2x/play_prism_48dp.png',
-    'Finance': 'https://www.gstatic.com/images/branding/product/2x/finance_48dp.png',
-    'Shopping': 'https://www.gstatic.com/images/branding/product/2x/shopping_48dp.png',
+    'Saved': 'https://www.gstatic.com/images/branding/product/2x/google_save_48dp.png',
+    'Arts & Culture': 'https://www.gstatic.com/images/branding/product/2x/arts_culture_48dp.png',
+    'Google Ads': 'https://www.gstatic.com/images/branding/product/2x/google_ads_48dp.png',
+    'Travel': 'https://www.gstatic.com/images/branding/product/2x/travel_48dp.png',
     'Tasks': 'https://www.gstatic.com/images/branding/product/2x/tasks_2021_48dp.png',
     'Cloud': 'https://www.gstatic.com/images/branding/product/2x/google_cloud_48dp.png',
-    'Account': 'https://www.gstatic.com/images/branding/product/2x/avatar_square_grey_512dp.png'
+    'YouTube Music': 'https://www.gstatic.com/images/branding/product/2x/youtube_music_48dp.png',
+    'Store': 'https://www.gstatic.com/images/branding/product/2x/google_store_48dp.png'
   };
 
   let built = false;
+  let activeView = 'all';
+  let filterQuery = '';
 
   function getAppIconAttr(name, url) {
-    if (!remoteFaviconsAllowed()) return faviconAttr(url);
     const s2 = `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(url)}&sz=128`;
     const primary = APP_ICONS[name] || s2;
-    return `src="${primary}" data-fav data-fav-fallbacks="${s2}"`;
+    const fallbacks = [s2];
+    const ext = extFaviconUrl(url);
+    if (ext) fallbacks.push(ext);
+    return `src="${primary}" data-fav data-fav-fallbacks="${fallbacks.join('|')}"`;
+  }
+
+  function getFavorites() {
+    try {
+      const s = StorageManager.getSettings();
+      if (Array.isArray(s.workspaceFavorites)) return s.workspaceFavorites;
+    } catch { }
+    return ['Search', 'Gmail', 'Drive', 'YouTube', 'Gemini', 'AI Studio', 'NotebookLM'];
+  }
+
+  function toggleFavorite(appName) {
+    const favs = [...getFavorites()];
+    const idx = favs.indexOf(appName);
+    if (idx >= 0) {
+      favs.splice(idx, 1);
+    } else {
+      favs.push(appName);
+    }
+    const settings = StorageManager.getSettings();
+    settings.workspaceFavorites = favs;
+    StorageManager.save();
+    renderGrid();
+  }
+
+  function renderAppItem([name, url], isFav) {
+    return `
+      <div class="workspace-item" title="${escapeHtml(name)}">
+        <button class="workspace-star-btn ${isFav ? 'is-active' : ''}" data-app="${escapeHtml(name)}" title="${isFav ? 'Remove from Starred' : 'Star app'}">★</button>
+        <a href="${escapeHtml(safeHref(url))}" target="_blank" rel="noopener" class="workspace-link" style="display:flex; flex-direction:column; align-items:center; text-decoration:none; width:100%;">
+          <span class="workspace-icon" data-letter="${escapeHtml(name.charAt(0))}">
+            <img ${getAppIconAttr(name, url)} alt="${escapeHtml(name)}" decoding="async" width="38" height="38" />
+          </span>
+          <span style="font-size:12px; font-weight:500; color:var(--text, #ffffff); line-height:1.2; text-align:center; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; margin-top:4px;">${escapeHtml(name)}</span>
+        </a>
+      </div>`;
+  }
+
+  function renderGrid() {
+    const grid = $('workspaceGrid');
+    if (!grid) return;
+
+    const favs = new Set(getFavorites());
+    const query = filterQuery.trim().toLowerCase();
+
+    const filteredApps = APPS.filter(([name]) => !query || name.toLowerCase().includes(query));
+
+    if (filteredApps.length === 0) {
+      grid.innerHTML = `<div class="workspace-no-results">No matching apps found</div>`;
+      return;
+    }
+
+    if (activeView === 'fav') {
+      const favApps = filteredApps.filter(([name]) => favs.has(name));
+      if (favApps.length === 0) {
+        grid.innerHTML = `<div class="workspace-no-results">No starred apps yet.<br/><span style="opacity:0.7; font-size:11px;">Hover over any app to star it!</span></div>`;
+        return;
+      }
+      grid.innerHTML = favApps.map(app => renderAppItem(app, true)).join('');
+    } else {
+      if (!query) {
+        const favApps = APPS.filter(([name]) => favs.has(name));
+        const otherApps = APPS.filter(([name]) => !favs.has(name));
+        let html = '';
+        if (favApps.length > 0) {
+          html += `<div class="workspace-section-header">Starred</div>`;
+          html += favApps.map(app => renderAppItem(app, true)).join('');
+        }
+        if (otherApps.length > 0) {
+          html += `<div class="workspace-section-header">All Apps</div>`;
+          html += otherApps.map(app => renderAppItem(app, false)).join('');
+        }
+        grid.innerHTML = html;
+      } else {
+        grid.innerHTML = filteredApps.map(app => renderAppItem(app, favs.has(app[0]))).join('');
+      }
+    }
+
+    wireFavicons(grid);
   }
 
   function build() {
-    const grid = $('workspaceGrid');
-    if (!grid || built) return;
+    if (built) return;
     built = true;
-    grid.innerHTML = APPS.map(([name, url]) => `
-      <a href="${escapeHtml(safeHref(url))}" target="_blank" rel="noopener" class="workspace-item" title="${escapeHtml(name)}">
-        <span class="workspace-icon" data-letter="${escapeHtml(name.charAt(0))}">
-          <img ${getAppIconAttr(name, url)} alt="${escapeHtml(name)}" decoding="async" width="38" height="38" />
-        </span>
-        <span style="font-size:12px; font-weight:500; color:var(--text, #ffffff); line-height:1.2; text-align:center; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;">${escapeHtml(name)}</span>
-      </a>`).join('');
-    wireFavicons(grid);
+    renderGrid();
   }
 
   function init() {
@@ -772,19 +887,61 @@ const WorkspaceWidget = (() => {
     const pop = $('workspacePopover');
     if (!btn || !pop) return;
 
-btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
       toggle();
     });
+
+    const searchInput = $('workspaceSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        filterQuery = e.target.value;
+        renderGrid();
+      });
+      searchInput.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    const tabAll = $('wsTabAll');
+    const tabFav = $('wsTabFav');
+    if (tabAll && tabFav) {
+      tabAll.addEventListener('click', (e) => {
+        e.stopPropagation();
+        activeView = 'all';
+        tabAll.classList.add('is-active');
+        tabFav.classList.remove('is-active');
+        renderGrid();
+      });
+      tabFav.addEventListener('click', (e) => {
+        e.stopPropagation();
+        activeView = 'fav';
+        tabFav.classList.add('is-active');
+        tabAll.classList.remove('is-active');
+        renderGrid();
+      });
+    }
+
+    const grid = $('workspaceGrid');
+    if (grid) {
+      grid.addEventListener('click', (e) => {
+        const starBtn = e.target.closest('.workspace-star-btn');
+        if (starBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const appName = starBtn.getAttribute('data-app');
+          if (appName) toggleFavorite(appName);
+          return;
+        }
+        const link = e.target.closest('.workspace-link');
+        if (link) {
+          close();
+        }
+      });
+    }
 
     document.addEventListener('click', (e) => {
       if (pop.classList.contains('open') && !pop.contains(e.target) && !e.target.closest('#workspaceBtn')) {
         close();
       }
-    });
-
-    pop.addEventListener('click', (e) => {
-      if (e.target.closest('.workspace-item')) close();
     });
   }
 
@@ -799,11 +956,13 @@ btn.addEventListener('click', (e) => {
     const btn = $('workspaceBtn');
     if (!pop || !btn) return;
     build();
+    renderGrid();
     const r = btn.getBoundingClientRect();
     pop.style.right = `${Math.max(16, window.innerWidth - r.right)}px`;
     pop.style.top = `${r.bottom + 8}px`;
     pop.classList.add('open');
     btn.classList.add('is-active');
+    setTimeout(() => $('workspaceSearchInput')?.focus(), 50);
   }
 
   function close() {

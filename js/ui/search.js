@@ -114,6 +114,20 @@ const SearchRenderer = (() => {
       resultsContainer.querySelectorAll('.command-item').forEach((el, i) => {
         el.addEventListener('click', () => matchCmds[i].action());
       });
+      const items = [...resultsContainer.querySelectorAll('.search-result-item')];
+      if (items.length) {
+        selIndex = 0;
+        items[0].classList.add('kb-active');
+      }
+      return;
+    }
+
+    if (trimmed === '#') {
+      resultsContainer.innerHTML = `
+        <div class="search-hint">
+          Type a tag name after <strong class="cmd-chip">#</strong> to filter bookmarks by tag (e.g. <strong>#code</strong>, <strong>#docs</strong>).
+        </div>
+      `;
       return;
     }
 

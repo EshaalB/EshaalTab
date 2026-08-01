@@ -235,10 +235,11 @@ body:not(.wallpaper-mode)::before {
   display: inline-flex;
   align-items: baseline;
   justify-content: center;
+  font-family: 'Orbitron', var(--font-app, sans-serif);
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-display);
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: 0.02em;
   line-height: 1;
 }
 

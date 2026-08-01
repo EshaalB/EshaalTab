@@ -109,7 +109,8 @@ const StorageManager = (() => {
     use12h: false,
     hidePinnedOnHome: false,
     clockPosition: 'auto',
-    remoteFavicons: false
+    remoteFavicons: false,
+    workspaceFavorites: ['Search', 'Gmail', 'Drive', 'YouTube', 'Gemini', 'AI Studio', 'NotebookLM']
   };
 
   const WRITER_ID = uuid();
@@ -209,20 +210,54 @@ const StorageManager = (() => {
     return c;
   }
 
+  function normalizeBookmark(bm) {
+    if (!bm || typeof bm !== 'object') return null;
+    const url = typeof bm.url === 'string' ? bm.url.trim() : '';
+    if (!url) return null;
+    return {
+      id: bm.id || uuid(),
+      title: String(bm.title || url).trim().slice(0, 300),
+      url: url,
+      tags: Array.isArray(bm.tags) ? bm.tags.map(t => String(t).toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9\-_]/g, '').slice(0, 30)).filter(Boolean) : [],
+      pinnedToHome: !!bm.pinnedToHome,
+      order: typeof bm.order === 'number' ? bm.order : 0
+    };
+  }
+
   function normalizeBoard(b) {
+    if (!b || typeof b !== 'object') b = {};
+    const rawBms = Array.isArray(b.bookmarks) ? b.bookmarks : [];
+    const normBms = rawBms.map(normalizeBookmark).filter(Boolean);
     const out = {
       id: b.id || uuid(),
-      name: b.name || 'Bookmarks',
+      name: String(b.name || 'Bookmarks').trim(),
       color: b.color || null,
       col: b.col ?? null,
-      order: b.order ?? 0,
-      bookmarks: Array.isArray(b.bookmarks) ? b.bookmarks : []
+      order: typeof b.order === 'number' ? b.order : 0,
+      bookmarks: normBms
     };
     if (b.pinnedToHome) out.pinnedToHome = true;
     return out;
   }
 
   const MAX_MIGRATED_PINS = 5;   // must not exceed BookmarkManager.PIN_LIMIT
+
+  function capPinnedBookmarks(d) {
+    if (!d || !Array.isArray(d.boards)) return d;
+    let count = 0;
+    d.boards.forEach(b => {
+      (b.bookmarks || []).forEach(bm => {
+        if (bm && bm.pinnedToHome) {
+          if (count >= MAX_MIGRATED_PINS) {
+            delete bm.pinnedToHome;
+          } else {
+            count++;
+          }
+        }
+      });
+    });
+    return d;
+  }
 
   function migratePins(d) {
     if (d.pinsMigrated) return d;
@@ -236,12 +271,12 @@ const StorageManager = (() => {
       }
       delete b.pinnedToHome;
     });
-    return d;
+    return capPinnedBookmarks(d);
   }
 
   function migrate(oldData) {
     if (Array.isArray(oldData.boards) && !Array.isArray(oldData.pages)) {
-      return migratePins({
+      return capPinnedBookmarks(migratePins({
         ...oldData,
         boards: oldData.boards.map(normalizeBoard),
         notes: typeof oldData.notes === 'string' ? oldData.notes : '',
@@ -249,7 +284,7 @@ const StorageManager = (() => {
         tags: oldData.tags || [],
         wallpapers: oldData.wallpapers || [],
         focus: oldData.focus || {}
-      });
+      }));
     }
 
     const boards = [];
@@ -273,7 +308,7 @@ const StorageManager = (() => {
     if (Array.isArray(oldData.todos)) oldData.todos.forEach(t => todos.push(t));
 
     const { pages, ...rest } = oldData;
-    return migratePins({
+    return capPinnedBookmarks(migratePins({
       ...rest,
       boards,
       notes: notesParts.join('\n\n---\n\n'),
@@ -281,7 +316,7 @@ const StorageManager = (() => {
       tags: oldData.tags || [],
       wallpapers: oldData.wallpapers || [],
       focus: oldData.focus || {}
-    });
+    }));
   }
 
   /* Refill the live object rather than replacing it. Renderers capture
@@ -438,7 +473,10 @@ const StorageManager = (() => {
     const out = deepClone(DEFAULT_SETTINGS);
     if (!raw || typeof raw !== 'object') return out;
     const str = (v, max = 200) => typeof v === 'string' ? v.slice(0, max) : undefined;
-    const num = (v, lo, hi) => (typeof v === 'number' && isFinite(v)) ? Math.min(hi, Math.max(lo, v)) : undefined;
+    const num = (v, lo, hi) => {
+      const n = typeof v === 'number' ? v : (typeof v === 'string' ? parseFloat(v) : NaN);
+      return (typeof n === 'number' && isFinite(n)) ? Math.min(hi, Math.max(lo, n)) : undefined;
+    };
     const pick = (k, v) => { if (v !== undefined) out[k] = v; };
 
     pick('mode', ['light', 'dark', 'system'].includes(raw.mode) ? raw.mode : undefined);
@@ -465,11 +503,25 @@ const StorageManager = (() => {
     pick('dualAccent', typeof raw.dualAccent === 'boolean' ? raw.dualAccent : undefined);
     pick('lastSettingsTab', ['theme', 'widgets', 'data', 'help'].includes(raw.lastSettingsTab) ? raw.lastSettingsTab : undefined);
     if (Array.isArray(raw.enabledEngines)) {
-      out.enabledEngines = raw.enabledEngines.filter(e => typeof e === 'string');
+      const filtered = raw.enabledEngines.filter(e => typeof e === 'string' && e.trim());
+      out.enabledEngines = filtered.length > 0 ? filtered : [...DEFAULT_SETTINGS.enabledEngines];
+    }
+    if (Array.isArray(raw.workspaceFavorites)) {
+      out.workspaceFavorites = raw.workspaceFavorites.filter(e => typeof e === 'string');
     }
     pick('activeTab', ['home', 'boards', 'notes'].includes(raw.activeTab) ? raw.activeTab : undefined);
     pick('use12h', typeof raw.use12h === 'boolean' ? raw.use12h : undefined);
     pick('remoteFavicons', !!raw.remoteFavicons);
+    /* These three were missing, so restoring a backup silently reset them to
+       defaults: the user's clock position moved, pinned links reappeared on
+       Home, and auto-colour switched back on. */
+    pick('autoColor', typeof raw.autoColor === 'boolean' ? raw.autoColor : undefined);
+    pick('hidePinnedOnHome', typeof raw.hidePinnedOnHome === 'boolean' ? raw.hidePinnedOnHome : undefined);
+    pick('clockPosition', ['auto', 'center', 'corner'].includes(raw.clockPosition) ? raw.clockPosition : undefined);
+    /* Not in DEFAULT_SETTINGS but written at runtime by presets and the accent
+       picker; without these a restored preset unlocks its mode. */
+    pick('modeLocked', typeof raw.modeLocked === 'boolean' ? raw.modeLocked : undefined);
+    pick('accentOverride', HEX.test(raw.accentOverride || '') ? raw.accentOverride : undefined);
     pick('cursorUrl', (typeof raw.cursorUrl === 'string' && raw.cursorUrl.startsWith('data:image/')) ? raw.cursorUrl : '');
     if (raw.widgets && typeof raw.widgets === 'object') {
       out.widgets = { ...DEFAULT_SETTINGS.widgets };
@@ -488,7 +540,7 @@ const StorageManager = (() => {
         if (!imported || typeof imported !== 'object' || (!imported.data && !imported.settings)) {
           onDone && onDone(false); return;
         }
-        if (imported.data) data = refill(data, migrate(imported.data));
+        if (imported.data) data = refill(data, capPinnedBookmarks(migrate(imported.data)));
         if (imported.settings) settings = refill(settings, sanitizeSettings(imported.settings));
         saveImmediate();
         onDone && onDone(true);

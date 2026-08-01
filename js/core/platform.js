@@ -107,7 +107,11 @@ function wireFavicons(root) {
   imgs.forEach(img => {
     if (img.__faviconWired) return;
     img.__faviconWired = true;
-    if (!img.getAttribute('src')) { img.src = FAVICON_FALLBACK; markFallback(img); return; }
+    if (!img.getAttribute('src') || (img.complete && img.naturalWidth === 0 && img.src !== FAVICON_FALLBACK)) {
+      img.src = FAVICON_FALLBACK;
+      markFallback(img);
+      return;
+    }
     const fbs = (img.getAttribute('data-fav-fallbacks') || '').split('|').filter(Boolean);
     let i = 0;
     img.addEventListener('error', function onErr() {
@@ -358,6 +362,7 @@ const CustomSelect = (() => {
         if (e.key === 'ArrowUp') nextIdx = (currentIdx - 1 + options.length) % options.length;
         if (options[nextIdx]) {
           setValue(openSelect, options[nextIdx].dataset.value, true);
+          try { options[nextIdx].scrollIntoView({ block: 'nearest' }); } catch {}
         }
       } else if (e.key === 'Enter') {
         e.preventDefault();
