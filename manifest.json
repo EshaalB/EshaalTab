@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EshaalTab — New Tab & Bookmark Boards",
-  "version": "2.0.52",
+  "version": "2.0.53",
   "description": "A new tab built around your own boards: pin the links you use, save any page in one click, search everything with Ctrl+K.",
   "icons": {
     "16": "icons/icon16.png",
@@ -44,6 +44,12 @@
         "mac": "Alt+Shift+S"
       },
       "description": "Save the current page to EshaalTab Inbox"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "eshaaltab@eshaalb.com",
+      "strict_min_version": "109.0"
     }
   }
 }
