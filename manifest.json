@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EshaalTab — New Tab & Bookmark Boards",
-  "version": "2.0.51",
+  "version": "2.0.52",
   "description": "A new tab built around your own boards: pin the links you use, save any page in one click, search everything with Ctrl+K.",
   "icons": {
     "16": "icons/icon16.png",
@@ -28,20 +28,6 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'none'"
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "https://chatgpt.com/*",
-        "https://*.chatgpt.com/*",
-        "https://claude.ai/*",
-        "https://*.claude.ai/*",
-        "https://gemini.google.com/*",
-        "https://*.gemini.google.com/*"
-      ],
-      "js": ["js/extension/ai-autosend.js"],
-      "run_at": "document_idle"
-    }
-  ],
   "permissions": [
     "storage",
     "unlimitedStorage",
