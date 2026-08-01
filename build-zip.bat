@@ -15,10 +15,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "  $out = [Regex]::Replace($raw, '(\"version\"\s*:\s*\")\d+\.\d+\.\d+(\")', ('${1}' + $ver + '${2}'), 1);" ^
   "  [IO.File]::WriteAllText($path, $out, [Text.UTF8Encoding]::new($false));" ^
   "  $dest = '%NAME%-v' + $ver + '.zip';" ^
-  "  if (Test-Path $dest) { Remove-Item $dest -Force };" ^
-  "  $exclude = @('.git','.github','.claude','.gitignore','node_modules','dev', $dest, '*.zip', 'build-zip.bat','*.md');" ^
-  "  $items = Get-ChildItem -Force | Where-Object { $ex = $_.Name; -not ($exclude | Where-Object { $ex -like $_ }) };" ^
-  "  Compress-Archive -Path $items.FullName -DestinationPath $dest -Force;" ^
-  "  Write-Host ('Successfully built ' + $dest + ' (version ' + $ver + ')');" ^
+  "  $destPath = Join-Path (Get-Location) $dest;" ^
+  "  if (Test-Path $destPath) { Remove-Item $destPath -Force };" ^
+  "  Add-Type -AssemblyName 'System.IO.Compression';" ^
+  "  Add-Type -AssemblyName 'System.IO.Compression.FileSystem';" ^
+  "  $zipStream = [System.IO.File]::Open($destPath, [System.IO.FileMode]::Create);" ^
+  "  $archive = New-Object System.IO.Compression.ZipArchive($zipStream, [System.IO.Compression.ZipArchiveMode]::Create);" ^
+  "  $rootDir = (Get-Location).Path;" ^
+  "  $excludePatterns = @('.git', '.github', '.claude', '.gitignore', 'node_modules', 'dev', '*.zip', 'build-zip.bat', '*.md');" ^
+  "  Get-ChildItem -Path $rootDir -Recurse -File | ForEach-Object {" ^
+  "    $file = $_;" ^
+  "    $relPath = $file.FullName.Substring($rootDir.Length + 1).Replace('\', '/');" ^
+  "    $skip = $false;" ^
+  "    foreach ($pat in $excludePatterns) {" ^
+  "      if ($relPath -like $pat -or $relPath -like ('*/' + $pat) -or $file.Name -like $pat) { $skip = $true; break; }" ^
+  "    }" ^
+  "    if (-not $skip) {" ^
+  "      [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $relPath) | Out-Null;" ^
+  "    }" ^
+  "  };" ^
+  "  $archive.Dispose();" ^
+  "  $zipStream.Dispose();" ^
+  "  Write-Host ('Successfully built ' + $dest + ' with POSIX forward-slashes for Firefox & Chrome (version ' + $ver + ')');" ^
   "}"
 endlocal
