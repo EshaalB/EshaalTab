@@ -100,7 +100,7 @@ const SearchRenderer = (() => {
 
       const matchCmds = COMMANDS.filter(c => c.cmd.toLowerCase().includes(trimmed.toLowerCase()) || c.label.toLowerCase().includes(trimmed.toLowerCase()));
 
-      resultsContainer.innerHTML = matchCmds.map(c => `
+      setSafeHTML(resultsContainer, matchCmds.map(c => `
         <div class="search-result-item command-item" data-cmd="${c.cmd}">
           <div class="sr-cmd-icon">/</div>
           <div class="sr-info">
@@ -109,7 +109,7 @@ const SearchRenderer = (() => {
           </div>
           <span class="sr-kbd">${c.cmd}</span>
         </div>
-      `).join('');
+      `).join(''));
 
       resultsContainer.querySelectorAll('.command-item').forEach((el, i) => {
         el.addEventListener('click', () => matchCmds[i].action());
@@ -123,20 +123,20 @@ const SearchRenderer = (() => {
     }
 
     if (trimmed === '#') {
-      resultsContainer.innerHTML = `
+      setSafeHTML(resultsContainer, `
         <div class="search-hint">
           Type a tag name after <strong class="cmd-chip">#</strong> to filter bookmarks by tag (e.g. <strong>#code</strong>, <strong>#docs</strong>).
         </div>
-      `;
+      `);
       return;
     }
 
     if (!trimmed) {
-      resultsContainer.innerHTML = `
+      setSafeHTML(resultsContainer, `
         <div class="search-hint">
           Type to search bookmarks or type <strong class="cmd-chip">/focus</strong>, <strong class="cmd-chip">/mode</strong>, <strong class="cmd-chip">/new</strong>, <strong class="cmd-chip">/notes</strong> for commands.
         </div>
-      `;
+      `);
       return;
     }
 
@@ -178,13 +178,13 @@ const SearchRenderer = (() => {
     ].filter(s => s.items.length);
 
     if (!sections.length) {
-      resultsContainer.innerHTML = `<div class="search-no-results">No results for "${escapeHtml(trimmed)}"</div>`;
+      setSafeHTML(resultsContainer, `<div class="search-no-results">No results for "${escapeHtml(trimmed)}"</div>`);
       return;
     }
 
-    resultsContainer.innerHTML = sections.map(sec =>
+    setSafeHTML(resultsContainer, sections.map(sec =>
       `<div class="search-section-label">${sec.label}</div>` + sec.items.map(it => rowHtml(it, sec.kind)).join('')
-    ).join('');
+    ).join(''));
 
     const items = [...resultsContainer.querySelectorAll('.search-result-item')];
     if (selIndex >= items.length) selIndex = items.length ? items.length - 1 : -1;

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EshaalTab — New Tab & Bookmark Boards",
-  "version": "2.0.56",
+  "version": "2.0.57",
   "description": "A new tab built around your own boards: pin the links you use, save any page in one click, search everything with Ctrl+K.",
   "icons": {
     "16": "icons/icon16.png",
@@ -34,7 +34,6 @@
     "unlimitedStorage",
     "bookmarks",
     "tabs",
-    "favicon",
     "history",
     "contextMenus"
   ],

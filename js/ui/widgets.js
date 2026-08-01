@@ -38,10 +38,10 @@ const ToastSystem = (() => {
     toast.dataset.msg = message;
 
     const iconSvg = getToastIcon(type);
-    toast.innerHTML = `
+    setSafeHTML(toast, `
       <span class="toast-icon ${type === 'loading' ? 'is-spinning' : ''}">${iconSvg}</span>
       <span class="toast-text">${escapeHtml(message)}</span>
-    `;
+    `);
 
     container.appendChild(toast);
 
@@ -69,7 +69,7 @@ const ToastSystem = (() => {
         const textEl = toast.querySelector('.toast-text');
         if (iconEl) {
           iconEl.className = `toast-icon ${newType === 'loading' ? 'is-spinning' : ''}`;
-          iconEl.innerHTML = getToastIcon(newType);
+          setSafeHTML(iconEl, getToastIcon(newType));
         }
         if (textEl) textEl.textContent = newMsg;
         if (toast.__timer) clearTimeout(toast.__timer);
@@ -94,11 +94,11 @@ const ToastSystem = (() => {
     toast.dataset.msg = message;
 
     const iconSvg = getToastIcon(type);
-    toast.innerHTML = `
+    setSafeHTML(toast, `
       <span class="toast-icon">${iconSvg}</span>
       <span class="toast-text">${escapeHtml(message)}</span>
       <button class="toast-action-btn">${escapeHtml(actionLabel)}</button>
-    `;
+    `);
 
     container.appendChild(toast);
 
@@ -393,7 +393,7 @@ const WidgetsRenderer = (() => {
       }
       const name = (StorageManager.getSettings().displayName || '').trim();
       const fullText = name ? `${greetingText}, ${name}` : greetingText;
-      greetingEl.innerHTML = `<span class="greeting-icon" style="display:inline-flex;align-items:center;margin-right:6px;vertical-align:middle;">${icon(iconName, 18)}</span><span>${escapeHtml(fullText)}</span>`;
+      setSafeHTML(greetingEl, `<span class="greeting-icon" style="display:inline-flex;align-items:center;margin-right:6px;vertical-align:middle;">${icon(iconName, 18)}</span><span>${escapeHtml(fullText)}</span>`);
     }
 
     dateEl.textContent = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(now);
@@ -406,9 +406,9 @@ const WidgetsRenderer = (() => {
     }
     main = main.trim();
     const formattedMain = escapeHtml(main).replace(':', '<span class="clock-colon" aria-hidden="true">:</span>');
-    timeEl.innerHTML = period
+    setSafeHTML(timeEl, period
       ? `<span class="clock-digits">${formattedMain}</span><span class="clock-ampm">${escapeHtml(period)}</span>`
-      : `<span class="clock-digits">${formattedMain}</span>`;
+      : `<span class="clock-digits">${formattedMain}</span>`);
   }
 
   function initFocusStats() {
@@ -450,7 +450,7 @@ const WidgetsRenderer = (() => {
     const renderEngines = availableEngines.length ? availableEngines : Object.entries(ENGINES);
     let currentEngineKey = ENGINES[settings.searchEngine] ? settings.searchEngine : 'default';
 
-    bar.innerHTML = `
+    setSafeHTML(bar, `
       <div class="et-search-pill" style="position:relative;">
         <button class="et-search-engine" id="nsbEngLogo" data-no-tooltip aria-haspopup="listbox" aria-expanded="false">
           <span class="et-search-engine-name">${escapeHtml((ENGINES[currentEngineKey] || ENGINES.default).name)}</span>
@@ -593,7 +593,7 @@ const WidgetsRenderer = (() => {
 
     const settings = StorageManager.getSettings();
     if (!settings.weatherCity) {
-      weatherEl.innerHTML = `${icon('weatherSun', 16)} <span>Set City</span>`;
+      setSafeHTML(weatherEl, `${icon('weatherSun', 16)} <span>Set City</span>`);
       return;
     }
     const unit = settings.weatherUnit === 'f' ? 'f' : 'c';
@@ -610,7 +610,7 @@ const WidgetsRenderer = (() => {
     if (!weatherEl) return;
     const cleanCity = String(city || '').trim();
     if (!cleanCity) {
-      weatherEl.innerHTML = `${icon('weatherSun', 16)} <span>Set City in Settings</span>`;
+      setSafeHTML(weatherEl, `${icon('weatherSun', 16)} <span>Set City in Settings</span>`);
       return;
     }
     try {
@@ -619,7 +619,7 @@ const WidgetsRenderer = (() => {
         const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanCity)}&count=1&language=en&format=json`);
         const geoData = await geoRes.json();
         if (!geoData.results || !geoData.results.length) {
-          weatherEl.innerHTML = `${icon('weatherSun', 16)} <span>City Not Found</span>`;
+          setSafeHTML(weatherEl, `${icon('weatherSun', 16)} <span>City Not Found</span>`);
           return;
         }
         const { latitude, longitude, name } = geoData.results[0];
@@ -636,7 +636,7 @@ const WidgetsRenderer = (() => {
     } catch (e) {
       const stale = weatherCache.readingFor(city, unit);
       if (stale) renderWeatherData(stale.data, stale.name || city);
-      else weatherEl.innerHTML = `${icon('weatherSun', 16)} <span>Offline</span>`;
+      else setSafeHTML(weatherEl, `${icon('weatherSun', 16)} <span>Offline</span>`);
     }
   }
   function renderWeatherData(weatherData, name) {
@@ -653,7 +653,7 @@ const WidgetsRenderer = (() => {
     else if (code >= 71 && code <= 77) iconName = 'weatherSnow';
     else if (code >= 95) iconName = 'weatherStorm';
 
-    weatherEl.innerHTML = `${icon(iconName, 16)} <span>${temp}${unitSymbol} ${escapeHtml(name)}</span>`;
+    setSafeHTML(weatherEl, `${icon(iconName, 16)} <span>${temp}${unitSymbol} ${escapeHtml(name)}</span>`);
   }
 
   function applyWidgetVisibility() {
@@ -843,17 +843,17 @@ const WorkspaceWidget = (() => {
     const filteredApps = APPS.filter(([name]) => !query || name.toLowerCase().includes(query));
 
     if (filteredApps.length === 0) {
-      grid.innerHTML = `<div class="workspace-no-results">No matching apps found</div>`;
+      setSafeHTML(grid, `<div class="workspace-no-results">No matching apps found</div>`);
       return;
     }
 
     if (activeView === 'fav') {
       const favApps = filteredApps.filter(([name]) => favs.has(name));
       if (favApps.length === 0) {
-        grid.innerHTML = `<div class="workspace-no-results">No starred apps yet.<br/><span style="opacity:0.7; font-size:11px;">Hover over any app to star it!</span></div>`;
+        setSafeHTML(grid, `<div class="workspace-no-results">No starred apps yet.<br/><span style="opacity:0.7; font-size:11px;">Hover over any app to star it!</span></div>`);
         return;
       }
-      grid.innerHTML = favApps.map(app => renderAppItem(app, true)).join('');
+      setSafeHTML(grid, favApps.map(app => renderAppItem(app, true)).join(''));
     } else {
       if (!query) {
         const favApps = APPS.filter(([name]) => favs.has(name));
@@ -867,9 +867,9 @@ const WorkspaceWidget = (() => {
           html += `<div class="workspace-section-header">All Apps</div>`;
           html += otherApps.map(app => renderAppItem(app, false)).join('');
         }
-        grid.innerHTML = html;
+        setSafeHTML(grid, html);
       } else {
-        grid.innerHTML = filteredApps.map(app => renderAppItem(app, favs.has(app[0]))).join('');
+        setSafeHTML(grid, filteredApps.map(app => renderAppItem(app, favs.has(app[0]))).join(''));
       }
     }
 
@@ -1083,13 +1083,13 @@ const TodoWidget = (() => {
     if (badge) badge.textContent = pendingCount;
     if (clearBtn) clearBtn.style.display = doneCount > 0 ? 'inline-block' : 'none';
 
-    list.innerHTML = todos.length ? '' : '<div class="todo-pop-empty"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4; margin-bottom:8px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><br/>Add your first task below</div>';
+    setSafeHTML(list, todos.length ? '' : '<div class="todo-pop-empty"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4; margin-bottom:8px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><br/>Add your first task below</div>');
     todos.forEach((t, idx) => {
       const timeMatch = parseTaskTime(t.text);
       const timeHint = timeMatch ? ` <span style="opacity:0.5; font-size:11px;">⏰ ${String(timeMatch.h).padStart(2,'0')}:${String(timeMatch.min).padStart(2,'0')}</span>` : '';
       const row = document.createElement('div');
       row.className = `todo-pop-row ${t.done ? 'done' : ''} ${t.pinned ? 'pinned' : ''}`;
-      row.innerHTML = `
+      setSafeHTML(row, `
         <button class="todo-pop-check" title="${t.done ? 'Mark pending' : 'Mark done'}">
           ${t.done ? icon('check', 16) : ''}
         </button>
@@ -1206,13 +1206,13 @@ const ClipboardRenderer = (() => {
     if (badgeEl) badgeEl.textContent = `${snippets.length} saved`;
 
     if (snippets.length === 0) {
-      listEl.innerHTML = `
+      setSafeHTML(listEl, `
         <div class="et-clip-empty">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
           <span>No snippets saved yet. Paste a command or link above to save!</span>
-        </div>`;
+        </div>`);
     } else {
-      listEl.innerHTML = snippets.map(item => `
+      setSafeHTML(listEl, snippets.map(item => `
         <div class="et-clip-item" data-id="${item.id}">
           <div class="et-clip-item-main" style="display:flex; flex-direction:column; gap:2px; flex:1; overflow:hidden;">
             ${item.title ? `<span class="et-clip-item-title" style="font-weight:600; color:var(--text); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(item.title)}</span>` : ''}
@@ -1226,7 +1226,7 @@ const ClipboardRenderer = (() => {
             <button class="et-clip-del-btn" title="Delete snippet" aria-label="Delete snippet ${escapeHtml(item.title || item.label || item.text)}">&times;</button>
           </div>
         </div>
-      `).join('');
+      `).join(''));
     }
 
     if (!bound) {
@@ -1358,7 +1358,7 @@ const HomeRenderer = (() => {
       return;
     }
     const pinned = BookmarkManager.getPinned();
-    wrap.innerHTML = '';
+    setSafeHTML(wrap, '');
     wrap.style.display = 'flex';
 
     pinned.forEach(bm => {
@@ -1373,10 +1373,10 @@ const HomeRenderer = (() => {
       a.setAttribute('data-id', bm.id);
       a.title = `${bm.title}
 ${bm.url}`;
-      a.innerHTML = `
+      setSafeHTML(a, `
         <span class="dock-pin-icon"><img class="dock-pin-fav" ${faviconAttr(bm.url)} alt="" /></span>
         <span class="dock-pin-label">${escapeHtml(bm.title)}</span>
-      `;
+      `);
       wireFavicons(a);
 
       const menuBtn = document.createElement('button');
@@ -1384,7 +1384,7 @@ ${bm.url}`;
       menuBtn.className = 'dock-pin-menu-btn';
       menuBtn.setAttribute('aria-label', `Options for ${bm.title}`);
       menuBtn.setAttribute('title', 'Options');
-      menuBtn.innerHTML = '&#8942;';
+      menuBtn.textContent = '⋮';
 
       const showMenu = (e) => {
         e.preventDefault();
@@ -1408,12 +1408,15 @@ ${bm.url}`;
     add.type = 'button';
     add.className = 'dock-pin dock-pin-add';
     add.setAttribute('aria-label', 'Add a link and pin it to Home');
-    add.innerHTML = `
+    setSafeHTML(add, `
       <span class="dock-pin-icon">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </span>
       <span class="dock-pin-label">${pinned.length ? 'Add pin' : 'Pin a link'}</span>
-    `;
+    `);
+    add.addEventListener('click', showAddPinModal);
+    wrap.appendChild(add);
+  }
     add.addEventListener('click', showAddPinModal);
     wrap.appendChild(add);
   }

@@ -232,7 +232,7 @@ const SettingsRenderer = (() => {
     if (sheetReturnFocus && document.contains(sheetReturnFocus)) sheetReturnFocus.focus();
     sheetReturnFocus = null;
     const body = $('sidesheetBody');
-    if (body) body.innerHTML = '';
+    if (body) setSafeHTML(body, '');
   }
 
   function renderSideSheetContent() {
@@ -403,20 +403,37 @@ const SettingsRenderer = (() => {
                       <button class="wp-gallery-del" data-wp-del="${escapeHtml(w.value)}" title="Delete wallpaper">&times;</button>
                     </div>
                   `).join('')}
+                <div class="st-label" style="margin-bottom:6px;">Recent Wallpapers</div>
+                <div class="st-wp-gallery" id="stWpGallery">
+                  ${wallpapers.map(w => `
+                    <div class="st-wp-thumb ${mode === 'custom' && settings.backgroundValue === w.value ? 'active' : ''}" data-wp-type="${w.type}" data-wp-value="${escapeHtml(w.value)}" data-wp-thumb="${w.type}">
+                      <button class="st-wp-del-btn" data-wp-del="${escapeHtml(w.value)}" title="Delete wallpaper">&times;</button>
+                    </div>
+                  `).join('')}
                 </div>
-              </div>` : ''}
-            </div>
+              </div>
+            ` : ''}
+
+            ${mode === 'custom' && settings.backgroundType === 'video' ? `
+              <div style="border-top:1px solid var(--border-soft); padding-top:10px; display:flex; flex-direction:column; gap:8px;">
+                <div class="st-row">
+                  <label class="st-label">Mute Video Audio</label>
+                  <input type="checkbox" id="chkWpMuted" ${settings.wallpaperMuted !== false ? 'checked' : ''} />
+                </div>
+                <div class="st-row">
+                  <span class="st-label">Video Volume</span>
+                  <span class="st-val" id="lblWpVolume">${Math.round((settings.wallpaperVolume ?? 0) * 100)}%</span>
+                </div>
+                <input type="range" id="rngWpVolume" min="0" max="1" step="0.05" value="${settings.wallpaperVolume ?? 0}" style="width:100%; cursor:pointer;" />
+              </div>
+            ` : ''}
           </div>
 
-          <!-- Presets in / out -->
-          <div class="st-group-title">Share Preset</div>
+          <div class="st-group-title">Share &amp; Import Presets</div>
           <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; gap:8px;">
-              <button id="btnExportPresetCode" class="st-action-btn primary" style="flex:1;">Copy preset code</button>
-              <button id="btnExportPresetFile" class="st-action-btn" style="flex:1;">Export .json</button>
-            </div>
-            <div style="display:flex; gap:8px;">
-              <input type="text" id="inpImportPresetCode" class="st-input" placeholder="Paste preset code (ESH-…) or JSON" style="flex:1;" />
+            <button id="btnExportPresetCode" class="st-action-btn">Copy preset code to clipboard</button>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="inpImportPresetCode" class="st-input" placeholder="Paste preset JSON code" style="flex:1;" />
               <button id="btnImportPresetCode" class="st-action-btn" style="padding:8px 14px; flex-shrink:0;">Apply</button>
             </div>
             <button id="btnImportPresetFileTrigger" class="st-action-btn" style="width:100%;">Upload .json preset file</button>
@@ -426,12 +443,12 @@ const SettingsRenderer = (() => {
         </div>
       `;
 
-      body.innerHTML = html;
+      setSafeHTML(body, html);
       bindThemeEvents();
     } else if (activeTab === 'widgets') {
       const w = settings.widgets || {};
       const enabledEngs = settings.enabledEngines || StorageManager.DEFAULT_SETTINGS.enabledEngines;
-      body.innerHTML = `
+      setSafeHTML(body, `
         <div class="st-container">
           <div class="st-group-title">Identity</div>
           <div class="st-card">
@@ -530,11 +547,11 @@ const SettingsRenderer = (() => {
             <button id="stWeatherApplyBtn" class="st-action-btn primary">Save weather</button>
           </div>
         </div>
-      `;
+      `);
 
       bindWidgetEvents();
     } else if (activeTab === 'data') {
-      body.innerHTML = `
+      setSafeHTML(body, `
         <div class="st-container">
           <div class="st-group-title">Preferences</div>
           <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
@@ -604,11 +621,11 @@ const SettingsRenderer = (() => {
             </div>
           </div>
         </div>
-      `;
+      `);
 
       bindDataEvents();
     } else if (activeTab === 'help') {
-      body.innerHTML = renderHelp();
+      setSafeHTML(body, renderHelp());
     }
     CustomSelect.initAll(body);
     hydrateGalleryThumbs(body);

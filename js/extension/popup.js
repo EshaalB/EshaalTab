@@ -3,6 +3,13 @@
 
 var $ = window.$ || (id => document.getElementById(id));
 
+function setSafeHTML(el, html) {
+  if (!el) return;
+  const range = document.createRange();
+  const frag = range.createContextualFragment(html || '');
+  el.replaceChildren(frag);
+}
+
 function collectBoards(d) {
   if (!d) return [];
   if (Array.isArray(d.boards)) return d.boards.filter(b => (b.type || 'links') === 'links');
@@ -124,11 +131,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     : [{ value: 'new', label: 'Create Inbox Board' }];
 
   if (boardSelectContainer) {
-    boardSelectContainer.innerHTML = CustomSelect.render({
+    setSafeHTML(boardSelectContainer, CustomSelect.render({
       id: 'boardSelect',
       value: options[0].value,
       options
-    });
+    }));
     CustomSelect.init(boardSelectContainer);
   }
 

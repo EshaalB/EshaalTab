@@ -21,7 +21,7 @@ const ContextMenu = (() => {
   function show(x, y, boardId, bm) {
     init();
     const pinned = !!bm.pinnedToHome;
-    menuEl.innerHTML = `
+    setSafeHTML(menuEl, `
       <div class="board-menu-item" data-act="open"><span class="board-menu-icon">${icon('link', 16)}</span><span class="board-menu-label">Open in new tab</span></div>
       <div class="board-menu-item" data-act="incognito"><span class="board-menu-icon">${icon('incognito', 16)}</span><span class="board-menu-label">Open in incognito</span></div>
       <div class="board-menu-item" data-act="copy"><span class="board-menu-icon">${icon('copy', 16)}</span><span class="board-menu-label">Copy URL</span></div>
@@ -29,7 +29,7 @@ const ContextMenu = (() => {
       <div class="board-menu-item" data-act="pin"><span class="board-menu-icon">${icon('pin', 16)}</span><span class="board-menu-label">${pinned ? 'Unpin from Home' : 'Pin to Home'}</span></div>
       <div class="board-menu-item" data-act="edit"><span class="board-menu-icon">${icon('edit', 16)}</span><span class="board-menu-label">Edit link</span></div>
       <div class="board-menu-item danger" data-act="delete"><span class="board-menu-icon">${icon('trash', 16)}</span><span class="board-menu-label">Delete link</span></div>
-    `;
+    `);
     menuEl.querySelectorAll('.board-menu-item').forEach(item => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -80,7 +80,7 @@ const ContextMenu = (() => {
 
   function showBoardMenu(x, y, board) {
     init();
-    menuEl.innerHTML = `
+    setSafeHTML(menuEl, `
       <div class="board-menu-item" data-act="rename"><span class="board-menu-icon">${icon('edit', 16)}</span><span class="board-menu-label">Rename Board</span></div>
       <div class="board-menu-item" data-act="addlink"><span class="board-menu-icon">+</span><span class="board-menu-label">Add Link</span></div>
       <div class="board-menu-item" data-act="openall"><span class="board-menu-icon">${icon('grid', 16)}</span><span class="board-menu-label">Open all in tabs</span></div>
@@ -89,7 +89,7 @@ const ContextMenu = (() => {
       <div class="board-menu-item" data-act="movedown"><span class="board-menu-icon">↓</span><span class="board-menu-label">Move down</span></div>
       <div class="board-menu-sep"></div>
       <div class="board-menu-item danger" data-act="delete"><span class="board-menu-icon">${icon('trash', 16)}</span><span class="board-menu-label">Delete Board</span></div>
-    `;
+    `);
     menuEl.querySelectorAll('.board-menu-item').forEach(item => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -334,13 +334,13 @@ const BoardRenderer = (() => {
       const boards = BoardManager.getAll();
 
       if (!boards || boards.length === 0) {
-        boardsArea.innerHTML = `
+        setSafeHTML(boardsArea, `
           <div class="boards-empty">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 24px; opacity: 0.8;"><rect x="3" y="3" width="20" height="20" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
             <div class="boards-empty-title">No boards yet</div>
             <div class="boards-empty-body">Organize your bookmarks into custom boards. Pin the ones you use most to your Home page.</div>
             <button id="btnCreateFirstBoard" class="boards-empty-btn"><span>+</span> Add Board</button>
-          </div>`;
+          </div>`);
         return;
       }
 
@@ -394,9 +394,9 @@ const BoardRenderer = (() => {
       addTile.id = 'btnColAddBoard';
       addTile.setAttribute('role', 'button');
       addTile.setAttribute('tabindex', '0');
-      addTile.innerHTML = `
+      setSafeHTML(addTile, `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span>+ Add Board</span>`;
+        <span>+ Add Board</span>`);
       colElements[minCol].appendChild(addTile);
 
       wireFavicons(gridContainer);
@@ -410,7 +410,7 @@ const BoardRenderer = (() => {
     acc.setAttribute('data-id', board.id);
     acc.setAttribute('draggable', 'true');
 
-    acc.innerHTML = `
+    setSafeHTML(acc, `
       <div class="et-board-card-header" role="button" tabindex="0"
            aria-expanded="${isExpanded}" aria-label="Toggle board ${escapeHtml(board.name)}">
         <div class="et-board-card-left">
@@ -438,7 +438,7 @@ const BoardRenderer = (() => {
           `}
         </div>
       </div>
-    `;
+    `);
     return acc;
   }
 
@@ -598,7 +598,7 @@ function showCustomModal(title, bodyHtml, onOk, okBtnText = 'Save', danger = fal
       else if (e.key === 'Tab') trapFocus(e, overlay);
     });
   }
-  overlay.innerHTML = `
+  setSafeHTML(overlay, `
     <div class="et-modal-card">
       <h3 class="dialog-modal-title" id="modalTitle">${escapeHtml(title)}</h3>
       <div class="modal-body-content">${bodyHtml}</div>
@@ -606,7 +606,7 @@ function showCustomModal(title, bodyHtml, onOk, okBtnText = 'Save', danger = fal
         <button id="modalCancelBtn" class="et-modal-btn">Cancel</button>
         <button id="modalOkBtn" class="et-modal-btn primary${danger ? ' danger' : ''}">${escapeHtml(okBtnText)}</button>
       </div>
-    </div>`;
+    </div>`);
   function close() {
     overlay.remove();
     if (returnFocusTo && document.contains(returnFocusTo)) returnFocusTo.focus();

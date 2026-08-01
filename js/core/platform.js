@@ -21,6 +21,13 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+function setSafeHTML(el, html) {
+  if (!el) return;
+  const range = document.createRange();
+  const frag = range.createContextualFragment(html || '');
+  el.replaceChildren(frag);
+}
+
 function safeHref(url) {
   if (!url) return '#';
   const s = String(url).trim();
@@ -171,7 +178,7 @@ const CustomTooltip = (() => {
     if (!text) { hide(); return; }
 
     activeTarget = target;
-    tooltipEl.innerHTML = formatTooltipText(text);
+    setSafeHTML(tooltipEl, formatTooltipText(text));
     tooltipEl.classList.add('visible');
 
     const rect = target.getBoundingClientRect();
