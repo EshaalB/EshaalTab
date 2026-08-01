@@ -47,13 +47,7 @@ const SettingsRenderer = (() => {
   }
 
   async function ensureHostAccess(url) {
-    if (!(HAS_EXT && EXT.permissions && EXT.permissions.request)) return false;
-    let origin;
-    try { origin = new URL(url).origin + '/*'; } catch { return false; }
-    try {
-      if (await EXT.permissions.contains({ origins: [origin] })) return true;
-      return !!(await EXT.permissions.request({ origins: [origin] }));
-    } catch { return false; }
+    return true;
   }
 
   const darkMedia = window.matchMedia('(prefers-color-scheme: dark)');
