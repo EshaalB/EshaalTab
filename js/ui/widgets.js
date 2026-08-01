@@ -468,7 +468,7 @@ const WidgetsRenderer = (() => {
           ${icon('search', 16)}
           <span class="search-btn-label">Search</span>
         </button>
-      </div>`;
+      </div>`);
 
     const input = $('nsbInput');
     const logoBtn = $('nsbEngLogo');
@@ -1099,7 +1099,7 @@ const TodoWidget = (() => {
         <button class="todo-pop-pin ${t.pinned ? 'active' : ''}" title="${t.pinned ? 'Unpin task' : 'Pin task to top'}">
           ${icon('pin', 16)}
         </button>
-        <button class="todo-pop-del" title="Delete task">&times;</button>`;
+        <button class="todo-pop-del" title="Delete task">&times;</button>`);
 
       row.querySelector('.todo-pop-check').addEventListener('click', (e) => { e.stopPropagation(); TodoManager.toggle(t.id); render(); });
       row.querySelector('.todo-pop-pin').addEventListener('click', (e) => { e.stopPropagation(); TodoManager.togglePin(t.id); render(); });
@@ -1414,9 +1414,6 @@ ${bm.url}`;
       </span>
       <span class="dock-pin-label">${pinned.length ? 'Add pin' : 'Pin a link'}</span>
     `);
-    add.addEventListener('click', showAddPinModal);
-    wrap.appendChild(add);
-  }
     add.addEventListener('click', showAddPinModal);
     wrap.appendChild(add);
   }
