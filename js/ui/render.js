@@ -220,15 +220,33 @@ const BoardRenderer = (() => {
 
   const promptNewBoard = (col = null) =>
     showPrompt('New Board', 'Board name:', 'Bookmarks', (val) => {
-      if (val) { BoardManager.addBoard(val, col); renderBoards(); }
+      // Immediate, not debounced: this is the exact "I just made this, why did
+      // it vanish" moment if a refresh or a second new tab lands first.
+      if (val) { BoardManager.addBoard(val, col); StorageManager.saveImmediate(); renderBoards(); }
     });
+
+  let lastNumCols = null;
+  // The expandedBoards -> collapsedBoards migration below must fire at most
+  // once per page load. Without this guard, a cross-tab storage reload that
+  // lands mid-write can bring back a pre-migration snapshot; re-running the
+  // migration then re-saves, which can trigger another reload, which can
+  // bring back the old snapshot again -- a real ping-pong loop that reads as
+  // the accordion's expand/collapse state flickering non-stop.
+  let boardsMigrated = false;
 
   function init() {
     let resizeT = null;
     window.addEventListener('resize', () => {
       clearTimeout(resizeT);
       resizeT = setTimeout(() => {
-        if ($('boardsView')?.classList.contains('active')) renderBoards();
+        if ($('boardsView')?.classList.contains('active')) {
+          const uiScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')) || 1;
+          const colW = Math.round((StorageManager.getSettings().boardWidth || 270) * uiScale);
+          const areaWidth = boardsArea.clientWidth || (window.innerWidth - 80) || 1200;
+          const numCols = Math.max(1, Math.floor((areaWidth + 16) / (colW + 16)));
+          if (lastNumCols === numCols) return;
+          renderBoards();
+        }
       }, 150);
     });
 
@@ -345,10 +363,11 @@ const BoardRenderer = (() => {
       }
 
       const data = StorageManager.getData();
-      if (Array.isArray(data.expandedBoards) && !Array.isArray(data.collapsedBoards)) {
+      if (!boardsMigrated && Array.isArray(data.expandedBoards) && !Array.isArray(data.collapsedBoards)) {
+        boardsMigrated = true;
         data.collapsedBoards = boards.filter(b => !data.expandedBoards.includes(b.id)).map(b => b.id);
         delete data.expandedBoards;
-        StorageManager.save();
+        StorageManager.saveImmediate();
       }
       const collapsedBoards = Array.isArray(data.collapsedBoards) ? data.collapsedBoards : [];
 
@@ -363,6 +382,7 @@ const BoardRenderer = (() => {
 
       const areaWidth = boardsArea.clientWidth || (window.innerWidth - 80) || 1200;
       const numCols = Math.max(1, Math.floor((areaWidth + 16) / (colW + 16)));
+      lastNumCols = numCols;
 
       const colElements = [];
       for (let i = 0; i < numCols; i++) {
@@ -394,9 +414,7 @@ const BoardRenderer = (() => {
       addTile.id = 'btnColAddBoard';
       addTile.setAttribute('role', 'button');
       addTile.setAttribute('tabindex', '0');
-      setSafeHTML(addTile, `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span>+ Add Board</span>`);
+      setSafeHTML(addTile, `<span>+ Add Board</span>`);
       colElements[minCol].appendChild(addTile);
 
       wireFavicons(gridContainer);
@@ -420,21 +438,30 @@ const BoardRenderer = (() => {
           <span class="et-board-card-title">${escapeHtml(board.name)}</span>
         </div>
         <div class="et-board-card-right">
-          <button class="et-board-add-link-btn" title="Add Link">+</button>
-          <button class="et-board-menu-btn" title="Options">&#8942;</button>
+          <button class="et-board-add-link-btn" aria-label="Add Link">+</button>
+          <button class="et-board-menu-btn" aria-label="Options">&#8942;</button>
         </div>
       </div>
       <div class="et-board-card-body" style="display: ${isExpanded ? 'block' : 'none'};">
         <div class="et-board-tiles">
-          ${board.bookmarks && board.bookmarks.length > 0 ? board.bookmarks.map(bm => `
+          ${board.bookmarks && board.bookmarks.length > 0 ? board.bookmarks.map(bm => {
+            const rawTitle = (bm.title || '').trim();
+            const displayTitle = rawTitle.length > 9 ? rawTitle.slice(0, 9) + '…' : rawTitle;
+            return `
               <div class="et-board-tile${bm.pinnedToHome ? ' is-pinned' : ''}" data-id="${bm.id}" draggable="true" role="button" tabindex="0"
-                   aria-label="${escapeHtml(bm.title)}${bm.pinnedToHome ? ', pinned to Home' : ''}" title="${escapeHtml(bm.title)} (${escapeHtml(bm.url)})">
-                <img class="et-board-tile-icon" ${faviconAttr(bm.url)} alt="" loading="lazy" />
-                <span class="et-board-tile-title">${escapeHtml(bm.title)}</span>
+                   aria-label="${escapeHtml(rawTitle)}${bm.pinnedToHome ? ', pinned to Home' : ''}" title="${escapeHtml(bm.title)} (${escapeHtml(bm.url)})">
+                <img class="et-board-tile-icon" ${faviconAttr(bm.url)} alt="" />
+                <span class="et-board-tile-title" title="${escapeHtml(bm.title)}">${escapeHtml(displayTitle)}</span>
                 ${bm.pinnedToHome ? `<span class="board-pin-badge" aria-hidden="true">${icon('pin', 11)}</span>` : ''}
               </div>
-            `).join('') : `
-            <div class="et-board-empty">Add a link</div>
+            `;
+          }).join('') : `
+            <div class="et-board-empty">
+              <button class="et-board-empty-btn" type="button" title="Add Link">
+                <span class="empty-btn-plus">+</span>
+                <span>Add Link</span>
+              </button>
+            </div>
           `}
         </div>
       </div>
@@ -465,10 +492,8 @@ const BoardRenderer = (() => {
       }
       let finalUrl = url;
       if (!/^https?:\/\//i.test(finalUrl)) finalUrl = 'https://' + finalUrl;
-      /* Tags are set from the Edit Link dialog instead -- adding a link is the
-         hot path and the extra field slowed it down for something most links
-         never use. */
       if (BookmarkManager.add(boardId, title, finalUrl, [])) {
+        StorageManager.saveImmediate();
         renderBoards();
         HomeRenderer.renderPinned();
       }
@@ -527,6 +552,7 @@ const ViewController = (() => {
       showPrompt('New Board', 'Board name:', 'Bookmarks', (val) => {
         if (val) {
           BoardManager.addBoard(val);
+          StorageManager.saveImmediate();
           BoardRenderer.renderBoards();
           HomeRenderer.renderPinned();
         }
@@ -580,7 +606,7 @@ function showConfirm(title, messageText, onConfirm) {
   }, 'Confirm', true);
 }
 
-function showCustomModal(title, bodyHtml, onOk, okBtnText = 'Save', danger = false) {
+function showCustomModal(title, bodyHtml, onOk, okBtnText = 'Save', danger = false, onCancel = null) {
   const returnFocusTo = document.activeElement;
   let overlay = $('appDynamicModal');
   if (!overlay) {
@@ -611,7 +637,7 @@ function showCustomModal(title, bodyHtml, onOk, okBtnText = 'Save', danger = fal
     overlay.remove();
     if (returnFocusTo && document.contains(returnFocusTo)) returnFocusTo.focus();
   }
-  $('modalCancelBtn').addEventListener('click', close);
+  $('modalCancelBtn').addEventListener('click', () => { if (onCancel) onCancel(); close(); });
   $('modalOkBtn').addEventListener('click', () => { if (onOk() !== false) close(); });
   (overlay.querySelector('input, textarea, select') || $('modalOkBtn'))?.focus();
 }

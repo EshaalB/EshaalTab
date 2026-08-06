@@ -3,6 +3,16 @@
    --board-* are also written at runtime by settings.js from the generated palette.
    --ui-scale steps up on large displays; container widths multiply by it. */
 
+/* Local variable fonts. One WOFF2 per family covers every UI weight from
+   400-700, keeps every offered font functional offline, and avoids leaking a
+   new-tab open to a third-party font host. */
+@font-face { font-family: 'Inter'; src: url('../fonts/inter-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'Outfit'; src: url('../fonts/outfit-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url('../fonts/jetbrains-mono-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'Lexend'; src: url('../fonts/lexend-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'Lora'; src: url('../fonts/lora-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'Roboto Slab'; src: url('../fonts/roboto-slab-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
+
 @font-face {
   font-family: 'Caveat';
   font-style: normal;
@@ -59,7 +69,10 @@ body {
 
 input::placeholder,
 textarea::placeholder {
-  color: rgba(255, 255, 255, 0.42) !important;
+  /* Was a hardcoded white at 42% opacity, so on a light-mode near-white
+     background the placeholder text was nearly invisible. --text-dim already
+     flips per theme (light body sets a dark, low-opacity value). */
+  color: var(--text-dim) !important;
   font-weight: 400 !important;
   opacity: 1 !important;
   text-shadow: none !important;
@@ -87,9 +100,14 @@ textarea::placeholder {
   --e3: 0 8px 24px rgba(0, 0, 0, 0.38);
   --e4: 0 16px 42px rgba(0, 0, 0, 0.52);
   --e-sheet: -8px 0 32px rgba(0, 0, 0, 0.45);
-  --glass: blur(16px) saturate(1.4);
-  --glass-lg: blur(24px) saturate(1.5);
+  --glass: none;
+  --glass-lg: none;
   --hair: 1px solid var(--border-soft);
+
+  /* Matches the values that used to be hardcoded into the clock's text-shadow;
+     settings.js overrides these once loaded. */
+  --wp-shadow-opacity: 0.6;
+  --wp-shadow-blur: 20px;
 
   --accent-color: #ffffff;
   --accent-contrast: #14151a;
@@ -110,6 +128,18 @@ textarea::placeholder {
   --surface-card: rgba(var(--board-rgb), var(--board-opacity, 0.08));
   --surface-2: rgba(var(--board-rgb), calc(var(--board-opacity, 0.08) * 1.2 + 0.02));
   --surface-3: rgba(var(--board-rgb), calc(var(--board-opacity, 0.08) * 1.5 + 0.05));
+
+  /* Per-region transparency. Each defaults to the board value so an install
+     that never touches these looks exactly as before, but the topbar/search,
+     the widget icon buttons and the notes surface can each be dialled
+     independently of the boards. */
+  --topbar-opacity: var(--board-opacity, 0.08);
+  --notes-opacity: var(--board-opacity, 0.08);
+  --surface-topbar: rgba(var(--board-rgb), calc(var(--topbar-opacity) * 1.2 + 0.02));
+  --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
+  /* Alpha of the filled box behind a widget icon. Applied to the background
+     colour, never to the element, so the glyph stays crisp as the box fades. */
+  --widget-bg-alpha: 0.95;
   --text: rgba(255, 255, 255, 0.95);
   --text-dim: rgba(255, 255, 255, 0.65);
   --text-faint: rgba(255, 255, 255, 0.35);
@@ -133,7 +163,7 @@ textarea::placeholder {
 
   --glass-fill: rgba(16, 18, 26, 0.55);
   --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-blur: blur(22px) saturate(1.5);
+  --glass-blur: none;
   --scrim: rgba(0, 0, 0, 0.55);
 
   --page-bg: #0d1117;
@@ -147,7 +177,7 @@ textarea::placeholder {
 
   --ui-scale: 1;
  
-  --fs-xs: calc(12px * var(--ui-scale));
+  --fs-xs: calc(13px * var(--ui-scale));
   --fs-sm: calc(14px * var(--ui-scale));
   --fs-base: calc(15px * var(--ui-scale));
   --fs-md: calc(16px * var(--ui-scale));
@@ -187,7 +217,6 @@ textarea::placeholder {
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --texture-paper: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.035'/%3E%3C/svg%3E");
 
   --success: #22c55e;
@@ -226,8 +255,15 @@ body.theme-light {
   --surface: rgba(0, 0, 0, 0.04);
   --surface-2: rgba(0, 0, 0, 0.06);
   --surface-3: rgba(0, 0, 0, 0.10);
+  /* Light mode tints with black, not white, so the same opacity sliders read as
+     "more visible" in both themes instead of vanishing against a pale page. */
+  --surface-topbar: rgba(0, 0, 0, calc(var(--topbar-opacity) * 0.8 + 0.02));
+  --surface-notes: rgba(0, 0, 0, calc(var(--notes-opacity) * 0.8));
   --surface-base: #f4f6f8;
-  --surface-card: rgba(255, 255, 255, 0.85);
+  /* Was a fixed 0.95, so the Boards transparency slider did nothing whatsoever
+     in light mode. Scaled and clamped so a card stays legible on a pale page
+     across the slider's full range instead of disappearing at low values. */
+  --surface-card: rgba(255, 255, 255, clamp(0.15, calc(0.35 + var(--board-opacity, 0.08) * 3), 0.96));
   --surface-chip: rgba(0, 0, 0, 0.05);
   --border-tactile: 1px solid var(--border-soft);
   --border-tactile-accent: 1px solid var(--accent-color);

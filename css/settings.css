@@ -130,26 +130,62 @@ body.radius-sharp .et-set-panel {
 }
 
 .st-group-title, .et-set-group {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
-  margin-top: var(--sp-2);
-  margin-bottom: 2px;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: capitalize;
+  letter-spacing: 0;
+  color: var(--accent-color);
+  margin-top: var(--sp-4);
+  margin-bottom: var(--sp-2);
 }
 
 .st-card, .et-set-card {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
   background: var(--surface-2);
   border: 1px solid var(--border-soft);
   border-radius: min(var(--r-lg), 16px);
-  padding: var(--sp-4) var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
   box-shadow: var(--e1);
   overflow: visible;
 }
+
+/* Named band inside a card, so a long accordion reads as a few labelled
+   clusters instead of one undifferentiated column of rows. */
+.st-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-top: var(--sp-3);
+  margin-top: var(--sp-1);
+  border-top: 1px solid var(--border-soft);
+}
+.st-subgroup:first-child {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: none;
+}
+.st-subhead {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: var(--sp-1);
+}
+.st-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-1) 0;
+}
+.st-slider-row .se-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.st-slider-row .se-slider { width: 100%; }
 
 .st-card:has(.et-custom-select.open),
 .st-row:has(.et-custom-select.open) {
@@ -162,12 +198,13 @@ body.radius-sharp .et-set-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--sp-3);
+  gap: var(--sp-4);
+  min-height: calc(30px * var(--ui-scale));
 }
 
 .st-label, .et-set-label {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text);
 }
 
@@ -411,10 +448,13 @@ body.radius-sharp .et-set-panel {
   color: var(--text-dim);
 }
 
+/* Compact swatch grid, not a row of full-width pill buttons -- a color dot
+   plus a small caption, wrapping as many per row as fit. The name is also on
+   the button's title attribute so it still shows on hover/focus. */
 .preset-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--sp-1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
 }
 .preset-sub {
   font-size: var(--fs-xs);
@@ -425,55 +465,48 @@ body.radius-sharp .et-set-panel {
   margin: var(--sp-2) 0 var(--sp-1);
 }
 .preset-sub:first-child { margin-top: 0; }
-.preset-btn {
+.preset-swatch {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--sp-1);
-  min-width: 0;
-  padding: var(--sp-1);
+  gap: 3px;
+  width: 56px;
+  padding: 4px 2px;
   border-radius: var(--r-sm);
-  border: 1px solid var(--border-soft);
-  background: var(--surface-2);
-  color: var(--text);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
   font-family: inherit;
   font-size: var(--fs-xs);
   font-weight: var(--fw-medium);
   cursor: pointer;
-  text-align: left;
   transition: border-color var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out);
 }
-.preset-btn:hover {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
+.preset-swatch:hover {
+  background: var(--surface-2);
+  color: var(--text);
 }
-.preset-btn.selected {
+.preset-swatch.selected {
   border-color: var(--accent-color);
-  box-shadow: inset 0 0 0 1px var(--accent-color);
-  background: color-mix(in srgb, var(--accent-color) 16%, transparent);
+  background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+  color: var(--text);
   font-weight: var(--fw-semi);
 }
-.preset-btn {
-  position: relative;
-}
-.preset-dots {
-  display: inline-flex;
-  flex-shrink: 0;
-}
-.preset-dots i {
-  width: 9px;
-  height: 9px;
+.preset-swatch-dot {
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 1px solid var(--border-soft);
+  flex-shrink: 0;
 }
-.preset-dots i + i {
-  margin-left: -5px;
+.preset-swatch.selected .preset-swatch-dot {
+  box-shadow: 0 0 0 2px var(--page-bg, #0d1117), 0 0 0 3px var(--accent-color);
 }
-.preset-name {
+.preset-swatch-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
+  max-width: 100%;
 }
 
 .st-group-note {
@@ -560,3 +593,46 @@ body.radius-sharp .et-set-panel {
 .wp-gallery-item:hover .wp-gallery-del,
 .wp-gallery-del:focus-visible { opacity: 1; }
 .wp-gallery-del:hover { background: #ef4444; }
+
+/* Accordion Specific Settings */
+.st-accordion {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--sp-4);
+}
+
+.st-accordion:last-child {
+  margin-bottom: 0;
+}
+
+.st-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 0 var(--sp-2) 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.st-accordion-chevron {
+  color: var(--text-dim, rgba(255, 255, 255, 0.6));
+  transition: transform 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.st-accordion-header:hover .st-accordion-chevron {
+  color: var(--accent-color, #ffffff);
+}
+
+.st-accordion.is-expanded .st-accordion-chevron {
+  transform: rotate(180deg);
+}
+
+.st-accordion-body {
+  padding: var(--sp-1) 0;
+}

@@ -26,6 +26,23 @@
   opacity: 1;
 }
 
+/* Optional dark scrim over the wallpaper, independent of the text-shadow
+   controls -- a bright/white wallpaper can wash out the top-bar icons even
+   when clock/greeting text is perfectly legible via shadow alone. */
+#wallpaper-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: #000;
+  opacity: 0;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+body.wallpaper-mode.wp-overlay-on #wallpaper-overlay {
+  opacity: var(--wp-overlay-opacity, 0.35);
+}
+
 body:not(.wallpaper-mode)::before {
   content: "";
   position: fixed;
@@ -37,6 +54,32 @@ body:not(.wallpaper-mode)::before {
   mix-blend-mode: overlay;
 }
 
+/* A flat fill reads as empty next to a photo, because a real surface is never
+   one uniform value. Three wide, very low-contrast pools of the seed colour --
+   plus a soft vignette -- give the eye some falloff to travel across without
+   introducing a second hue or a visible gradient band. Derived from the accent
+   so it re-tints itself with every preset instead of being a fixed look. */
+body.solid-mode.ambient-on::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 55% at 12% 8%,  color-mix(in srgb, var(--accent-color) 20%, transparent), transparent 72%),
+    radial-gradient(60% 50% at 88% 18%, color-mix(in srgb, var(--accent-color) 12%, transparent), transparent 70%),
+    radial-gradient(65% 55% at 72% 95%, color-mix(in srgb, var(--accent-color) 16%, transparent), transparent 72%),
+    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.20) 100%);
+}
+
+body.theme-light.solid-mode.ambient-on::after {
+  background:
+    radial-gradient(70% 55% at 12% 8%,  color-mix(in srgb, var(--accent-color) 26%, transparent), transparent 72%),
+    radial-gradient(60% 50% at 88% 18%, color-mix(in srgb, var(--accent-color) 16%, transparent), transparent 70%),
+    radial-gradient(65% 55% at 72% 95%, color-mix(in srgb, var(--accent-color) 22%, transparent), transparent 72%),
+    radial-gradient(120% 90% at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.07) 100%);
+}
+
 .app {
   position: relative;
   z-index: 1;
@@ -44,6 +87,15 @@ body:not(.wallpaper-mode)::before {
   display: flex;
   flex-direction: column;
   padding: 28px 0 var(--sp-6) 0;
+  visibility: hidden;
+}
+
+/* The static shell exists before storage-backed settings and renderers are
+   ready. Keep it out of the first paint so users never see a half-built topbar
+   or the wrong widget visibility for a frame; the boot-painted background
+   remains visible while initialization completes. */
+body.loaded .app {
+  visibility: visible;
 }
 
 .et-topbar {
@@ -79,23 +131,43 @@ body:not(.wallpaper-mode)::before {
 .et-topbar-btn {
   width: calc(38px * var(--ui-scale));
   height: calc(38px * var(--ui-scale));
-  border-radius: var(--r-pill);
+  border-radius: var(--r-md, 10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  /* Only the box fades, never the glyph: element-level opacity would dim the
+     icon itself and make it hard to read. The alpha lives in the background
+     colour so the icon stays fully opaque at any setting. */
+  background: rgba(var(--accent-rgb, 99, 102, 241), var(--widget-bg-alpha, 0.95));
+  color: var(--accent-contrast, #ffffff);
+  /* No border, and the shadow fades with the same alpha: at 0% the box has to
+     disappear completely, and a border or a leftover drop shadow would still
+     outline where it used to be. */
   border: none;
   outline: none;
-  color: var(--text);
-  opacity: 0.75;
   cursor: pointer;
-  box-shadow: none;
-  transition: opacity var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, calc(var(--widget-bg-alpha, 0.95) * 0.22));
+  transition: opacity var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out), border-radius var(--dur-2) var(--ease-out);
   padding: 0;
 }
 
 .et-topbar-btn:hover {
   opacity: 1;
+  background: rgba(var(--accent-rgb, 99, 102, 241), var(--widget-bg-alpha, 0.95));
+  color: var(--accent-contrast, #ffffff);
+  transform: translateY(-1px);
+}
+
+body.theme-light .et-topbar-btn {
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, calc(var(--widget-bg-alpha, 0.95) * 0.12));
+}
+
+.greeting-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  vertical-align: middle;
 }
 
 .et-topbar-btn svg {
@@ -113,12 +185,10 @@ body:not(.wallpaper-mode)::before {
   align-items: center;
   gap: 4px;
   padding: 4px;
-  background: rgba(var(--board-rgb, 18, 22, 32), var(--board-opacity, 0.08));
+  background: var(--surface-topbar);
   border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.14));
   border-radius: var(--r-pill);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  backdrop-filter: var(--glass-lg);
-  -webkit-backdrop-filter: var(--glass-lg);
 }
 
 @media (min-width: 768px) {
@@ -158,6 +228,20 @@ body:not(.wallpaper-mode)::before {
   color: var(--accent-contrast, #ffffff) !important;
   font-weight: 600;
   opacity: 1 !important;
+}
+
+body.theme-light .et-main-tab:not(.active) {
+  color: var(--text-dim, #475569) !important;
+}
+
+body.theme-light .et-main-tab:not(.active):hover {
+  color: var(--text, #0f172a) !important;
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-light .et-search-pill,
+body.theme-light .et-main-tabs {
+  border-color: rgba(0, 0, 0, 0.14) !important;
 }
 
 .et-view {
@@ -231,34 +315,43 @@ body:not(.wallpaper-mode)::before {
   box-shadow: none;
 }
 
+/* Weight and tracking come from the chosen clock face, not from here -- a thin
+   iOS-style clock and a heavy Orbitron one are the same element with different
+   variables. Hardcoding weight:600 here used to flatten every face to the same
+   thickness, which is why they all looked like "generic thick ones". */
 .et-home-time {
   display: inline-flex;
   align-items: baseline;
   justify-content: center;
-  font-family: 'Orbitron', var(--font-app, sans-serif);
+  font-family: var(--clock-font, 'Orbitron', var(--font-app, sans-serif));
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-display);
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-weight: var(--clock-weight, 600);
+  letter-spacing: var(--clock-tracking, 0.02em);
   line-height: 1;
 }
 
-body.font-handwriting .et-home-time {
-  font-family: 'Caveat', 'Patrick Hand', 'Comic Sans MS', cursive;
-  font-size: clamp(64px, 8.5vw, calc(110px * var(--ui-scale)));
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 0.95;
+/* Only the clock digits/colon get a shadow regardless of wallpaper -- that was
+   the explicit ask for the clock specifically. Everything else that reads
+   these same two variables (greeting, date, weather, pinned labels, further
+   down this file) keeps its existing wallpaper-only gating, so one pair of
+   sliders controls all of them without turning shadows on where there is no
+   wallpaper to need them for. */
+.et-home-clock .et-home-time,
+.et-home-clock .clock-colon {
+  text-shadow: 0 4px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.6));
 }
 
-body:not(.wallpaper-mode) *,
-body.solid-mode * {
+body:not(.wallpaper-mode) *:not(.et-home-clock .et-home-time):not(.et-home-clock .clock-colon),
+body.solid-mode *:not(.et-home-clock .et-home-time):not(.et-home-clock .clock-colon) {
   text-shadow: none !important;
   box-shadow: none !important;
 }
 
+/* --clock-color is only set when the user picks one explicitly; unset means
+   "follow the accent", which is the default look. */
 .clock-digits {
-  color: var(--text);
+  color: var(--clock-color, color-mix(in srgb, var(--accent-color) 75%, var(--text)));
 }
 
 /* Same colour as the digits. It was accent-coloured, which made the separator
@@ -266,14 +359,7 @@ body.solid-mode * {
 .clock-colon {
   display: inline-block;
   margin: 0 2px;
-  animation: clock-colon-bounce 1.5s ease-in-out infinite alternate;
-  color: var(--text);
-}
-
-@keyframes clock-colon-bounce {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.85); }
-  100% { opacity: 1; transform: scale(1.05); }
+  color: var(--clock-color, color-mix(in srgb, var(--accent-color) 75%, var(--text)));
 }
 
 .clock-ampm {
@@ -286,20 +372,20 @@ body.solid-mode * {
 }
 
 .et-home-greeting {
-  font-size: var(--fs-lg);
-  font-weight: var(--fw-medium);
+  font-size: clamp(24px, 2.5vw, 36px);
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text);
-  opacity: 0.85;
+  opacity: 0.95;
   margin-bottom: var(--sp-2);
   text-shadow: none;
 }
 
-body.wallpaper-mode .et-home-greeting,
-body:not(.solid-mode) .et-home-greeting {
-  color: var(--text);
-  opacity: 0.95;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+body.wallpaper-mode .et-home-greeting {
+  color: #ffffff !important;
+  opacity: 0.98;
+  text-shadow: 0 2px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.7)),
+               0 1px calc(var(--wp-shadow-blur, 20px) * 0.15) rgba(0, 0, 0, calc(var(--wp-shadow-opacity, 0.7) * 0.67));
 }
 
 .et-home-date-row {
@@ -315,8 +401,8 @@ body:not(.solid-mode) .et-home-greeting {
 }
 
 .et-home-date, .et-weather-inline {
-  font-size: var(--fs-sm);
-  font-weight: 500;
+  font-size: clamp(18px, 1.6vw, 24px);
+  font-weight: 600;
   line-height: 1;
   vertical-align: baseline;
   display: inline;
@@ -337,19 +423,23 @@ body:not(.solid-mode) .et-home-greeting {
 }
 
 body.wallpaper-mode .et-home-date-row,
-body:not(.solid-mode) .et-home-date-row,
 body.wallpaper-mode .et-home-date,
-body:not(.solid-mode) .et-home-date,
-body.wallpaper-mode .et-weather-inline,
-body:not(.solid-mode) .et-weather-inline {
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+body.wallpaper-mode .et-weather-inline {
+  color: rgba(255, 255, 255, 0.92) !important;
+  text-shadow: 0 2px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.7)),
+               0 1px calc(var(--wp-shadow-blur, 20px) * 0.15) rgba(0, 0, 0, calc(var(--wp-shadow-opacity, 0.7) * 0.67));
 }
 
-body.wallpaper-mode .et-weather-inline:hover,
-body:not(.solid-mode) .et-weather-inline:hover {
-  color: var(--text);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 1px 4px rgba(0, 0, 0, 0.5);
+body.solid-mode.theme-light .et-home-greeting {
+  color: var(--text, #0f172a) !important;
+  text-shadow: none !important;
+}
+
+body.solid-mode.theme-light .et-home-date-row,
+body.solid-mode.theme-light .et-home-date,
+body.solid-mode.theme-light .et-weather-inline {
+  color: var(--text-dim, #475569) !important;
+  text-shadow: none !important;
 }
 
 body.clock-pos-corner .et-home-clock,
@@ -366,26 +456,28 @@ body.wallpaper-mode:not(.clock-pos-center) .et-home-clock {
   box-shadow: none;
 }
 
+/* Corner/wallpaper placement only changes the size. It used to also force
+   weight:600 and color:var(--text), which silently discarded both the chosen
+   clock face's weight and any custom clock colour the moment the clock was not
+   centred. */
 body.clock-pos-corner .et-home-time,
 body.wallpaper-mode:not(.clock-pos-center) .et-home-time {
   font-size: clamp(54px, 7vw, calc(96px * var(--ui-scale)));
-  font-weight: 800;
-  color: var(--text);
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 }
 
+body.clock-pos-corner .clock-digits,
+body.wallpaper-mode:not(.clock-pos-center) .clock-digits,
 body.clock-pos-corner .clock-colon,
 body.wallpaper-mode:not(.clock-pos-center) .clock-colon {
-  color: var(--text);
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  color: var(--clock-color, var(--text));
 }
 
 body.clock-pos-corner .et-home-greeting,
 body.wallpaper-mode:not(.clock-pos-center) .et-home-greeting {
-  font-size: var(--fs-md);
+  font-size: clamp(22px, 2.2vw, 30px);
+  font-weight: 600;
   color: var(--text);
   opacity: 0.95;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
   margin-bottom: var(--sp-1);
 }
 
@@ -393,7 +485,6 @@ body.clock-pos-corner .et-home-date-row,
 body.wallpaper-mode:not(.clock-pos-center) .et-home-date-row {
   justify-content: flex-start;
   color: var(--text-dim);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
 body.clock-pos-center .et-home-clock {
@@ -442,27 +533,39 @@ body.wallpaper-mode #navSearchBar {
 
 body.wallpaper-mode .et-search-pill,
 body.wallpaper-mode .et-main-tabs {
-  background: rgba(var(--board-rgb, 12, 16, 24), var(--board-opacity, 0.45)) !important;
+  background: rgba(var(--board-rgb, 12, 16, 24), var(--board-opacity, 0.75)) !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
   box-shadow: 0 10px 36px rgba(0, 0, 0, 0.35) !important;
 }
 
-body.wallpaper-mode .et-search-engine {
+body.wallpaper-mode:not(.theme-light) .et-search-engine {
   background: transparent !important;
   border: none !important;
   color: rgba(255, 255, 255, 0.95) !important;
 }
 
-body.wallpaper-mode .et-search-input {
+body.wallpaper-mode:not(.theme-light) .et-search-input {
   color: #ffffff !important;
 }
 
-body.wallpaper-mode .et-search-input::placeholder {
+body.wallpaper-mode:not(.theme-light) .et-search-input::placeholder {
   color: rgba(255, 255, 255, 0.45) !important;
   text-shadow: none !important;
   font-weight: 400 !important;
+}
+
+body.theme-light .et-search-input {
+  color: var(--text, #0f172a) !important;
+}
+
+body.theme-light .et-search-input::placeholder {
+  color: var(--text-dim, rgba(15, 23, 42, 0.55)) !important;
+  text-shadow: none !important;
+  font-weight: 400 !important;
+}
+
+body.theme-light .et-search-engine {
+  color: var(--text, #0f172a) !important;
 }
 
 body.wallpaper-mode .et-home-pinned {
@@ -474,12 +577,11 @@ body.wallpaper-mode .dock-pin-label {
   font-size: 11px;
   font-weight: 600;
   color: #ffffff !important;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.9);
-  background: rgba(0, 0, 0, 0.35);
+  text-shadow: 0 2px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.6)),
+               0 1px calc(var(--wp-shadow-blur, 20px) * 0.15) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.6));
+  background: rgba(0, 0, 0, 0.5);
   padding: 2px 8px;
   border-radius: var(--r-pill);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 .et-home-pinned {
@@ -533,13 +635,30 @@ body.wallpaper-mode .dock-pin-label {
 .dock-pin-wrap:hover .dock-pin-icon { transform: scale(1.12); }
 .dock-pin:active .dock-pin-icon { transform: scale(0.94); }
 
+/* Chrome-style tile: the favicon sits on a filled surface rather than floating
+   bare on the wallpaper. Shape follows the user's corner choice via --r-md, and
+   goes fully round under the 'circle' option. */
 .dock-pin-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
-  transition: transform var(--dur-2) var(--ease-out);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  box-shadow: none;
+  transition: transform var(--dur-2) var(--ease-out),
+              background var(--dur-2) var(--ease-out),
+              border-color var(--dur-2) var(--ease-out);
+}
+
+body.tiles-circle .dock-pin-icon { border-radius: 50%; }
+
+.dock-pin:hover .dock-pin-icon,
+.dock-pin-wrap:hover .dock-pin-icon {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
 }
 
 .dock-pin-fav {
@@ -562,7 +681,8 @@ body.wallpaper-mode .dock-pin-label {
 
 body:not(.solid-mode) .dock-pin-label {
   color: var(--text);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1px calc(var(--wp-shadow-blur, 20px) * 0.2) rgba(0, 0, 0, calc(var(--wp-shadow-opacity, 0.6) * 1.33)),
+               0 2px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.6));
 }
 
 .dock-pin-remove,
@@ -615,13 +735,21 @@ body:not(.solid-mode) .dock-pin-label {
   .dock-pin-remove, .dock-pin-menu-btn { opacity: 1; }
 }
 
+/* Mixed against `transparent`, not a hardcoded white. Mixing the accent into
+   rgba(255,255,255,…) washed out to near-white in light mode, so the Add-pin
+   tile and its hover state were nearly invisible against a pale page -- it only
+   ever looked right on a dark background. Mixing toward transparent keeps the
+   accent's own hue in both themes. */
 .dock-pin-add .dock-pin-icon {
-  border: none;
-  background: transparent;
+  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+  border: 1.5px dashed color-mix(in srgb, var(--accent-color) 45%, transparent);
   color: var(--text-dim);
+  box-shadow: none;
 }
 .dock-pin-add:hover .dock-pin-icon {
-  color: var(--accent-ink, var(--accent-color));
+  background: color-mix(in srgb, var(--accent-color) 26%, transparent);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 .dock-pin-add .dock-pin-label { color: var(--text-dim); font-weight: 500; }
 
@@ -630,7 +758,7 @@ body:not(.solid-mode) .dock-pin-label {
   .dock-pin-wrap, .dock-pin { width: 60px; }
   .dock-pin-icon { width: 40px; height: 40px; }
   .dock-pin-fav { width: 28px; height: 28px; }
-  .dock-pin-label { font-size: 10px; max-width: 60px; }
+  .dock-pin-label { font-size: var(--fs-xs); max-width: 60px; }
 }
 
 @media (max-height: 720px) {
@@ -653,26 +781,27 @@ body:not(.solid-mode) .dock-pin-label {
   right: var(--sp-6);
   display: flex;
   flex-direction: column-reverse;
+  align-items: flex-end;
   gap: var(--sp-2);
   z-index: 10000;
   pointer-events: none;
-  max-width: 380px;
+  max-width: 320px;
 }
 
 .toast-msg {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-radius: var(--r-pill);
-  background: rgba(18, 22, 32, 0.88);
-  border: 1px solid var(--border-soft);
-  color: var(--text);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
-  backdrop-filter: var(--glass-lg);
-  -webkit-backdrop-filter: var(--glass-lg);
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--r-md, 10px);
+  width: fit-content;
+  max-width: 300px;
+  background: var(--accent-fill, var(--accent-color, #6366f1));
+  color: var(--accent-contrast, #ffffff);
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   pointer-events: auto;
   transform: translateY(12px) scale(0.95);
   opacity: 0;
@@ -689,35 +818,36 @@ body:not(.solid-mode) .dock-pin-label {
   animation: toastPulse 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.toast-msg.default {
-  border-color: rgba(255, 255, 255, 0.45);
-  color: #ffffff;
+.toast-msg.default,
+.toast-msg.info {
+  background: var(--accent-fill, var(--accent-color, #6366f1));
+  color: var(--accent-contrast, #ffffff);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-color, #6366f1) 35%, transparent);
 }
 
 .toast-msg.success {
-  border-color: rgba(16, 185, 129, 0.45);
-  color: #34d399;
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
 }
 
 .toast-msg.error {
-  background: rgba(225, 29, 72, 0.94);
-  border-color: rgba(244, 63, 94, 0.6);
+  background: #ef4444;
   color: #ffffff;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
 }
 
 .toast-msg.warning {
-  border-color: rgba(245, 158, 11, 0.5);
-  color: #fbbf24;
-}
-
-.toast-msg.info {
-  border-color: rgba(59, 130, 246, 0.45);
-  color: #60a5fa;
+  background: #f59e0b;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
 }
 
 .toast-msg.loading {
-  border-color: rgba(255, 255, 255, 0.45);
-  color: #ffffff;
+  background: var(--surface-card, #1e293b);
+  color: var(--text, #ffffff);
+  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.15));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 .toast-icon.is-spinning svg {

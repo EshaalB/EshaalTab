@@ -55,14 +55,131 @@ const HAS_EXT = (() => {
   } catch { return false; }
 })();
 
+const PermissionManager = (() => {
+  const RECOMMENDED = ['tabs', 'bookmarks', 'history'];
+  const AI_ORIGINS = ['https://chatgpt.com/*', 'https://claude.ai/*', 'https://gemini.google.com/*'];
+  const AI_SCRIPT_ID = 'eshaaltab-ai-autosend';
+
+  async function requestRecommended() {
+    if (!(HAS_EXT && EXT.permissions?.request)) return false;
+    try { return !!(await EXT.permissions.request({ permissions: RECOMMENDED })); }
+    catch { return false; }
+  }
+
+  async function setAiEnabled(enabled) {
+    if (!(HAS_EXT && EXT.permissions && EXT.scripting)) return false;
+    try {
+      if (!enabled) {
+        try { await EXT.scripting.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
+        try { await EXT.permissions.remove({ permissions: ['scripting'], origins: AI_ORIGINS }); } catch { }
+        return false;
+      }
+      // One user gesture, one browser prompt: scripting and every supported AI
+      // origin are granted together instead of interrupting the user repeatedly.
+      const granted = await EXT.permissions.request({
+        permissions: ['scripting'],
+        origins: AI_ORIGINS
+      });
+      if (!granted) return false;
+      try { await EXT.scripting.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
+      await EXT.scripting.registerContentScripts([{
+        id: AI_SCRIPT_ID,
+        matches: AI_ORIGINS,
+        js: ['js/extension/ai-autosend.js'],
+        runAt: 'document_start',
+        persistAcrossSessions: true
+      }]);
+      return true;
+    } catch { return false; }
+  }
+
+  async function syncAiEnabled(enabled) {
+    if (!(HAS_EXT && EXT.permissions?.contains && EXT.scripting)) return false;
+    try {
+      const granted = await EXT.permissions.contains({
+        permissions: ['scripting'],
+        origins: AI_ORIGINS
+      });
+      if (!enabled || !granted) {
+        try { await EXT.scripting.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
+        return false;
+      }
+      const registered = await EXT.scripting.getRegisteredContentScripts({ ids: [AI_SCRIPT_ID] });
+      if (!registered.length) {
+        await EXT.scripting.registerContentScripts([{
+          id: AI_SCRIPT_ID, matches: AI_ORIGINS, js: ['js/extension/ai-autosend.js'],
+          runAt: 'document_start', persistAcrossSessions: true
+        }]);
+      }
+      return true;
+    } catch { return false; }
+  }
+
+  return { requestRecommended, setAiEnabled, syncAiEnabled };
+})();
+
+/* chrome://favicon replacement. _favicon/ only exists on Chromium AND only when
+   the "favicon" permission is granted; Firefox has no equivalent at all. When
+   it is unavailable every bookmark tile fired its own failed request, filling
+   the console with net::ERR_FAILED. Probe once, then stop asking. */
+let faviconApiState = 'unknown';   // 'unknown' | 'ok' | 'unavailable'
+
+/* Ask the permissions API rather than firing a test request. The old image
+   probe produced its own net::ERR_FAILED in the console on every load whenever
+   the permission was missing -- replacing ten errors with one is not the same
+   as fixing it. This asks a question instead of failing at something. */
+function probeFaviconApi() {
+  if (faviconApiState !== 'unknown') return;
+  if (!(HAS_EXT && EXT.runtime && EXT.runtime.getURL)) { faviconApiState = 'unavailable'; return; }
+
+  const settle = (ok) => {
+    const next = ok ? 'ok' : 'unavailable';
+    if (faviconApiState === next) return;
+    faviconApiState = next;
+    // Re-resolve anything already rendered against the old assumption.
+    if (typeof refreshFavicons === 'function') refreshFavicons();
+  };
+
+  try {
+    if (EXT.permissions && EXT.permissions.contains) {
+      Promise.resolve(EXT.permissions.contains({ permissions: ['favicon'] }))
+        .then(ok => settle(!!ok))
+        .catch(() => settle(false));
+      return;
+    }
+  } catch { }
+  // Firefox and anything without the permissions API: no _favicon/ endpoint.
+  settle(false);
+}
+
+/* Recomputes every rendered icon's source chain in place. Used when the
+   favicon capability resolves after first paint, and when the user toggles
+   third-party icons on or off. */
+function refreshFavicons(root) {
+  const scope = root || document;
+  scope.querySelectorAll('img[data-fav]').forEach(img => {
+    const url = img.getAttribute('data-fav-url');
+    if (!url) return;
+    const { src, fallbacks } = faviconSrcSet(url);
+    img.classList.remove('is-fallback');
+    img.parentElement?.classList.remove('is-fallback');
+    img.setAttribute('data-fav-fallbacks', fallbacks.join('|'));
+    img.__faviconWired = false;
+    img.src = src || FAVICON_FALLBACK;
+    if (!src) { img.classList.add('is-fallback'); img.parentElement?.classList.add('is-fallback'); }
+    else wireFavicons(img);
+  });
+}
+
 function extFaviconUrl(pageUrl) {
+  if (faviconApiState === 'unavailable') return '';
   try {
     if (HAS_EXT && EXT.runtime && EXT.runtime.getURL) {
       return EXT.runtime.getURL('_favicon/') + '?pageUrl=' + encodeURIComponent(pageUrl) + '&size=32';
     }
   } catch { }
   return '';
-} 
+}
 function remoteFaviconsAllowed() {
   try {
     return typeof StorageManager !== 'undefined' &&
@@ -71,22 +188,35 @@ function remoteFaviconsAllowed() {
   } catch { return false; }
 }
 
+/* Chrome's local favicon cache is always preferred. Remote services and direct
+   site requests are included only after the user enables remote favicons. */
 function faviconSrcSet(url) {
-  let domain = '';
-  try { domain = new URL(url.startsWith('http') ? url : 'https://' + url).hostname; } catch { }
+  let origin = '', domain = '';
+  try {
+    const u = new URL(url.startsWith('http') ? url : 'https://' + url);
+    origin = u.origin;
+    domain = u.hostname;
+  } catch { }
+
   const chain = [];
   const ext = extFaviconUrl(url);
   if (ext) chain.push(ext);
-  if (domain && remoteFaviconsAllowed()) {
-    chain.push(`https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(url)}&sz=128`);
+  const allowRemote = remoteFaviconsAllowed();
+  if (domain && allowRemote) {
     chain.push(`https://icons.duckduckgo.com/ip3/${domain}.ico`);
+    chain.push(`https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(url)}&sz=128`);
+  }
+  if (origin && allowRemote && /^https?:$/.test(new URL(origin).protocol)) {
+    chain.push(origin + '/favicon.ico');
   }
   const uniq = [...new Set(chain.filter(Boolean))];
   return { src: uniq[0] || '', fallbacks: uniq.slice(1) };
 }
 function faviconAttr(url) {
   const { src, fallbacks } = faviconSrcSet(url);
-  return `src="${src}" data-fav data-fav-fallbacks="${fallbacks.join('|')}"`;
+  return `src="${src}" data-fav data-fav-url="${String(url).replace(/"/g, '&quot;')}" ` +
+         `referrerpolicy="no-referrer" decoding="async" ` +
+         `data-fav-fallbacks="${fallbacks.join('|')}"`;
 }
 
 const FAVICON_FALLBACK =
@@ -99,34 +229,69 @@ const FAVICON_FALLBACK =
 
 function wireFavicons(root) {
   if (!root) return;
-  const imgs = root.matches && root.matches('img[data-fav]') ? [root] : [];
-  root.querySelectorAll && root.querySelectorAll('img[data-fav]').forEach(i => imgs.push(i));
-  /* Mark the wrapper as well as the image. The app-launcher tile hides the
-     broken <img> via `.workspace-icon img.is-fallback` and draws a lettered
-     circle via `.workspace-icon.is-fallback::before` -- but the class only ever
-     landed on the image, so the icon was hidden and the letter never appeared:
-     an empty tile for every app whose favicon is not in the local cache. */
+  const imgs = [];
+  if (root.matches && root.matches('img[data-fav]')) imgs.push(root);
+  if (root.querySelectorAll) root.querySelectorAll('img[data-fav]').forEach(i => imgs.push(i));
+
   const markFallback = (img) => {
     img.classList.add('is-fallback');
     img.parentElement?.classList.add('is-fallback');
   };
 
+  const clearFallback = (img) => {
+    img.classList.remove('is-fallback');
+    img.parentElement?.classList.remove('is-fallback');
+  };
+
   imgs.forEach(img => {
     if (img.__faviconWired) return;
     img.__faviconWired = true;
-    if (!img.getAttribute('src') || (img.complete && img.naturalWidth === 0 && img.src !== FAVICON_FALLBACK)) {
-      img.src = FAVICON_FALLBACK;
-      markFallback(img);
-      return;
-    }
+
     const fbs = (img.getAttribute('data-fav-fallbacks') || '').split('|').filter(Boolean);
-    let i = 0;
-    img.addEventListener('error', function onErr() {
-      if (i < fbs.length) { img.src = fbs[i++]; return; }
-      img.removeEventListener('error', onErr);
+    const triedUrls = new Set([img.src]);
+    let fbIndex = 0;
+    let attempts = 0;
+
+    const tryNextFallback = () => {
+      attempts++;
+      if (img.src === FAVICON_FALLBACK || attempts > 10) {
+        if (img.src !== FAVICON_FALLBACK) img.src = FAVICON_FALLBACK;
+        markFallback(img);
+        return;
+      }
+
+      while (fbIndex < fbs.length) {
+        const nextUrl = fbs[fbIndex++];
+        if (nextUrl && !triedUrls.has(nextUrl)) {
+          triedUrls.add(nextUrl);
+          img.src = nextUrl;
+          return;
+        }
+      }
+
       img.src = FAVICON_FALLBACK;
       markFallback(img);
-    });
+    };
+
+    const handleLoad = () => {
+      if (img.src === FAVICON_FALLBACK) {
+        markFallback(img);
+      } else {
+        clearFallback(img);
+      }
+    };
+
+    const handleError = () => {
+      tryNextFallback();
+    };
+
+    img.addEventListener('load', handleLoad, { passive: true });
+    img.addEventListener('error', handleError, { passive: true });
+
+    const currentSrc = img.getAttribute('src');
+    if (!currentSrc || currentSrc === '') {
+      tryNextFallback();
+    }
   });
 }
 
@@ -382,8 +547,8 @@ const CustomSelect = (() => {
 })();
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => CustomTooltip.init());
+  document.addEventListener('DOMContentLoaded', () => { CustomTooltip.init(); probeFaviconApi(); });
 } else {
   CustomTooltip.init();
+  probeFaviconApi();
 }
-

@@ -20,6 +20,7 @@
 
     if (typeof b.pageBg === 'string' && /^#[0-9a-f]{3,6}$/i.test(b.pageBg)) {
       root.style.setProperty('--page-bg', b.pageBg);
+      root.style.backgroundColor = b.pageBg;
     }
     if (b.mode === 'light' || b.mode === 'dark') {
       root.style.colorScheme = b.mode;

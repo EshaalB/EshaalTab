@@ -162,6 +162,41 @@ const SearchRenderer = (() => {
       </div>`;
   }
 
+  /* Notes and todos have no URL, so they get their own row instead of forcing
+     rowHtml to special-case a missing favicon/href for two kinds only it uses. */
+  function noteRowHtml(it) {
+    return `
+      <div class="search-result-item" data-act="note">
+        <div class="sr-info">
+          <div class="sr-title">Notepad</div>
+          <div class="sr-sub">${it.snippet}</div>
+        </div>
+        <span class="sr-badge sr-badge-dim">Note</span>
+      </div>`;
+  }
+  function todoRowHtml(it) {
+    return `
+      <div class="search-result-item" data-act="todo" data-todo-id="${escapeHtml(it.id)}">
+        <div class="sr-info">
+          <div class="sr-title">${escapeHtml(it.text)}</div>
+        </div>
+        <span class="sr-badge sr-badge-dim">${it.done ? 'Done' : 'Todo'}</span>
+      </div>`;
+  }
+
+  /* Plain-text match with the matched span bolded, like a search-engine
+     snippet -- makes it obvious WHY this note matched before you jump to it. */
+  function buildSnippet(text, term) {
+    const idx = text.toLowerCase().indexOf(term.toLowerCase());
+    if (idx < 0) return escapeHtml(text.slice(0, 80));
+    const start = Math.max(0, idx - 30);
+    const end = Math.min(text.length, idx + term.length + 30);
+    const before = escapeHtml(text.slice(start, idx));
+    const match = escapeHtml(text.slice(idx, idx + term.length));
+    const after = escapeHtml(text.slice(idx + term.length, end));
+    return `${start > 0 ? '…' : ''}${before}<strong>${match}</strong>${after}${end < text.length ? '…' : ''}`;
+  }
+
   async function renderMixed(trimmed, token) {
     const [openTabs, hist] = await Promise.all([BrowserSearch.tabs(trimmed), BrowserSearch.history(trimmed)]);
     if (token !== searchToken || !isOpen()) return;
@@ -171,9 +206,21 @@ const SearchRenderer = (() => {
     const seen = new Set([...openTabs.map(t => t.url), ...bookmarks.map(b => b.url)]);
     const history = hist.filter(h => !seen.has(h.url));
 
+    /* The palette already searched everywhere a link could live. It never
+       searched the two other things you actually type into this app -- so a
+       phrase you jotted in Notes, or a task you wrote as a todo, was
+       invisible to Ctrl+K even though both were sitting in memory already. */
+    const noteText = typeof NotesManager !== 'undefined' ? NotesManager.get() : '';
+    const noteHit = noteText && noteText.toLowerCase().includes(trimmed.toLowerCase());
+    const todoHits = typeof TodoManager !== 'undefined'
+      ? TodoManager.getAll().filter(t => t.text.toLowerCase().includes(trimmed.toLowerCase())).slice(0, 5)
+      : [];
+
     const sections = [
       { label: 'Open Tabs', kind: 'tab', items: openTabs },
       { label: 'Bookmarks', kind: 'bookmark', items: bookmarks.map(b => ({ title: b.title, url: b.url, subtitle: `${b.boardName} • ${b.url}` })) },
+      { label: 'Todos', kind: 'todo', items: todoHits },
+      { label: 'Notes', kind: 'note', items: noteHit ? [{ snippet: buildSnippet(noteText, trimmed) }] : [] },
       { label: 'History', kind: 'history', items: history }
     ].filter(s => s.items.length);
 
@@ -183,7 +230,9 @@ const SearchRenderer = (() => {
     }
 
     setSafeHTML(resultsContainer, sections.map(sec =>
-      `<div class="search-section-label">${sec.label}</div>` + sec.items.map(it => rowHtml(it, sec.kind)).join('')
+      `<div class="search-section-label">${sec.label}</div>` + sec.items.map(it =>
+        sec.kind === 'todo' ? todoRowHtml(it) : sec.kind === 'note' ? noteRowHtml(it) : rowHtml(it, sec.kind)
+      ).join('')
     ).join(''));
 
     const items = [...resultsContainer.querySelectorAll('.search-result-item')];
@@ -199,6 +248,20 @@ const SearchRenderer = (() => {
             EXT.tabs.update(tabId, { active: true });
             if (!isNaN(winId) && EXT.windows) EXT.windows.update(winId, { focused: true });
           } catch { window.open(el.dataset.url, '_blank'); }
+        } else if (el.dataset.act === 'note') {
+          close();
+          ViewController.show('notes');
+          const area = $('notesArea');
+          if (area) {
+            const idx = area.value.toLowerCase().indexOf(trimmed.toLowerCase());
+            area.focus();
+            if (idx >= 0) area.setSelectionRange(idx, idx + trimmed.length);
+          }
+          return;
+        } else if (el.dataset.act === 'todo') {
+          close();
+          TodoWidget.open();
+          return;
         } else {
           window.open(el.dataset.url, '_blank');
         }

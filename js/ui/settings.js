@@ -184,6 +184,20 @@ const SettingsRenderer = (() => {
       });
     }
 
+    const body = $('sidesheetBody');
+    if (body) {
+      body.addEventListener('click', (e) => {
+        const header = e.target.closest('.st-accordion-header');
+        if (header) {
+          const acc = header.closest('.st-accordion');
+          const accBody = acc.querySelector('.st-accordion-body');
+          const isExp = acc.classList.contains('is-expanded');
+          acc.classList.toggle('is-expanded', !isExp);
+          if (accBody) accBody.style.display = !isExp ? 'block' : 'none';
+        }
+      });
+    }
+
     tabBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         tabBtns.forEach(b => b.classList.remove('active'));
@@ -215,6 +229,7 @@ const SettingsRenderer = (() => {
     });
 
     renderSideSheetContent();
+    overlay.classList.remove('closing');
     overlay.classList.add('open');
     if (topBtn) topBtn.classList.add('is-active');
 
@@ -227,12 +242,26 @@ const SettingsRenderer = (() => {
   function closeSideSheet() {
     const overlay = $('sidesheetOverlay');
     const topBtn = $('topSettingsBtn');
-    if (overlay) overlay.classList.remove('open');
     if (topBtn) topBtn.classList.remove('is-active');
     if (sheetReturnFocus && document.contains(sheetReturnFocus)) sheetReturnFocus.focus();
     sheetReturnFocus = null;
-    const body = $('sidesheetBody');
-    if (body) setSafeHTML(body, '');
+
+    if (overlay) {
+      // Same transition plays in reverse for the close as the open, instead
+      // of cutting straight to display:none -- 'closing' keeps the overlay
+      // rendered (display:flex) for one transition duration while 'open'
+      // drops off so the transform/opacity animate back out.
+      overlay.classList.add('closing');
+      overlay.classList.remove('open');
+      const onEnd = (e) => {
+        if (e.target !== overlay) return;
+        overlay.classList.remove('closing');
+        overlay.removeEventListener('transitionend', onEnd);
+        const body = $('sidesheetBody');
+        if (body) setSafeHTML(body, '');
+      };
+      overlay.addEventListener('transitionend', onEnd);
+    }
   }
 
   function renderSideSheetContent() {
@@ -247,197 +276,267 @@ const SettingsRenderer = (() => {
       const isSolidMode = settings.backgroundType === 'solid' || !settings.backgroundType;
 
       const activePreset = settings.preset || '';
-      const activeName = presetById(activePreset)?.name || 'Default';
+      const activeName = activePreset === 'custom' ? 'Custom' : (activePreset === 'wallpaper' ? 'Wallpaper' : (presetById(activePreset)?.name || 'Default'));
 
       const presetBtn = (p) => {
         const full = p ? p.name : 'Default';
         const short = p ? full.replace(new RegExp('^' + p.group + ' '), '') : full;
         return `
-        <button class="preset-btn ${activePreset === (p ? p.id : '') ? 'selected' : ''}"
+        <button class="preset-swatch ${activePreset === (p ? p.id : '') ? 'selected' : ''}"
                 data-preset="${p ? p.id : ''}" aria-pressed="${activePreset === (p ? p.id : '')}"
                 title="${escapeHtml(full)}">
-          <span class="preset-dots">
-            <i style="background:${p ? p.accent : 'var(--accent-color)'}"></i>
-          </span>
-          <span class="preset-name">${escapeHtml(short)}</span>
+          <i class="preset-swatch-dot" style="background:${p ? p.accent : 'var(--accent-color)'}"></i>
+          <span class="preset-swatch-name">${escapeHtml(short)}</span>
         </button>`;
       };
 
+      /* Shown only once the user has picked a base colour or accent by hand --
+         a real chip instead of just leaving no swatch highlighted, so it is
+         obvious the current look does not match any saved preset. Clicking it
+         resets back to the plain default (same as data-preset=""). */
+      const customChip = activePreset === 'custom' ? `
+        <button class="preset-swatch selected" data-preset="" aria-pressed="true" title="Custom">
+          <i class="preset-swatch-dot" style="background:var(--accent-color)"></i>
+          <span class="preset-swatch-name">Custom</span>
+        </button>` : '';
+
       let html = `
         <div class="st-container">
-          <div class="st-group-title">Preset <span class="st-group-note">${escapeHtml(activeName)}</span></div>
-          <div class="st-card">
-            <div class="preset-sub">Default</div>
-            <div class="preset-grid">${presetBtn(null)}</div>
-            ${PRESET_GROUPS.map(g => `
-              <div class="preset-sub">${g}</div>
-              <div class="preset-grid">
-                ${PRESETS.filter(p => p.group === g).map(presetBtn).join('')}
-              </div>`).join('')}
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Preset <span class="st-group-note">${escapeHtml(activeName)}</span></span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card">
+                <div class="preset-sub">Default</div>
+                <div class="preset-grid">
+                  ${customChip || presetBtn(null)}
+                  ${settings.backgroundType === 'image' || settings.backgroundType === 'video' ? `
+                  <button class="preset-swatch ${activePreset === 'wallpaper' ? 'selected' : ''}" id="btnExtractWallpaper" title="Extract from Wallpaper">
+                    <i class="preset-swatch-dot" style="background:${settings.wpExtractedAccent || 'var(--accent-color)'}"></i>
+                    <span class="preset-swatch-name">Wallpaper</span>
+                  </button>` : ''}
+                </div>
+                ${PRESET_GROUPS.map(g => `
+                  <div class="preset-sub">${g}</div>
+                  <div class="preset-grid">
+                    ${PRESETS.filter(p => p.group === g).map(presetBtn).join('')}
+                  </div>`).join('')}
+              </div>
+            </div>
           </div>
 
-          <!-- Appearance -->
-          <div class="st-group-title">Appearance</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
-            <div class="mynt-mode-seg" role="group" aria-label="Colour mode">
+          <!-- Theme & Colors -->
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Theme &amp; Colors</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:14px;">
+            <div class="mynt-mode-seg" role="group" aria-label="Color Mode">
               <button class="mynt-seg-btn ${settings.mode === 'light' ? 'active' : ''}" data-mode="light" aria-pressed="${settings.mode === 'light'}">Light</button>
               <button class="mynt-seg-btn ${settings.mode === 'dark' ? 'active' : ''}" data-mode="dark" aria-pressed="${settings.mode === 'dark'}">Dark</button>
               <button class="mynt-seg-btn ${settings.mode === 'system' ? 'active' : ''}" data-mode="system" aria-pressed="${settings.mode === 'system'}">System</button>
             </div>
             <div class="st-row">
-              <label class="st-label" for="myntColorPicker">Base colour</label>
+              <label class="st-label" for="stAccent1Picker">Accent color</label>
+              <input type="color" id="stAccent1Picker" class="st-color" value="${effectiveAccent()}" />
+            </div>
+            <div class="st-row">
+              <label class="st-label" for="myntColorPicker">Base background</label>
               <input type="color" id="myntColorPicker" class="st-color"
                      value="${/^#[0-9a-f]{6}$/i.test(settings.solidSeed || '') ? settings.solidSeed : (settings.mode === 'light' ? '#c7d2fe' : '#0d1117')}" />
             </div>
-            <div class="st-hint">The whole palette, including surfaces, borders and accent, is generated from this one colour.</div>
-          </div>
+            <div class="st-hint">Generates the solid background palette. (Note: Base background color applies when wallpaper is off).</div>
+            <button id="stAccentResetBtn" class="st-action-btn" style="margin-top:2px;">Reset accent color</button>
 
-          <div class="st-group-title">Colours &amp; Accents</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
-            <div class="st-row">
-              <label class="st-label" for="stAccent1Picker">Primary accent</label>
-              <input type="color" id="stAccent1Picker" class="st-color" value="${effectiveAccent()}" />
-            </div>
-            <button id="stAccentResetBtn" class="st-action-btn">Reset accent to the base colour</button>
-          </div>
-
-          <div class="st-group-title">Shape &amp; Type</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
-            <div class="st-row">
-              <label class="st-label" for="stCornerRadius">Corner radius</label>
-              ${CustomSelect.render({
-                id: 'stCornerRadius',
-                value: settings.cornerRadius || 'default',
-                options: [
-                  { value: 'default', label: 'Theme default' },
-                  { value: '0px', label: 'Sharp (0px)' },
-                  { value: '8px', label: 'Rounded (8px)' },
-                  { value: '16px', label: 'Soft (16px)' },
-                  { value: '9999px', label: 'Pill' }
-                ],
-                style: 'width:150px;'
-              })}
-            </div>
-            <div class="st-row">
-              <label class="st-label" for="stFontFamily">Font family</label>
-              ${CustomSelect.render({
-                id: 'stFontFamily',
-                value: settings.fontFamily || 'default',
-                options: [
-                  { value: 'default', label: 'System UI (Default)' },
-                  { value: 'sans-serif', label: 'Modern Sans (Inter)' },
-                  { value: 'geometric', label: 'Geometric (Outfit)' },
-                  { value: 'serif', label: 'Editorial Serif (Georgia)' },
-                  { value: 'monospace', label: 'Developer Mono (JetBrains)' },
-                  { value: 'rounded', label: 'Rounded Soft (Quicksand)' },
-                  { value: 'slab', label: 'Slab Typewriter (Rockwell)' }
-                ],
-                style: 'width:200px;'
-              })}
-            </div>
-            <div>
-              <div class="se-label" style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                <span>Card opacity</span> <span id="seOpacityVal">${Math.round((settings.boardOpacity ?? 0.08) * 100)}%</span>
+            <!-- Shape & Typography -->
+            <div class="st-subgroup">
+              <div class="st-subhead">Shape &amp; Type</div>
+              <div class="st-row">
+                <label class="st-label" for="stCornerRadius">Corner Shape</label>
+                ${CustomSelect.render({
+                  id: 'stCornerRadius',
+                  value: settings.cornerRadius || 'default',
+                  options: [
+                    { value: 'default', label: 'Default' },
+                    { value: '0px', label: 'Sharp' },
+                    { value: '8px', label: 'Soft' },
+                    { value: '16px', label: 'Round' },
+                    { value: 'circle', label: 'Circle' },
+                    { value: '9999px', label: 'Pill' }
+                  ],
+                  style: 'width:150px;'
+                })}
               </div>
-              <input type="range" class="se-slider" id="seOpacitySlider" aria-label="Card opacity"
-                     min="0" max="100" step="1" value="${Math.round((settings.boardOpacity ?? 0.08) * 100)}" style="width:100%;" />
+              <div class="st-row">
+                <label class="st-label" for="stFontFamily">App Font</label>
+                ${CustomSelect.render({
+                  id: 'stFontFamily',
+                  value: settings.fontFamily || 'default',
+                  options: [
+                    { value: 'default', label: 'Default' },
+                    { value: 'sans-serif', label: 'Sans-serif' },
+                    { value: 'geometric', label: 'Geometric' },
+                    { value: 'serif', label: 'Serif' },
+                    { value: 'monospace', label: 'Monospace' },
+                    { value: 'rounded', label: 'Rounded' },
+                    { value: 'slab', label: 'Slab' },
+                    { value: 'handwriting', label: 'Handwriting' }
+                  ],
+                  style: 'width:150px;'
+                })}
+              </div>
             </div>
-          </div>
 
-          <!-- Wallpaper -->
-          <div class="st-group-title">Wallpaper</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
-            <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px;">
-              <input type="checkbox" id="themeWpToggle" ${!isSolidMode ? 'checked' : ''} />
-              <span>Use Custom Wallpaper</span>
-            </label>
-            <div id="themeWpControls" style="display:${!isSolidMode ? 'flex' : 'none'}; flex-direction:column; gap:12px; margin-top:8px;">
-              <button class="mynt-wp-upload-btn" id="wpUploadBtn" style="width:100%;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="20" height="20" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <span>+ Upload Photo or Video File</span>
-              </button>
-              <div style="display:flex; gap:8px;">
-                <input type="text" id="wpUrlInp" class="st-input" placeholder="Paste photo or .mp4 URL…" style="flex:1;" />
-                <button id="wpUrlApplyBtn" class="st-action-btn primary" style="padding:8px 14px; flex-shrink:0;">Apply URL</button>
+            ${isSolidMode ? `
+            <div class="st-subgroup">
+              <div class="st-subhead">Background depth</div>
+              <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px;">
+                <input type="checkbox" id="stSolidAmbient" ${settings.solidAmbient !== false ? 'checked' : ''} />
+                <span class="st-label">Ambient colour wash</span>
+              </label>
+              <div class="st-hint">Adds soft pools of your accent colour so a plain fill has some depth instead of looking flat.</div>
+            </div>` : ''}
+
+            <div class="st-subgroup">
+              <div class="st-subhead">Transparency</div>
+              <div class="st-slider-row">
+                <div class="se-label"><span>Boards</span> <span id="seOpacityVal">${Math.round((settings.boardOpacity ?? 0.08) * 100)}%</span></div>
+                <input type="range" class="se-slider" id="seOpacitySlider" min="0" max="60" step="1" value="${Math.round((settings.boardOpacity ?? 0.08) * 100)}" />
               </div>
-
-              <!-- Alignment & Zoom Controls -->
-              <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:10px;">
-                <div class="se-label" style="display:flex; justify-content:space-between;">
-                  <span>Wallpaper Zoom</span> <span id="stWpZoomVal">${settings.wallpaperZoom || 100}%</span>
-                </div>
-                <input type="range" class="se-slider" id="stWpZoom" min="25" max="350" step="5" value="${settings.wallpaperZoom || 100}" style="width:100%;" />
-
-                <div class="se-label" style="display:flex; justify-content:space-between; margin-top:4px;">
-                  <span>Horizontal Position (X)</span> <span id="stWpPosXVal">${settings.wallpaperPosX ?? 50}%</span>
-                </div>
-                <input type="range" class="se-slider" id="stWpPosX" min="-150" max="250" step="1" value="${settings.wallpaperPosX ?? 50}" style="width:100%;" />
-
-                <div class="se-label" style="display:flex; justify-content:space-between; margin-top:4px;">
-                  <span>Vertical Position (Y)</span> <span id="stWpPosYVal">${settings.wallpaperPosY ?? 50}%</span>
-                </div>
-                <input type="range" class="se-slider" id="stWpPosY" min="-150" max="250" step="1" value="${settings.wallpaperPosY ?? 50}" style="width:100%;" />
+              <div class="st-slider-row">
+                <div class="se-label"><span>Top bar &amp; search</span> <span id="stTopbarOpacityVal">${settings.topbarOpacity ?? 8}%</span></div>
+                <input type="range" class="se-slider" id="stTopbarOpacity" min="0" max="60" step="1" value="${settings.topbarOpacity ?? 8}" />
               </div>
+              <div class="st-slider-row">
+                <div class="se-label"><span>Widget icon background</span> <span id="stWidgetBgOpacityVal">${settings.widgetBgOpacity ?? 95}%</span></div>
+                <input type="range" class="se-slider" id="stWidgetBgOpacity" min="0" max="100" step="1" value="${settings.widgetBgOpacity ?? 95}" />
+              </div>
+              <div class="st-slider-row">
+                <div class="se-label"><span>Notes page</span> <span id="stNotesOpacityVal">${settings.notesOpacity ?? 8}%</span></div>
+                <input type="range" class="se-slider" id="stNotesOpacity" min="0" max="60" step="1" value="${settings.notesOpacity ?? 8}" />
+              </div>
+            </div>
 
-              <!-- Video Sound Control -->
-              ${settings.backgroundType === 'video' ? `
-              <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:10px;">
-                <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px;">
-                  <input type="checkbox" id="stWpMuteToggle" ${settings.wallpaperMuted !== false ? 'checked' : ''} />
-                  <span>Mute Video Audio</span>
-                </label>
-                <div class="se-label" style="display:flex; justify-content:space-between;">
-                  <span>Video Volume</span> <span id="stWpVolumeVal">${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}%</span>
+            <!-- Wallpaper Controls inside Theme & Colors -->
+            <div style="border-top:1px solid var(--border-soft); padding-top:12px; margin-top:4px;">
+              <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px; padding:0;">
+                <input type="checkbox" id="themeWpToggle" ${!isSolidMode ? 'checked' : ''} />
+                <span class="st-label" style="font-weight:600;">Use Custom Wallpaper</span>
+              </label>
+              <div id="themeWpControls" style="display:${!isSolidMode ? 'flex' : 'none'}; flex-direction:column; gap:12px; margin-top:10px;">
+                <button class="mynt-wp-upload-btn" id="wpUploadBtn" style="width:100%;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="20" height="20" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <span>+ Upload Photo or Video File</span>
+                </button>
+                <div style="display:flex; gap:8px;">
+                  <input type="text" id="wpUrlInp" class="st-input" placeholder="Paste photo or .mp4 URL…" style="flex:1;" />
+                  <button id="wpUrlApplyBtn" class="st-action-btn primary" style="padding:8px 14px; flex-shrink:0;">Apply URL</button>
                 </div>
-                <input type="range" class="se-slider" id="stWpVolume" min="0" max="100" step="5" value="${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}" style="width:100%;" />
-              </div>` : ''}
 
-              <!-- Saved Wallpapers Gallery -->
-              ${data.wallpapers && data.wallpapers.length ? `
-              <div style="border-top:1px solid var(--border-soft); padding-top:10px;">
-                <div class="st-label" style="margin-bottom:6px;">Saved Wallpaper Gallery</div>
-                <div class="wp-gallery-grid">
-                  ${data.wallpapers.map(w => `
-                    <div class="wp-gallery-item ${w.value === settings.backgroundValue ? 'active' : ''}" data-wp-val="${escapeHtml(w.value)}" data-wp-type="${w.type}">
-                      <div class="wp-gallery-thumb" data-wp-thumb="${escapeHtml(w.value)}" data-wp-thumb-type="${w.type}"></div>
-                      <button class="wp-gallery-del" data-wp-del="${escapeHtml(w.value)}" title="Delete wallpaper">&times;</button>
+                <!-- Alignment & Zoom Controls -->
+                <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:10px;">
+                  <div class="st-row" style="padding:0; margin-bottom:8px;">
+                    <span class="st-label">Wallpaper Fit</span>
+                    ${CustomSelect.render({
+                      id: 'stWpFit',
+                      value: settings.wallpaperFit || 'cover',
+                      options: [
+                        { value: 'cover', label: 'Cover (Fill Screen)' },
+                        { value: 'contain', label: 'Contain (Fit Screen)' }
+                      ]
+                    })}
+                  </div>
+                  <div class="se-label" style="display:flex; justify-content:space-between;">
+                    <span>Wallpaper Zoom</span> <span id="stWpZoomVal">${settings.wallpaperZoom || 100}%</span>
+                  </div>
+                  <input type="range" class="se-slider" id="stWpZoom" min="25" max="350" step="5" value="${settings.wallpaperZoom || 100}" style="width:100%;" />
+
+                  <div class="se-label" style="display:flex; justify-content:space-between; margin-top:4px;">
+                    <span>Horizontal Position (X)</span> <span id="stWpPosXVal">${settings.wallpaperPosX ?? 50}%</span>
+                  </div>
+                  <input type="range" class="se-slider" id="stWpPosX" min="-150" max="250" step="1" value="${settings.wallpaperPosX ?? 50}" style="width:100%;" />
+
+                  <div class="se-label" style="display:flex; justify-content:space-between; margin-top:4px;">
+                    <span>Vertical Position (Y)</span> <span id="stWpPosYVal">${settings.wallpaperPosY ?? 50}%</span>
+                  </div>
+                  <input type="range" class="se-slider" id="stWpPosY" min="-150" max="250" step="1" value="${settings.wallpaperPosY ?? 50}" style="width:100%;" />
+                </div>
+
+                <!-- Dark Overlay Control -->
+                <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:10px;">
+                  <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px; padding:0;">
+                    <input type="checkbox" id="stWpOverlayToggle" ${settings.wallpaperOverlay ? 'checked' : ''} />
+                    <span>Dim Wallpaper (dark overlay)</span>
+                  </label>
+                  <div class="st-hint">Bright wallpapers can wash out top icons. Turn this on to lay a dark overlay underneath.</div>
+                  <div id="stWpOverlayOpacityRow" style="display:${settings.wallpaperOverlay ? 'flex' : 'none'}; flex-direction:column; gap:4px;">
+                    <div class="se-label" style="display:flex; justify-content:space-between;">
+                      <span>Overlay Darkness</span> <span id="stWpOverlayOpacityVal">${settings.wallpaperOverlayOpacity ?? 35}%</span>
                     </div>
-                  `).join('')}
-                <div class="st-label" style="margin-bottom:6px;">Recent Wallpapers</div>
-                <div class="st-wp-gallery" id="stWpGallery">
-                  ${wallpapers.map(w => `
-                    <div class="st-wp-thumb ${mode === 'custom' && settings.backgroundValue === w.value ? 'active' : ''}" data-wp-type="${w.type}" data-wp-value="${escapeHtml(w.value)}" data-wp-thumb="${w.type}">
-                      <button class="st-wp-del-btn" data-wp-del="${escapeHtml(w.value)}" title="Delete wallpaper">&times;</button>
-                    </div>
-                  `).join('')}
+                    <input type="range" class="se-slider" id="stWpOverlayOpacity" min="0" max="90" step="5" value="${settings.wallpaperOverlayOpacity ?? 35}" style="width:100%;" />
+                  </div>
                 </div>
-              </div>
-            ` : ''}
 
-            ${mode === 'custom' && settings.backgroundType === 'video' ? `
-              <div style="border-top:1px solid var(--border-soft); padding-top:10px; display:flex; flex-direction:column; gap:8px;">
-                <div class="st-row">
-                  <label class="st-label">Mute Video Audio</label>
-                  <input type="checkbox" id="chkWpMuted" ${settings.wallpaperMuted !== false ? 'checked' : ''} />
+                <!-- Video Sound Control -->
+                ${settings.backgroundType === 'video' ? `
+                <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:10px;">
+                  <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px; padding:0;">
+                    <input type="checkbox" id="stWpMuteToggle" ${settings.wallpaperMuted !== false ? 'checked' : ''} />
+                    <span>Mute Video Audio</span>
+                  </label>
+                  <div class="se-label" style="display:flex; justify-content:space-between;">
+                    <span>Video Volume</span> <span id="stWpVolumeVal">${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}%</span>
+                  </div>
+                  <input type="range" class="se-slider" id="stWpVolume" min="0" max="100" step="5" value="${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}" style="width:100%;" />
+                </div>` : ''}
+
+                <!-- Saved Wallpapers Gallery -->
+                ${data.wallpapers && data.wallpapers.length ? `
+                <div style="border-top:1px solid var(--border-soft); padding-top:10px;">
+                  <div class="st-label" style="margin-bottom:6px;">Saved Wallpaper Gallery</div>
+                  <div class="wp-gallery-grid">
+                    ${data.wallpapers.map(w => `
+                      <div class="wp-gallery-item ${w.value === settings.backgroundValue ? 'active' : ''}" data-wp-val="${escapeHtml(w.value)}" data-wp-type="${w.type}">
+                        <div class="wp-gallery-thumb" data-wp-thumb="${escapeHtml(w.value)}" data-wp-thumb-type="${w.type}"></div>
+                        <button class="wp-gallery-del" data-wp-del="${escapeHtml(w.value)}" title="Delete wallpaper">&times;</button>
+                      </div>
+                    `).join('')}
+                  </div>
                 </div>
-                <div class="st-row">
-                  <span class="st-label">Video Volume</span>
-                  <span class="st-val" id="lblWpVolume">${Math.round((settings.wallpaperVolume ?? 0) * 100)}%</span>
+              ` : ''}
                 </div>
-                <input type="range" id="rngWpVolume" min="0" max="1" step="0.05" value="${settings.wallpaperVolume ?? 0}" style="width:100%; cursor:pointer;" />
               </div>
-            ` : ''}
+            </div>
           </div>
 
-          <div class="st-group-title">Share &amp; Import Presets</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
-            <button id="btnExportPresetCode" class="st-action-btn">Copy preset code to clipboard</button>
-            <div style="display:flex; gap:6px;">
-              <input type="text" id="inpImportPresetCode" class="st-input" placeholder="Paste preset JSON code" style="flex:1;" />
-              <button id="btnImportPresetCode" class="st-action-btn" style="padding:8px 14px; flex-shrink:0;">Apply</button>
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Share Your Theme</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card">
+                <div class="st-subgroup">
+                  <div class="st-subhead">Share this theme</div>
+                  <div class="st-hint">Copies your current colours, fonts and shapes as a code you can send to someone else.</div>
+                  <button id="btnExportPresetCode" class="st-action-btn" style="width:100%;">Copy my theme code</button>
+                </div>
+                <div class="st-subgroup">
+                  <div class="st-subhead">Use someone else's theme</div>
+                  <div class="st-hint">Paste a theme code you were given, or load one from a saved .json file.</div>
+                  <div style="display:flex; gap:6px;">
+                    <input type="text" id="inpImportPresetCode" class="st-input" placeholder="Paste a theme code here" style="flex:1;" />
+                    <button id="btnImportPresetCode" class="st-action-btn" style="padding:8px 14px; flex-shrink:0;">Apply</button>
+                  </div>
+                  <button id="btnImportPresetFileTrigger" class="st-action-btn" style="width:100%;">Load theme from file</button>
+                  <input type="file" id="inpImportPresetFile" accept=".json" aria-label="Preset file" style="display:none;" />
+                </div>
+              </div>
             </div>
-            <button id="btnImportPresetFileTrigger" class="st-action-btn" style="width:100%;">Upload .json preset file</button>
-            <input type="file" id="inpImportPresetFile" accept=".json" aria-label="Preset file" style="display:none;" />
           </div>
 
         </div>
@@ -450,18 +549,30 @@ const SettingsRenderer = (() => {
       const enabledEngs = settings.enabledEngines || StorageManager.DEFAULT_SETTINGS.enabledEngines;
       setSafeHTML(body, `
         <div class="st-container">
-          <div class="st-group-title">Identity</div>
-          <div class="st-card">
-            <div class="st-row">
-              <label class="st-label" for="stDisplayName">Your name</label>
-              <input type="text" id="stDisplayName" class="st-input" maxlength="24"
-                     placeholder="Optional" value="${escapeHtml(settings.displayName || '')}" />
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Identity</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card">
+                <div class="st-row">
+                  <label class="st-label" for="stDisplayName">Your name</label>
+                  <input type="text" id="stDisplayName" class="st-input" maxlength="24"
+                         placeholder="Optional" value="${escapeHtml(settings.displayName || '')}" />
+                </div>
+                <div class="st-hint">Shown in the greeting on Home.</div>
+              </div>
             </div>
-            <div class="st-hint">Shown in the greeting on Home.</div>
           </div>
 
-          <div class="st-group-title">Show on Home</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Show on Home</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
             <div class="st-row">
               <label class="st-label">Clock Widget</label>
               <input type="checkbox" id="wClockToggle" ${w.clock !== false ? 'checked' : ''} />
@@ -486,6 +597,7 @@ const SettingsRenderer = (() => {
               <label class="st-label">Pinned Links on Home</label>
               <input type="checkbox" id="wPinnedLinksToggle" ${!settings.hidePinnedOnHome ? 'checked' : ''} />
             </div>
+            ${w.clock !== false ? `
             <div class="st-row">
               <label class="st-label" for="stClockPos">Clock Layout Position</label>
               ${CustomSelect.render({
@@ -499,10 +611,60 @@ const SettingsRenderer = (() => {
                 style: 'width:220px;'
               })}
             </div>
+            <div class="st-hint">Position works the same with or without a wallpaper.</div>
+            <div class="st-row">
+              <label class="st-label" for="stClockFont">Clock Time Font</label>
+              ${CustomSelect.render({
+                id: 'stClockFont',
+                value: settings.clockFont || 'default',
+                options: [
+                  { value: 'thin', label: 'Thin (iOS style)' },
+                  { value: 'light', label: 'Light (Android style)' },
+                  { value: 'default', label: 'Digital (Orbitron)' },
+                  { value: 'app', label: 'Match App Font' },
+                  { value: 'serif', label: 'Serif' },
+                  { value: 'mono', label: 'Monospace' },
+                  { value: 'handwriting', label: 'Handwriting' }
+                ],
+                style: 'width:220px;'
+              })}
+            </div>
+            <div class="st-row">
+              <label class="st-label" for="stClockColor">Clock Color</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="color" id="stClockColor" class="st-color"
+                       value="${/^#[0-9a-f]{6}$/i.test(settings.clockColor || '') ? settings.clockColor : effectiveAccent()}" />
+                <button id="stClockColorReset" class="st-action-btn" style="padding:6px 10px;">Use accent</button>
+              </div>
+            </div>` : ''}
+            <div class="st-row" style="align-items:flex-start; flex-direction:column; gap:4px;">
+              <div class="st-row" style="width:100%;">
+                <label class="st-label" for="stWpShadowOpacity">Text Shadow Transparency</label>
+                <span class="st-val" id="stWpShadowOpacityVal">${settings.wpShadowOpacity ?? 60}%</span>
+              </div>
+              <input type="range" id="stWpShadowOpacity" min="0" max="100" step="1"
+                     value="${settings.wpShadowOpacity ?? 60}" style="width:100%;" />
+            </div>
+            <div class="st-row" style="align-items:flex-start; flex-direction:column; gap:4px;">
+              <div class="st-row" style="width:100%;">
+                <label class="st-label" for="stWpShadowBlur">Text Shadow Blur</label>
+                <span class="st-val" id="stWpShadowBlurVal">${settings.wpShadowBlur ?? 20}px</span>
+              </div>
+              <input type="range" id="stWpShadowBlur" min="0" max="40" step="1"
+                     value="${settings.wpShadowBlur ?? 20}" style="width:100%;" />
+            </div>
+            <div class="st-hint">Controls the clock's shadow always, and the greeting, date, weather and pinned-link labels whenever a wallpaper is active. Set opacity to 0 to turn it off.</div>
+              </div>
+            </div>
           </div>
 
-          <div class="st-group-title">Search Engine &amp; Dropdown Checklist</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Search Engine &amp; Dropdown Checklist</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
             <div class="st-row">
               <label class="st-label" for="stSearchEngine">Default Search Engine</label>
               ${CustomSelect.render({
@@ -524,10 +686,34 @@ const SettingsRenderer = (() => {
                 </label>
               `).join('')}
             </div>
+              </div>
+            </div>
           </div>
 
-          <div class="st-group-title">Weather</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">AI Search Privacy</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card">
+                <div class="st-row">
+                  <label class="st-label" for="stAiAutoSend">Auto-send EshaalTab queries on AI sites</label>
+                  <input type="checkbox" id="stAiAutoSend" ${settings.aiAutoSend ? 'checked' : ''} />
+                </div>
+                <div class="st-hint">Off by default. Enabling shows one Chrome prompt for the optional scripting permission and access to ChatGPT, Claude and Gemini. The script only handles a query opened from EshaalTab and does not collect conversations.</div>
+              </div>
+            </div>
+          </div>
+
+          ${w.weather ? `
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Weather</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
             <div class="st-row">
               <label class="st-label">City Name</label>
               <input type="text" id="stWeatherCity" class="st-input" value="${escapeHtml(settings.weatherCity || '')}" placeholder="e.g. London" style="width:140px;" />
@@ -545,7 +731,9 @@ const SettingsRenderer = (() => {
               })}
             </div>
             <button id="stWeatherApplyBtn" class="st-action-btn primary">Save weather</button>
-          </div>
+              </div>
+            </div>
+          </div>` : ''}
         </div>
       `);
 
@@ -553,71 +741,120 @@ const SettingsRenderer = (() => {
     } else if (activeTab === 'data') {
       setSafeHTML(body, `
         <div class="st-container">
-          <div class="st-group-title">Preferences</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
-            <div class="st-row">
-              <label class="st-label">Time Format</label>
-              ${CustomSelect.render({
-                id: 'stTimeFormat',
-                value: settings.use12h ? '12' : '24',
-                options: [
-                  { value: '24', label: '24-Hour' },
-                  { value: '12', label: '12-Hour (AM/PM)' }
-                ],
-                style: 'width:160px;'
-              })}
-            </div>
-            <div>
-              <div class="st-row" style="margin-bottom:6px;">
-                <span class="st-label">Column width</span>
-                <span class="st-val">${settings.boardWidth || 260}px</span>
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Preferences</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
+                <div class="st-row">
+                  <label class="st-label">Time Format</label>
+                  ${CustomSelect.render({
+                    id: 'stTimeFormat',
+                    value: settings.use12h ? '12' : '24',
+                    options: [
+                      { value: '24', label: '24-Hour' },
+                      { value: '12', label: '12-Hour (AM/PM)' }
+                    ],
+                    style: 'width:160px;'
+                  })}
+                </div>
+                <div>
+                  <div class="st-row" style="margin-bottom:6px;">
+                    <span class="st-label">Column width</span>
+                    <span class="st-val">${settings.boardWidth || 260}px</span>
+                  </div>
+                  <input type="range" id="stBoardWidth" min="200" max="560" step="10" value="${settings.boardWidth || 260}" style="width:100%; cursor:pointer;" />
+                </div>
               </div>
-              <input type="range" id="stBoardWidth" min="200" max="560" step="10" value="${settings.boardWidth || 260}" style="width:100%; cursor:pointer;" />
             </div>
           </div>
 
-          <div class="st-group-title">Import</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Import</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
             <button id="btnImportBrowser" class="st-action-btn primary">Import Chrome Bookmarks Bar</button>
             <button id="btnRaindropTrigger" class="st-action-btn">Import Raindrop.io (.csv / .json)</button>
             <input type="file" id="btnImportRaindropFile" accept=".csv,.json" style="display:none;" />
+              </div>
+            </div>
           </div>
 
-          <div class="st-group-title">Cleanup</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Cleanup</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
             <button id="stDedupeBtn" class="st-action-btn">Find &amp; Remove Duplicate Bookmarks</button>
             <div class="st-hint">Removes links whose URL already exists on another board (keeps the first).</div>
+              </div>
+            </div>
           </div>
 
-          <div class="st-group-title">Privacy</div>
-          <div class="st-card">
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Privacy</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card">
             <div class="st-row">
               <label class="st-label" for="stRemoteFavicons">Load icons from the web</label>
               <input type="checkbox" id="stRemoteFavicons" ${settings.remoteFavicons ? 'checked' : ''} />
             </div>
             <div class="st-hint">Off by default. When on, sites you bookmark are sent to DuckDuckGo and Google to fetch nicer icons. Your browser's own cached icons are always used first.</div>
+              </div>
+            </div>
           </div>
 
-          <div class="st-group-title">Backup</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Backup</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
             <button id="stExportBtn" class="st-action-btn">Export Full JSON Backup</button>
             <div>
               <div class="st-hint" style="margin-bottom:6px;">Restore JSON File:</div>
               <input type="file" id="btnImportJsonFile" accept=".json" />
             </div>
+              </div>
+            </div>
           </div>
 
-          <div class="st-group-title">Reset &amp; Data Wipe</div>
-          <div class="st-card" style="display:flex; flex-direction:column; gap:12px; border:1px solid color-mix(in srgb, #ef4444 30%, var(--border-soft));">
+          <div class="st-accordion is-expanded">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Reset &amp; Data Wipe</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:12px; border:1px solid color-mix(in srgb, #ef4444 30%, var(--border-soft));">
+            <div>
+              <div class="st-label" style="margin-bottom:4px;">Repair Wallpaper Cache</div>
+              <div class="st-hint" style="margin-bottom:8px;">Removes broken wallpaper entries and unused cached media without touching boards, notes, todos, or working wallpapers.</div>
+              <button id="stRepairMediaBtn" class="st-action-btn">Repair Wallpaper Cache</button>
+            </div>
+            <div style="border-top:1px solid var(--border-soft); padding-top:10px;">
             <div>
               <div class="st-label" style="margin-bottom:4px;">Remove All Boards</div>
               <div class="st-hint" style="margin-bottom:8px;">Deletes all bookmark boards and links. Your settings, notes, and wallpapers remain intact.</div>
               <button id="stClearBoardsBtn" class="st-action-btn" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4);">Clear All Boards</button>
             </div>
+            </div>
             <div style="border-top:1px solid var(--border-soft); padding-top:10px;">
               <div class="st-label" style="margin-bottom:4px;">Factory Reset Extension</div>
               <div class="st-hint" style="margin-bottom:8px;">Completely wipes all boards, notes, focus timers, wallpapers, and resets all settings to defaults.</div>
               <button id="stResetAllBtn" class="st-reset-btn" style="background:#ef4444; color:#ffffff; font-weight:600; width:100%;">Reset Extension Complete</button>
+            </div>
+              </div>
             </div>
           </div>
         </div>
@@ -714,7 +951,7 @@ const SettingsRenderer = (() => {
         <div class="st-group-title">Your data</div>
         <div class="st-card help-card">
           ${item('Backup and restore', 'In <b>Data</b> you can export a full JSON backup, restore one, or import from Chrome or Raindrop. <b>Find and remove duplicate bookmarks</b> clears out links you have saved more than once.')}
-          ${item('What leaves your browser', 'Your boards, notes and todos stay on your device. There is no account and no server. The new tab page makes no network requests at all unless you switch something on. <b>Load icons from the web</b> is off by default and fetches site icons from Google and DuckDuckGo when enabled. The <b>weather widget</b> is off by default and calls open-meteo.com once you set a city. Nothing else leaves your browser.')}
+          ${item('What leaves your browser', 'Your boards, notes and todos stay on your device. There is no EshaalTab account, analytics service or server. A search is sent only when you submit it to your chosen search or AI provider. A wallpaper URL contacts that site when you add it. <b>Load icons from the web</b> is off by default and contacts Google and DuckDuckGo when enabled. The <b>weather widget</b> contacts Open-Meteo after you set a city. AI auto-send is off by default and needs the separate permission described in Widgets.')}
         </div>
       </div>`;
   }
@@ -724,7 +961,24 @@ const SettingsRenderer = (() => {
     const data = StorageManager.getData();
     const fileInput = $('fileInput');
 
-    $$('.preset-btn').forEach(btn => {
+    $('btnExtractWallpaper')?.addEventListener('click', async () => {
+      delete settings.accentOverride;
+      settings.preset = 'wallpaper';
+      if (settings.wpExtractedAccent) {
+        settings.accentColor = settings.wpExtractedAccent;
+        StorageManager.save();
+        applyTheme();
+        renderSideSheetContent();
+        ToastSystem.success('Restored wallpaper accent');
+      } else {
+        const val = settings.backgroundValue;
+        const isVideo = settings.backgroundType === 'video';
+        const mediaUrl = StorageManager.isMediaRef(val) ? await StorageManager.resolveMedia(val) : val;
+        autoExtractColor(mediaUrl, isVideo);
+      }
+    });
+
+    $$('.preset-swatch[data-preset]').forEach(btn => {
       btn.addEventListener('click', () => {
         applyPreset(btn.dataset.preset);
         renderSideSheetContent();
@@ -744,6 +998,9 @@ const SettingsRenderer = (() => {
     $('myntColorPicker')?.addEventListener('input', (e) => {
       settings.solidSeed = e.target.value;
       if (!settings.accentOverride) settings.accentColor = e.target.value;
+      // Hand-picking a colour means the current look no longer matches
+      // whatever preset (if any) was active -- reflect that immediately.
+      settings.preset = 'custom';
       StorageManager.saveSettings();
       applyTheme();
       if ($('boardsView')?.classList.contains('active')) BoardRenderer.renderBoards();
@@ -756,6 +1013,7 @@ const SettingsRenderer = (() => {
     $('stAccent1Picker')?.addEventListener('input', (e) => {
       settings.accentOverride = e.target.value;
       settings.accentColor = e.target.value;
+      settings.preset = 'custom';
       StorageManager.saveSettings();
       applyTheme();
       if ($('boardsView')?.classList.contains('active')) BoardRenderer.renderBoards();
@@ -791,8 +1049,34 @@ const SettingsRenderer = (() => {
       applyTheme();
     });
 
+    /* The three region sliders all follow the same shape: store 0-100, echo the
+       value in its label, then let applyTheme() push the CSS variables. */
+    const opacitySlider = (id, key, valId) => {
+      $(id)?.addEventListener('input', (e) => {
+        settings[key] = parseInt(e.target.value, 10);
+        const v = $(valId); if (v) v.textContent = `${e.target.value}%`;
+        StorageManager.saveSettings();
+        applyTheme();
+      });
+    };
+    opacitySlider('stTopbarOpacity', 'topbarOpacity', 'stTopbarOpacityVal');
+    opacitySlider('stWidgetBgOpacity', 'widgetBgOpacity', 'stWidgetBgOpacityVal');
+    opacitySlider('stNotesOpacity', 'notesOpacity', 'stNotesOpacityVal');
+
+    $('stSolidAmbient')?.addEventListener('change', (e) => {
+      settings.solidAmbient = e.target.checked;
+      StorageManager.saveSettings();
+      applyTheme();
+    });
+
     $('btnExportPresetCode')?.addEventListener('click', exportPresetCode);
     $('btnExportPresetFile')?.addEventListener('click', exportPresetFile);
+
+    $('stWpFit')?.addEventListener('change', (e) => {
+      settings.wallpaperFit = e.target.value;
+      StorageManager.saveSettings();
+      applyWallpaperStyle();
+    });
 
     $('stWpZoom')?.addEventListener('input', (e) => {
       settings.wallpaperZoom = parseInt(e.target.value);
@@ -813,6 +1097,21 @@ const SettingsRenderer = (() => {
       const valEl = $('stWpPosYVal'); if (valEl) valEl.textContent = `${e.target.value}%`;
       StorageManager.saveSettings();
       applyWallpaperStyle();
+    });
+
+    $('stWpOverlayToggle')?.addEventListener('change', (e) => {
+      settings.wallpaperOverlay = e.target.checked;
+      const row = $('stWpOverlayOpacityRow');
+      if (row) row.style.display = e.target.checked ? 'flex' : 'none';
+      StorageManager.saveSettings();
+      applyWallpaperOverlay();
+    });
+
+    $('stWpOverlayOpacity')?.addEventListener('input', (e) => {
+      settings.wallpaperOverlayOpacity = parseInt(e.target.value);
+      const valEl = $('stWpOverlayOpacityVal'); if (valEl) valEl.textContent = `${e.target.value}%`;
+      StorageManager.saveSettings();
+      applyWallpaperOverlay();
     });
 
     $('stWpMuteToggle')?.addEventListener('change', (e) => {
@@ -1007,18 +1306,24 @@ const SettingsRenderer = (() => {
       nameInp.addEventListener('change', saveName);
     }
 
-    const bindWidgetToggle = (id, key) => {
+    /* `regates` marks a widget whose own settings block is conditionally
+       rendered (clock position/font/colour, the whole Weather card). Those need
+       the sheet rebuilt on the spot, otherwise the section only appears or
+       disappears the next time settings is opened -- which reads as the toggle
+       simply not working. */
+    const bindWidgetToggle = (id, key, regates = false) => {
       $(id)?.addEventListener('change', (e) => {
         live().widgets[key] = e.target.checked;
         StorageManager.save();
         WidgetsRenderer.applyWidgetVisibility();
+        if (regates) renderSideSheetContent();
       });
     };
-    bindWidgetToggle('wClockToggle', 'clock');
+    bindWidgetToggle('wClockToggle', 'clock', true);
     bindWidgetToggle('wSearchToggle', 'navSearch');
     bindWidgetToggle('wTodoToggle', 'todo');
     bindWidgetToggle('wWorkspaceToggle', 'workspace');
-    bindWidgetToggle('wWeatherToggle', 'weather');
+    bindWidgetToggle('wWeatherToggle', 'weather', true);
 
     $('wPinnedLinksToggle')?.addEventListener('change', (e) => {
       const s = live();
@@ -1028,11 +1333,63 @@ const SettingsRenderer = (() => {
       HomeRenderer.render();
       ToastSystem.success(s.hidePinnedOnHome ? 'Pinned links hidden on Home' : 'Pinned links visible on Home');
     });
+
+    $('stAiAutoSend')?.addEventListener('change', async (e) => {
+      const wanted = e.target.checked;
+      e.target.disabled = true;
+      const enabled = await PermissionManager.setAiEnabled(wanted);
+      live().aiAutoSend = wanted && enabled;
+      e.target.checked = live().aiAutoSend;
+      e.target.disabled = false;
+      StorageManager.saveSettings();
+      ToastSystem[live().aiAutoSend ? 'success' : 'info'](
+        live().aiAutoSend ? 'AI auto-send enabled' : (wanted ? 'AI-site access was not granted' : 'AI auto-send disabled')
+      );
+    });
     $('stClockPos')?.addEventListener('change', (e) => {
       live().clockPosition = e.target.value;
       StorageManager.save();
       WidgetsRenderer.applyWidgetVisibility();
       ToastSystem.success(`Clock position updated`);
+    });
+
+    $('stClockFont')?.addEventListener('change', (e) => {
+      live().clockFont = e.target.value;
+      StorageManager.save();
+      WidgetsRenderer.applyWidgetVisibility();
+      ToastSystem.success('Clock font updated');
+    });
+
+    $('stClockColor')?.addEventListener('input', (e) => {
+      live().clockColor = e.target.value;
+      StorageManager.save();
+      WidgetsRenderer.applyClockAppearance(live());
+    });
+
+    $('stClockColorReset')?.addEventListener('click', () => {
+      live().clockColor = '';
+      StorageManager.save();
+      WidgetsRenderer.applyClockAppearance(live());
+      renderSideSheetContent();
+      ToastSystem.info('Clock follows the accent colour again');
+    });
+
+    $('stWpShadowOpacity')?.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      live().wpShadowOpacity = val;
+      const lbl = $('stWpShadowOpacityVal');
+      if (lbl) lbl.textContent = val + '%';
+      StorageManager.saveSettings();
+      WidgetsRenderer.applyWidgetVisibility();
+    });
+
+    $('stWpShadowBlur')?.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      live().wpShadowBlur = val;
+      const lbl = $('stWpShadowBlurVal');
+      if (lbl) lbl.textContent = val + 'px';
+      StorageManager.saveSettings();
+      WidgetsRenderer.applyWidgetVisibility();
     });
 
     $('stSearchEngine')?.addEventListener('change', (e) => {
@@ -1153,6 +1510,9 @@ const SettingsRenderer = (() => {
       StorageManager.saveSettings();
       BoardRenderer.renderBoards();
       HomeRenderer.renderPinned();
+      // Re-resolve icons already on screen (workspace grid, search results)
+      // instead of leaving them on the previous chain until the next reload.
+      if (typeof refreshFavicons === 'function') refreshFavicons();
       ToastSystem.info(e.target.checked ? 'Web icons enabled' : 'Web icons off, using your browser cache only');
     });
 
@@ -1177,13 +1537,41 @@ const SettingsRenderer = (() => {
     $('stClearBoardsBtn')?.addEventListener('click', () => {
       showConfirm('Clear All Boards & Bookmarks?',
         'Are you sure you want to remove all bookmark boards and links? Your settings, notes, and wallpapers will stay intact.', () => {
+        // Same snapshot-and-offer-Undo pattern the dedupe button already uses --
+        // this was the one destructive board action with no way back at all.
+        const before = JSON.parse(JSON.stringify(BoardManager.getAll()));
         StorageManager.getData().boards = [];
         StorageManager.saveImmediate();
         BoardRenderer.renderBoards();
         HomeRenderer.renderPinned();
         renderSideSheetContent();
-        ToastSystem.success('All boards removed');
+        ToastSystem.action('All boards removed', 'Undo', () => {
+          StorageManager.getData().boards = before;
+          StorageManager.saveImmediate();
+          BoardRenderer.renderBoards();
+          HomeRenderer.renderPinned();
+          renderSideSheetContent();
+          ToastSystem.info('Boards restored');
+        });
       });
+    });
+
+    $('stRepairMediaBtn')?.addEventListener('click', async (e) => {
+      e.currentTarget.disabled = true;
+      try {
+        const result = await StorageManager.repairMedia();
+        if (result.backgroundReset) {
+          await applyWallpaper('solid', StorageManager.getSettings().backgroundValue, false);
+        }
+        renderSideSheetContent();
+        const details = [];
+        if (result.removed) details.push(`${result.removed} broken wallpaper${result.removed === 1 ? '' : 's'} removed`);
+        if (result.backgroundReset) details.push('background reset safely');
+        ToastSystem.success(details.length ? details.join(', ') : 'Wallpaper cache is healthy');
+      } catch {
+        e.currentTarget.disabled = false;
+        ToastSystem.error('Could not repair the wallpaper cache');
+      }
     });
 
     $('stResetAllBtn')?.addEventListener('click', () => {
@@ -1635,7 +2023,17 @@ const SettingsRenderer = (() => {
       ? settings.cornerRadius
       : (p && p.radius ? p.radius : null);
 
-    if (override === '0px') {
+    /* 'circle' is a tile shape, not a radius scale: panels and cards stay
+       rectangular, only the square icon tiles (pinned links, board tiles,
+       workspace apps) go fully round. Driven by a body class so the CSS can
+       target exactly those without a global radius override. */
+    document.body.classList.toggle('tiles-circle', override === 'circle');
+
+    if (override === 'circle') {
+      document.body.classList.remove('radius-sharp');
+      RADIUS_VARS.forEach(v => el.removeProperty(v));
+      el.removeProperty('--radius');
+    } else if (override === '0px') {
       RADIUS_VARS.forEach(v => el.setProperty(v, '0px'));
       el.setProperty('--radius', '0px');
       el.setProperty('--r-xs', '0px');
@@ -1671,31 +2069,37 @@ const SettingsRenderer = (() => {
     }
     if (p && p.cls) document.body.classList.add(p.cls);
 
-    if (settings.fontFamily === 'sans-serif') {
+    if (settings.fontFamily === 'geometric') {
       document.body.classList.remove('font-handwriting');
-      el.setProperty('--font-app', "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif");
-    } else if (settings.fontFamily === 'geometric') {
-      document.body.classList.remove('font-handwriting');
-      el.setProperty('--font-app', "'Outfit', 'Poppins', 'Century Gothic', 'Futura', sans-serif");
-    } else if (settings.fontFamily === 'serif') {
-      document.body.classList.remove('font-handwriting');
-      el.setProperty('--font-app', "Georgia, 'Playfair Display', 'Times New Roman', serif");
-    } else if (settings.fontFamily === 'monospace' || (settings.fontFamily === 'default' && p && p.mono)) {
-      document.body.classList.remove('font-handwriting');
-      el.setProperty('--font-app', "'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Consolas, monospace");
+      el.setProperty('--font-app', "'Outfit', system-ui, sans-serif");
     } else if (settings.fontFamily === 'rounded') {
       document.body.classList.remove('font-handwriting');
-      el.setProperty('--font-app', "'Quicksand', 'Nunito', 'Segoe UI Soft', 'Comic Sans MS', sans-serif");
+      el.setProperty('--font-app', "'Lexend', system-ui, sans-serif");
+    } else if (settings.fontFamily === 'monospace') {
+      document.body.classList.remove('font-handwriting');
+      el.setProperty('--font-app', "'JetBrains Mono', monospace");
+    } else if (settings.fontFamily === 'serif') {
+      document.body.classList.remove('font-handwriting');
+      el.setProperty('--font-app', "'Lora', Georgia, serif");
     } else if (settings.fontFamily === 'slab') {
       document.body.classList.remove('font-handwriting');
-      el.setProperty('--font-app', "'Rockwell', 'Courier Prime', 'Courier New', serif");
+      el.setProperty('--font-app', "'Roboto Slab', Georgia, serif");
+    } else if (settings.fontFamily === 'sans-serif') {
+      document.body.classList.remove('font-handwriting');
+      el.setProperty('--font-app', "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif");
     } else if (settings.fontFamily === 'handwriting') {
-      el.setProperty('--font-app', "'Caveat', 'Patrick Hand', 'Comic Sans MS', cursive");
+      el.setProperty('--font-app', "'Caveat', cursive");
       document.body.classList.add('font-handwriting');
     } else {
       document.body.classList.remove('font-handwriting');
-      el.removeProperty('--font-app');
+      el.setProperty('--font-app', "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif");
     }
+
+    /* Clock face/weight/tracking/colour are owned solely by
+       WidgetsRenderer.applyClockAppearance(). A second setter used to live here
+       and raced it -- whichever ran last won, which is why the clock font
+       appeared to work sometimes and do nothing other times. */
+    WidgetsRenderer.applyClockAppearance(settings);
   }
 
   /* There is one accent now. This still writes --accent-2 so any stored preset
@@ -1722,7 +2126,7 @@ const SettingsRenderer = (() => {
          aspect ratio puts it, so any photo that was not exactly the viewport
          ratio got letterboxed with bands of page background above and below.
          cover always fills; the scale on top is what zoom means. */
-      photoBg.style.backgroundSize = 'cover';
+      photoBg.style.backgroundSize = settings.wallpaperFit || 'cover';
       photoBg.style.backgroundPosition = `${posX}% ${posY}%`;
       photoBg.style.transform = `scale(${zoom})`;
       photoBg.style.transformOrigin = `${posX}% ${posY}%`;
@@ -1742,6 +2146,12 @@ const SettingsRenderer = (() => {
     }
   }
 
+  function applyWallpaperOverlay() {
+    const settings = StorageManager.getSettings();
+    document.body.classList.toggle('wp-overlay-on', !!settings.wallpaperOverlay);
+    document.documentElement.style.setProperty('--wp-overlay-opacity', (settings.wallpaperOverlayOpacity ?? 35) / 100);
+  }
+
   function applyTheme() {
     const settings = StorageManager.getSettings();
     const el = document.documentElement.style;
@@ -1749,6 +2159,7 @@ const SettingsRenderer = (() => {
 
     document.body.classList.toggle('solid-mode', solid);
     document.body.classList.toggle('wallpaper-mode', !solid);
+    applyWallpaperOverlay();
 
     const activeMode = resolveMode();
     const isLight = activeMode === 'light';
@@ -1756,6 +2167,21 @@ const SettingsRenderer = (() => {
 
     const opacityVal = typeof settings.boardOpacity === 'number' ? settings.boardOpacity : 0.08;
     el.setProperty('--board-opacity', opacityVal);
+
+    /* Per-region transparency. Each is stored 0-100 and falls back to the board
+       value, so an install that never touches them keeps the old single-slider
+       behaviour. */
+    const pct = (v, fallback) => (typeof v === 'number' ? v : fallback) / 100;
+    el.setProperty('--topbar-opacity', String(pct(settings.topbarOpacity, opacityVal * 100)));
+    el.setProperty('--notes-opacity', String(pct(settings.notesOpacity, opacityVal * 100)));
+    /* Plain 0-1 alpha fed into rgba(). color-mix() was tried first and silently
+       produced a fully transparent box: a var() that expands to a colour
+       containing calc() does not resolve inside color-mix(), so the box simply
+       vanished at every slider position. */
+    el.setProperty('--widget-bg-alpha', String(pct(settings.widgetBgOpacity, 95)));
+
+    // Soft accent wash behind solid (non-wallpaper) backgrounds.
+    document.body.classList.toggle('ambient-on', settings.solidAmbient !== false);
 
     document.documentElement.style.colorScheme = isLight ? 'light' : 'dark';
 
@@ -1812,8 +2238,8 @@ const SettingsRenderer = (() => {
 
       const a = hexToRgb(accent);
       const rgb = isLight
-        ? { r: 255, g: 255, b: 255 }
-        : { r: Math.round(a.r * 0.45), g: Math.round(a.g * 0.45), b: Math.round(a.b * 0.45) };
+        ? { r: Math.round(a.r * 0.35 + 240 * 0.65), g: Math.round(a.g * 0.35 + 240 * 0.65), b: Math.round(a.b * 0.35 + 240 * 0.65) }
+        : { r: Math.round(a.r * 0.55 + 12 * 0.45), g: Math.round(a.g * 0.55 + 12 * 0.45), b: Math.round(a.b * 0.55 + 12 * 0.45) };
       el.setProperty('--board-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
 
       const bodyEl = document.body.style;
@@ -1939,16 +2365,32 @@ const SettingsRenderer = (() => {
     const { color, avgLum } = dominantColor(data);
     const toHex = c => '#' + ((1 << 24) + (c.r << 16) + (c.g << 8) + c.b).toString(16).slice(1);
     const settings = StorageManager.getSettings();
-    if (!settings.accentOverride) settings.accentColor = toHex(color);
+    delete settings.accentOverride;
+    const hex = toHex(color);
+    settings.accentColor = hex;
+    settings.wpExtractedAccent = hex;
     if (settings.mode !== 'system' && !settings.modeLocked) {
       settings.mode = avgLum > 0.5 ? 'light' : 'dark';
     }
+    settings.preset = 'wallpaper';
     StorageManager.save();
     applyTheme();
+    renderSideSheetContent();
   }
 
-  async function autoExtractColor(mediaUrl, isVideo = false) {
-    if (!mediaUrl) return;
+  async function autoExtractColor(rawMediaUrl, isVideo = false) {
+    if (!rawMediaUrl) return;
+    let mediaUrl = rawMediaUrl;
+    if (typeof mediaUrl === 'string' && mediaUrl.startsWith('ref:')) {
+      try {
+        mediaUrl = await StorageManager.resolveMedia(mediaUrl);
+      } catch (e) { return; }
+    }
+    // A ref: value is an IndexedDB/storage key, never a browser-loadable URL.
+    // If its backing media is missing, stop instead of assigning the key to an
+    // image/video element and producing a CORS error in the extension console.
+    if (!mediaUrl || (typeof mediaUrl === 'string' && mediaUrl.startsWith('ref:'))) return;
+
     try {
       const isVideoFile = isVideo || /\.(mp4|webm|ogg)$/i.test(mediaUrl) || mediaUrl.startsWith('data:video/') || mediaUrl.startsWith('blob:');
 
@@ -1956,7 +2398,9 @@ const SettingsRenderer = (() => {
         const video = document.createElement('video');
         video.muted = true;
         video.playsInline = true;
-        video.crossOrigin = 'Anonymous';
+        if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
+          video.crossOrigin = 'Anonymous';
+        }
         video.src = mediaUrl;
 
         const processVideoFrame = () => {
@@ -1967,9 +2411,7 @@ const SettingsRenderer = (() => {
             ctx.drawImage(video, 0, 0, 60, 60);
 
             applyExtracted(ctx.getImageData(0, 0, 60, 60).data);
-          } catch (err) {
-            console.warn('Video frame extract exception:', err);
-          }
+          } catch (err) {}
         };
 
         video.onloadeddata = () => {
@@ -1980,23 +2422,22 @@ const SettingsRenderer = (() => {
           }
         };
         video.onseeked = processVideoFrame;
-        video.onerror = () => console.warn('Video load error for color extraction');
         return;
       }
 
       let blobUrl = mediaUrl;
+      let isObjectUrl = false;
       if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
         try {
           const res = await fetch(mediaUrl);
           const blob = await res.blob();
           blobUrl = URL.createObjectURL(blob);
-        } catch (err) {
-          console.warn('Fetch image blob failed, using direct image src', err);
-        }
+          isObjectUrl = true;
+        } catch (err) {}
       }
 
       const img = new Image();
-      if (!blobUrl.startsWith('blob:')) {
+      if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
         img.crossOrigin = 'Anonymous';
       }
 
@@ -2008,17 +2449,11 @@ const SettingsRenderer = (() => {
           ctx.drawImage(img, 0, 0, 60, 60);
 
           applyExtracted(ctx.getImageData(0, 0, 60, 60).data);
-          if (blobUrl.startsWith('blob:')) URL.revokeObjectURL(blobUrl);
-        } catch (e) {
-          console.warn('Canvas extract failed:', e);
-        }
+          if (isObjectUrl) URL.revokeObjectURL(blobUrl);
+        } catch (e) {}
       };
-
-      img.onerror = () => console.warn('Image load error for color extraction');
       img.src = blobUrl;
-    } catch (e) {
-      console.warn('Auto color extraction exception:', e);
-    }
+    } catch (e) {}
   }
 
   function applyCursor() {
@@ -2115,4 +2550,4 @@ const SettingsRenderer = (() => {
   }
 
   return { init, openSideSheet, closeSideSheet, applyTheme, applyPresetShell, setMode, applyWallpaper, autoExtractColor, applyCursor };
-})(); 
+})();

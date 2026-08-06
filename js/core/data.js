@@ -102,25 +102,26 @@ const BookmarkManager = (() => {
     return 'https://' + s;
   }
 
-  function add(boardId, title, url, tags = []) {
+  function add(boardId, title, url, tags = [], nickname = '') {
     const b = BoardManager.find(boardId);
     if (!b) return null;
     const safe = normalizeUrl(url);
     if (!safe) return null;
     const norm = tags.map(TagManager.normalize).filter(Boolean);
     norm.forEach(TagManager.add);
-    const bm = { id: uuid(), title: String(title || safe).trim().slice(0, 300), url: safe, tags: norm, order: b.bookmarks.length };
+    const bm = { id: uuid(), title: String(title || safe).trim().slice(0, 300), nickname: String(nickname || '').trim().slice(0, 60), url: safe, tags: norm, order: b.bookmarks.length };
     b.bookmarks.push(bm);
     StorageManager.save();
     return bm;
   }
-  function edit(boardId, bmId, title, url, tags) {
+  function edit(boardId, bmId, title, url, tags, nickname = '') {
     const b = BoardManager.find(boardId);
     const bm = b && b.bookmarks.find(x => x.id === bmId);
     if (!bm) return;
     const safe = normalizeUrl(url);
     if (!safe) return;
     bm.title = String(title || safe).trim().slice(0, 300);
+    bm.nickname = String(nickname || '').trim().slice(0, 60);
     bm.url = safe;
     bm.tags = (tags || []).map(TagManager.normalize).filter(Boolean);
     bm.tags.forEach(TagManager.add);
@@ -179,7 +180,20 @@ const BookmarkManager = (() => {
         if (bm.pinnedToHome) out.push({ ...bm, boardId: board.id, boardName: board.name });
       }
     }
+    const order = StorageManager.getData().pinnedOrder || [];
+    out.sort((a, b) => {
+      const idxA = order.indexOf(a.id);
+      const idxB = order.indexOf(b.id);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return 0;
+    });
     return out;
+  }
+  function reorderPinned(pinnedIds) {
+    StorageManager.getData().pinnedOrder = pinnedIds;
+    StorageManager.save();
   }
   function isPinned(bmId) {
     return getPinned().some(bm => bm.id === bmId);
@@ -206,12 +220,36 @@ const BookmarkManager = (() => {
   }
 
   return { add, edit, remove, insertAt, move, searchAll, normalizeUrl,
-           getPinned, isPinned, countPinned, togglePin, unpin, PIN_LIMIT };
+           getPinned, isPinned, countPinned, togglePin, unpin, reorderPinned, PIN_LIMIT };
 })();
 
 const NotesManager = (() => {
+  const MAX_HISTORY = 25;
+
   function get() { return StorageManager.getData().notes || ''; }
   function set(text) { StorageManager.getData().notes = text; StorageManager.save(); }
+  /* Same as set(), but forces the write to disk instead of waiting on the
+     debounce. Used for the manual "Save" button and before a history recall
+     overwrites the field, so the version you're about to leave is durable. */
+  function setImmediate(text) { StorageManager.getData().notes = text; StorageManager.saveImmediate(); }
+
+  function getHistory() {
+    const d = StorageManager.getData();
+    return Array.isArray(d.notesHistory) ? d.notesHistory : (d.notesHistory = []);
+  }
+  /* One checkpoint per "editing session" (see the focus/blur pairing in
+     NotesRenderer), not per keystroke -- a history entry per character would
+     make the recall list useless. */
+  function pushHistory(text) {
+    const t = String(text || '');
+    if (!t.trim()) return;
+    const hist = getHistory();
+    if (hist[0] === t) return;
+    hist.unshift(t);
+    if (hist.length > MAX_HISTORY) hist.length = MAX_HISTORY;
+    StorageManager.save();
+  }
+
   function exportTxt() {
     const blob = new Blob([get()], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
@@ -220,7 +258,7 @@ const NotesManager = (() => {
     a.click();
     URL.revokeObjectURL(a.href);
   }
-  return { get, set, exportTxt };
+  return { get, set, setImmediate, getHistory, pushHistory, exportTxt };
 })();
 
 const ClipboardManager = (() => {

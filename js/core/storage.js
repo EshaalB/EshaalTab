@@ -26,17 +26,21 @@ const ICONS = {
   grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
   check: '<polyline points="20 6 9 17 4 12"/>',
   search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
-  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/>',
-  weatherSun: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
-  weatherCloud: '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>',
-  weatherRain: '<path d="M16 13v8M8 13v8M12 15v8M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/>',
-  weatherSnow: '<path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="16" y1="16" x2="16.01" y2="16"/><line x1="10" y1="21" x2="10.01" y2="21"/><line x1="14" y1="21" x2="14.01" y2="21"/>',
-  weatherStorm: '<path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polygon points="13 11 9 17 15 17 11 23"/>',
-  coffee: '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
-  sparkles: '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>',
-  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>'
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5" fill="#fcd34d"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
+  weatherSun: '<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5" fill="#fcd34d"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+  weatherCloud: '<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" fill="#e2e8f0"/></svg>',
+  weatherRain: '<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13v8M8 13v8M12 15v8M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" stroke="#94a3b8"/><path d="M18 7h-1.26A8 8 0 1 0 4 15.25" fill="#e2e8f0" stroke="none"/></svg>',
+  weatherSnow: '<svg viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25" stroke="#94a3b8"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="16" y1="16" x2="16.01" y2="16"/><line x1="10" y1="21" x2="10.01" y2="21"/><line x1="14" y1="21" x2="14.01" y2="21"/><path d="M18 8h-1.26A8 8 0 1 0 4 16.25" fill="#e2e8f0" stroke="none"/></svg>',
+  weatherStorm: '<svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9" fill="#cbd5e1"/><polygon points="13 11 9 17 15 17 11 23" fill="#fde047" stroke="#eab308"/></svg>',
+  coffee: '<svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" fill="#fcd34d"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>',
+  sunset: '<svg viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14a5 5 0 0 0-10 0" fill="#fdba74"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="4.93" y1="6.93" x2="6.34" y2="8.34"/><line x1="19.07" y1="6.93" x2="17.66" y2="8.34"/><line x1="2" y1="14" x2="22" y2="14" stroke="#ea580c" stroke-width="2.5"/><line x1="4" y1="18" x2="20" y2="18" stroke="#ea580c" stroke-width="2"/></svg>',
+  sparkles: '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L10.088 8.813A2 2 0 0 1 8.813 10.088L3 12L8.813 13.912A2 2 0 0 1 10.088 15.187L12 21L13.912 15.187A2 2 0 0 1 15.187 13.912L21 12L15.187 10.088A2 2 0 0 1 13.912 8.813L12 3Z" fill="#ddd6fe"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" fill="#bfdbfe"/></svg>'
 };
 function icon(name, size = 16) {
+  if (ICONS[name] && ICONS[name].startsWith('<svg')) {
+    return ICONS[name].replace('<svg', `<svg width="${size}" height="${size}"`);
+  }
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ''}</svg>`;
 }
 
@@ -67,6 +71,8 @@ const StorageManager = (() => {
   const DEFAULT_DATA = {
     boards: seedBoards(),
     notes: '',
+    notesHistory: [],
+    tabStashes: [],
     todos: [],
     tags: ['code', 'git', 'dev', 'docs', 'video', 'media', 'news', 'mail'],
     wallpapers: [],
@@ -94,6 +100,7 @@ const StorageManager = (() => {
        engines the store listing advertises. */
     enabledEngines: ['default', 'duckduckgo', 'youtube', 'chatgpt', 'claude', 'gemini', 'research', 'perplexity'],
     lastSettingsTab: 'theme',
+    lastSavedBoardId: '',   // popup.js: defaults the board picker to wherever you saved last
     boardWidth: 260,
     searchEngine: 'default',
     weatherCity: '',
@@ -109,7 +116,21 @@ const StorageManager = (() => {
     use12h: false,
     hidePinnedOnHome: false,
     clockPosition: 'auto',
+    clockFont: 'default',
+    clockColor: '',            // empty = follow the accent colour
+    topbarOpacity: 8,
+    /* Alpha of the box behind widget icons (not the icon itself), so 95 is the
+       original filled look rather than the 8 used by the panel-tint sliders. */
+    widgetBgOpacity: 95,
+    notesOpacity: 8,
+    solidAmbient: true,
+    wpShadowOpacity: 60,
+    wpShadowBlur: 20,
+    wallpaperOverlay: false,
+    wallpaperOverlayOpacity: 35,
     remoteFavicons: false,
+    onboardingSeen: false,
+    aiAutoSend: false,
     workspaceFavorites: ['Search', 'Gmail', 'Drive', 'YouTube', 'Gemini', 'AI Studio', 'NotebookLM']
   };
 
@@ -136,24 +157,38 @@ const StorageManager = (() => {
   const isMediaRef = (v) => typeof v === 'string' && v.startsWith('ref:');
   const refId = (v) => String(v).slice(4);
 
+  function isExtValid() {
+    try {
+      return !!(chromeAvailable && EXT && EXT.runtime && EXT.runtime.id);
+    } catch {
+      return false;
+    }
+  }
+
+  function handleStorageError(label, err) {
+    const msg = String(err?.message || err || '');
+    if (/MAX_WRITE_OPERATIONS|quota|invalidated/i.test(msg)) return;
+    console.warn(label, err);
+  }
+
   async function readMediaIndex() {
     try {
-      if (chromeAvailable) return (await EXT.storage.local.get(MEDIA_INDEX_KEY))[MEDIA_INDEX_KEY] || [];
+      if (isExtValid()) return (await EXT.storage.local.get(MEDIA_INDEX_KEY))[MEDIA_INDEX_KEY] || [];
       return JSON.parse(localStorage.getItem(MEDIA_INDEX_KEY) || '[]');
     } catch { return []; }
   }
 
   async function writeMediaIndex(ids) {
     try {
-      if (chromeAvailable) await EXT.storage.local.set({ [MEDIA_INDEX_KEY]: ids });
+      if (isExtValid()) await EXT.storage.local.set({ [MEDIA_INDEX_KEY]: ids });
       else localStorage.setItem(MEDIA_INDEX_KEY, JSON.stringify(ids));
-    } catch (e) { console.warn('media index:', e); }
+    } catch (e) { handleStorageError('media index:', e); }
   }
 
   async function putMedia(id, dataUrl) {
     mediaCache.set(id, dataUrl);
     const key = MEDIA_PREFIX + id;
-    if (chromeAvailable) await EXT.storage.local.set({ [key]: dataUrl });
+    if (isExtValid()) await EXT.storage.local.set({ [key]: dataUrl });
     else localStorage.setItem(key, dataUrl);
     const idx = await readMediaIndex();
     if (!idx.includes(id)) await writeMediaIndex([...idx, id]);
@@ -165,9 +200,9 @@ const StorageManager = (() => {
     const key = MEDIA_PREFIX + id;
     let val = '';
     try {
-      if (chromeAvailable) val = (await EXT.storage.local.get(key))[key] || '';
+      if (isExtValid()) val = (await EXT.storage.local.get(key))[key] || '';
       else val = localStorage.getItem(key) || '';
-    } catch (e) { console.warn('media read:', e); }
+    } catch (e) { handleStorageError('media read:', e); }
     if (val) mediaCache.set(id, val);
     return val;
   }
@@ -176,9 +211,9 @@ const StorageManager = (() => {
     mediaCache.delete(id);
     const key = MEDIA_PREFIX + id;
     try {
-      if (chromeAvailable) await EXT.storage.local.remove(key);
+      if (isExtValid()) await EXT.storage.local.remove(key);
       else localStorage.removeItem(key);
-    } catch (e) { console.warn('media delete:', e); }
+    } catch (e) { handleStorageError('media delete:', e); }
   }
 
   async function resolveMedia(value) {
@@ -196,7 +231,7 @@ const StorageManager = (() => {
         else await delMedia(id);
       }
       if (keep.length !== idx.length) await writeMediaIndex(keep);
-    } catch (e) { console.warn('media prune:', e); }
+    } catch (e) { handleStorageError('media prune:', e); }
   }
 
   function trimForSync(s) {
@@ -340,7 +375,7 @@ const StorageManager = (() => {
   async function load() {
     try {
       let rawSettings, rawData;
-      if (chromeAvailable) {
+      if (isExtValid()) {
         const localBag = await EXT.storage.local.get(['data', 'settings']);
         rawData = localBag.data;
         rawSettings = localBag.settings;
@@ -392,31 +427,42 @@ const StorageManager = (() => {
     }
   }
 
-  const SYNC_MIN_INTERVAL = 10000;
+  const SYNC_MIN_INTERVAL = 30000;
   let syncTimer = null;
+  let lastSyncedSettingsStr = '';
 
   function writeSyncNow() {
     syncTimer = null;
+    if (!isExtValid() || !EXT.storage || !EXT.storage.sync) return;
     try {
-      Promise.resolve(EXT.storage.sync.set({ settings: trimForSync(settings) }))
-        .catch(e => console.warn('sync save:', e));
-    } catch (e) { console.warn('sync save:', e); }
+      const trimmed = trimForSync(settings);
+      const str = JSON.stringify(trimmed);
+      if (str === lastSyncedSettingsStr) return;
+      lastSyncedSettingsStr = str;
+
+      EXT.storage.sync.set({ settings: trimmed })
+        .catch(e => handleStorageError('sync save:', e));
+    } catch (e) {
+      handleStorageError('sync save:', e);
+    }
   }
 
   function queueSync() {
-    if (!chromeAvailable || !EXT.storage.sync) return;
-    if (syncTimer) clearTimeout(syncTimer);        // coalesce: reset the timer on every call
-    /* ponytail: plain debounce. The old Math.max(INTERVAL - elapsed, INTERVAL)
-       could never return anything but INTERVAL, so the elapsed-time term was
-       dead arithmetic dressed up as a rate limiter. Same behaviour, visibly. */
+    if (!isExtValid() || !EXT.storage || !EXT.storage.sync) return;
+    if (syncTimer) clearTimeout(syncTimer);
     syncTimer = setTimeout(writeSyncNow, SYNC_MIN_INTERVAL);
   }
 
   function persist() {
     mirrorBootState();
-    if (chromeAvailable) {
-      Promise.resolve(EXT.storage.local.set({ data, settings, writer: nextWriterStamp() })).catch(e => console.warn('local save:', e));
-      queueSync();
+    if (isExtValid()) {
+      try {
+        EXT.storage.local.set({ data, settings, writer: nextWriterStamp() })
+          .catch(e => handleStorageError('local save:', e));
+        queueSync();
+      } catch (e) {
+        handleStorageError('local save:', e);
+      }
     } else {
       localStorage.setItem('markmez_settings', JSON.stringify(settings));
       localStorage.setItem('markmez_data', JSON.stringify(data));
@@ -425,22 +471,45 @@ const StorageManager = (() => {
 
   function persistSettings() {
     mirrorBootState();
-    if (chromeAvailable) {
-      Promise.resolve(EXT.storage.local.set({ settings, writer: nextWriterStamp() })).catch(e => console.warn('local save:', e));
-      queueSync();
+    if (isExtValid()) {
+      try {
+        EXT.storage.local.set({ settings, writer: nextWriterStamp() })
+          .catch(e => handleStorageError('local save:', e));
+        queueSync();
+      } catch (e) {
+        handleStorageError('local save:', e);
+      }
     } else {
       localStorage.setItem('markmez_settings', JSON.stringify(settings));
     }
   }
 
   let pendingPersist = null;
-  function schedule(fn) {
-    pendingPersist = fn;
+  /* 300ms was long enough that a quick refresh, or opening a second new tab,
+     could land before this tab's edit ever reached disk -- the "new tab shows
+     stale data" and "refresh loses my bookmark" reports. 120ms still coalesces
+     a synchronous bulk-import loop (hundreds of calls collapse into one write,
+     since none of them can fire mid-loop) and a slider drag's input burst, but
+     shrinks the real-world exposure window by more than half. The remaining
+     gap is closed by saveImmediate() at the handful of call sites where a user
+     just created something (see data.js / render.js / widgets.js) and by the
+     flush() safety net on hide/pagehide/blur in main.js.
+
+     save() and saveSettings() used to schedule two different functions
+     (persist vs persistSettings) onto this ONE pendingPersist slot. Whichever
+     call landed second within the 120ms window silently replaced the first,
+     so a pending Notes/Clipboard edit (save) could be dropped entirely by a
+     Pomodoro/widget-toggle settings save that followed it -- the edit never
+     reached disk and reappeared as "missing" after any later reload. Both
+     now always schedule the same full persist(), so there is nothing left
+     for either call to clobber. */
+  function schedule() {
+    pendingPersist = persist;
     clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => { pendingPersist = null; fn(); }, 300);
+    saveTimeout = setTimeout(() => { pendingPersist = null; persist(); }, 120);
   }
-  function save() { schedule(persist); }
-  function saveSettings() { schedule(persistSettings); }
+  function save() { schedule(); }
+  function saveSettings() { schedule(); }
   function saveImmediate() { clearTimeout(saveTimeout); pendingPersist = null; persist(); }
 
   function flush() {
@@ -450,7 +519,6 @@ const StorageManager = (() => {
       clearTimeout(saveTimeout);
       fn();
     }
-    if (syncTimer) { clearTimeout(syncTimer); writeSyncNow(); }
   }
 
   function getData() { return data; }
@@ -488,7 +556,7 @@ const StorageManager = (() => {
     pick('boardWidth', num(raw.boardWidth, 200, 560));
     pick('backgroundType', ['solid', 'image', 'video'].includes(raw.backgroundType) ? raw.backgroundType : undefined);
     pick('backgroundValue', SAFE_MEDIA(raw.backgroundValue) ? raw.backgroundValue : undefined);
-    pick('cornerRadius', ['default', '0px', '8px', '16px', '9999px'].includes(raw.cornerRadius) ? raw.cornerRadius : undefined);
+    pick('cornerRadius', ['default', '0px', '8px', '16px', 'circle', '9999px'].includes(raw.cornerRadius) ? raw.cornerRadius : undefined);
     pick('fontFamily', ['default', 'sans-serif', 'geometric', 'serif', 'monospace', 'rounded', 'slab', 'handwriting'].includes(raw.fontFamily) ? raw.fontFamily : undefined);
     pick('searchEngine', str(raw.searchEngine, 30));
     pick('weatherCity', str(raw.weatherCity, 80));
@@ -512,12 +580,24 @@ const StorageManager = (() => {
     pick('activeTab', ['home', 'boards', 'notes'].includes(raw.activeTab) ? raw.activeTab : undefined);
     pick('use12h', typeof raw.use12h === 'boolean' ? raw.use12h : undefined);
     pick('remoteFavicons', !!raw.remoteFavicons);
+    pick('onboardingSeen', typeof raw.onboardingSeen === 'boolean' ? raw.onboardingSeen : undefined);
+    pick('aiAutoSend', typeof raw.aiAutoSend === 'boolean' ? raw.aiAutoSend : undefined);
     /* These three were missing, so restoring a backup silently reset them to
        defaults: the user's clock position moved, pinned links reappeared on
        Home, and auto-colour switched back on. */
     pick('autoColor', typeof raw.autoColor === 'boolean' ? raw.autoColor : undefined);
     pick('hidePinnedOnHome', typeof raw.hidePinnedOnHome === 'boolean' ? raw.hidePinnedOnHome : undefined);
     pick('clockPosition', ['auto', 'center', 'corner'].includes(raw.clockPosition) ? raw.clockPosition : undefined);
+    pick('clockFont', ['default', 'thin', 'light', 'app', 'serif', 'mono', 'handwriting'].includes(raw.clockFont) ? raw.clockFont : undefined);
+    pick('clockColor', /^#[0-9a-f]{6}$/i.test(raw.clockColor || '') || raw.clockColor === '' ? raw.clockColor : undefined);
+    pick('topbarOpacity', num(raw.topbarOpacity, 0, 100));
+    pick('widgetBgOpacity', num(raw.widgetBgOpacity, 0, 100));
+    pick('notesOpacity', num(raw.notesOpacity, 0, 100));
+    pick('solidAmbient', typeof raw.solidAmbient === 'boolean' ? raw.solidAmbient : undefined);
+    pick('wpShadowOpacity', num(raw.wpShadowOpacity, 0, 100));
+    pick('wpShadowBlur', num(raw.wpShadowBlur, 0, 40));
+    pick('wallpaperOverlay', typeof raw.wallpaperOverlay === 'boolean' ? raw.wallpaperOverlay : undefined);
+    pick('wallpaperOverlayOpacity', num(raw.wallpaperOverlayOpacity, 0, 90));
     /* Not in DEFAULT_SETTINGS but written at runtime by presets and the accent
        picker; without these a restored preset unlocks its mode. */
     pick('modeLocked', typeof raw.modeLocked === 'boolean' ? raw.modeLocked : undefined);
@@ -558,7 +638,26 @@ const StorageManager = (() => {
     pruneMedia();
   }
 
+  async function repairMedia() {
+    const before = Array.isArray(data.wallpapers) ? data.wallpapers.length : 0;
+    const repaired = [];
+    for (const wp of (data.wallpapers || [])) {
+      if (!isMediaRef(wp.value) || await getMedia(refId(wp.value))) repaired.push(wp);
+    }
+    data.wallpapers = repaired;
+
+    let backgroundReset = false;
+    if (isMediaRef(settings.backgroundValue) && !(await getMedia(refId(settings.backgroundValue)))) {
+      settings.backgroundType = 'solid';
+      settings.backgroundValue = settings.solidSeed || (settings.mode === 'light' ? '#f4f6f8' : '#0d1117');
+      backgroundReset = true;
+    }
+    saveImmediate();
+    await pruneMedia();
+    return { removed: before - repaired.length, backgroundReset };
+  }
+
   return { load, save, saveSettings, saveImmediate, flush, getData, getSettings, exportJSON, importJSON, resetAll,
-           putMedia, getMedia, delMedia, resolveMedia, pruneMedia, isMediaRef, refId, sanitizeSettings, setBootBg,
+           putMedia, getMedia, delMedia, resolveMedia, pruneMedia, repairMedia, isMediaRef, refId, sanitizeSettings, setBootBg,
            getWriterId: () => WRITER_ID, isOwnWriter, DEFAULT_SETTINGS, DEFAULT_DATA };
 })();

@@ -94,16 +94,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         tabTitleEl.textContent = tab.title || tab.url;
         tabUrlEl.textContent = tab.url || '';
 
-        if (tab.favIconUrl) {
-          tabFaviconEl.src = tab.favIconUrl;
-          tabFaviconEl.addEventListener('error', () => { tabFaviconEl.style.opacity = 0.3; }, { once: true });
-        } else {
-          const { src, fallbacks } = faviconSrcSet(tab.url || '');
-          tabFaviconEl.src = src;
-          tabFaviconEl.setAttribute('data-fav', '');
-          tabFaviconEl.setAttribute('data-fav-fallbacks', fallbacks.join('|'));
-          wireFavicons(tabFaviconEl);
-        }
+        const { src, fallbacks } = faviconSrcSet(tab.url || '');
+        const primary = tab.favIconUrl || src;
+        const allFallbacks = tab.favIconUrl ? [src, ...fallbacks] : fallbacks;
+        tabFaviconEl.src = primary;
+        tabFaviconEl.style.display = '';
+        tabFaviconEl.setAttribute('data-fav', '');
+        tabFaviconEl.setAttribute('data-fav-url', tab.url || '');
+        tabFaviconEl.setAttribute('data-fav-fallbacks', allFallbacks.filter(f => f !== primary).join('|'));
+        wireFavicons(tabFaviconEl);
       }
     } catch (e) {
       enableManual('Couldn’t read the current tab');
@@ -112,28 +111,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     enableManual('Tab access unavailable');
   }
 
-  let localData = null, localSettings = null;
+  let localData = null, localSettings = null, localStashes = null;
   if (HAS_EXT && EXT.storage) {
-    const raw = await EXT.storage.local.get(['data', 'settings']);
+    const raw = await EXT.storage.local.get(['data', 'settings', 'tabStashes']);
     localData = raw.data;
     localSettings = raw.settings;
+    localStashes = raw.tabStashes;
   } else {
     try { localData = JSON.parse(localStorage.getItem('markmez_data')); } catch {}
     try { localSettings = JSON.parse(localStorage.getItem('markmez_settings')); } catch {}
+    try { localStashes = JSON.parse(localStorage.getItem('markmez_tab_stashes')); } catch {}
   }
   applyPopupTheme(localSettings);
 
   if (!localData || typeof localData !== 'object') localData = { boards: [] };
+  if (!Array.isArray(localStashes)) {
+    // Migrate stashes made by releases that kept them inside the shared data
+    // object. A dedicated key prevents an older open new-tab page from
+    // overwriting them when it later saves unrelated board or setting data.
+    localStashes = Array.isArray(localData.tabStashes) ? localData.tabStashes : [];
+    if (HAS_EXT && EXT.storage) {
+      try { await EXT.storage.local.set({ tabStashes: localStashes }); } catch { }
+    } else {
+      try { localStorage.setItem('markmez_tab_stashes', JSON.stringify(localStashes)); } catch { }
+    }
+  }
 
   const boards = collectBoards(localData);
   const options = boards.length
     ? boards.map(b => ({ value: b.id, label: b.name }))
     : [{ value: 'new', label: 'Create Inbox Board' }];
 
+  /* Defaulted to the first board every time, so a research session meant
+     re-picking the same board on every single save. Default to wherever you
+     saved last instead -- settings already round-trips through storage, so
+     this is one remembered id, not a new subsystem. */
+  const lastBoardId = localSettings?.lastSavedBoardId;
+  const defaultValue = (lastBoardId && options.some(o => o.value === lastBoardId))
+    ? lastBoardId : options[0].value;
+
   if (boardSelectContainer) {
     setSafeHTML(boardSelectContainer, CustomSelect.render({
       id: 'boardSelect',
-      value: options[0].value,
+      value: defaultValue,
       options
     }));
     CustomSelect.init(boardSelectContainer);
@@ -143,9 +163,134 @@ document.addEventListener('DOMContentLoaded', async () => {
   const fail = (msg) => {
     saveBtn.disabled = false;
     saveBtn.textContent = 'Save Bookmark';
+    errorMsg.classList.remove('qs-info');   // a real error always overrides the dupe-notice styling
     errorMsg.textContent = msg;
     errorMsg.style.display = 'block';
   };
+
+  /* Stashes live under their own persistent storage key, not as boards -- a stash
+     is a "put these down for a minute" pile, not a bookmark collection, and
+     putting it in Boards meant it was invisible unless you already knew to go
+     looking there. Each entry stays until you delete it: Restore reopens the
+     tabs without touching the entry, so restoring in one window and again in
+     another both work from the same stash. */
+  const MAX_STASHES = 20;
+  const stashList = $('stashList');
+
+  function fmtStamp(ts) {
+    return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderStashes() {
+    const stashes = localStashes;
+    if (!stashes.length) {
+      setSafeHTML(stashList, '<div class="qs-stash-empty">Nothing stashed yet.</div>');
+      return;
+    }
+    // Newest first.
+    const ordered = [...stashes].sort((a, b) => b.ts - a.ts);
+    setSafeHTML(stashList, ordered.map(s => {
+      const names = (s.tabs || []).map(t => t.title || t.url).filter(Boolean);
+      const preview = names.slice(0, 3).join(', ') + (names.length > 3 ? `, +${names.length - 3} more` : '');
+      return `
+        <div class="qs-stash-item" data-id="${escapeHtml(s.id)}">
+          <div class="qs-stash-info">
+            <div class="qs-stash-time">${escapeHtml(fmtStamp(s.ts))} · ${s.tabs.length} tab${s.tabs.length === 1 ? '' : 's'}</div>
+            <div class="qs-stash-tabs" title="${escapeHtml(preview)}">${escapeHtml(preview)}</div>
+          </div>
+          <div class="qs-stash-actions">
+            <button class="qs-stash-icon-btn qs-restore-btn" title="Reopen these tabs" aria-label="Reopen these tabs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+            </button>
+            <button class="qs-stash-icon-btn qs-del-btn" title="Delete this stash" aria-label="Delete this stash">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            </button>
+          </div>
+        </div>`;
+    }).join(''));
+  }
+
+  async function saveStashes() {
+    if (HAS_EXT && EXT.storage) {
+      await EXT.storage.local.set({ tabStashes: localStashes });
+    } else {
+      localStorage.setItem('markmez_tab_stashes', JSON.stringify(localStashes));
+    }
+  }
+
+  stashList?.addEventListener('click', async (e) => {
+    const item = e.target.closest('.qs-stash-item');
+    if (!item) return;
+    const id = item.dataset.id;
+    const stashes = localStashes;
+    const stash = stashes.find(s => s.id === id);
+    if (!stash) return;
+
+    if (e.target.closest('.qs-restore-btn')) {
+      if (!(HAS_EXT && EXT.tabs)) { fail('Reopening tabs needs the installed extension.'); return; }
+      const btn = e.target.closest('.qs-restore-btn');
+      btn.disabled = true;
+      try {
+        for (const t of stash.tabs) {
+          try { await EXT.tabs.create({ url: t.url, active: false }); } catch { }
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    } else if (e.target.closest('.qs-del-btn')) {
+      localStashes = stashes.filter(s => s.id !== id);
+      await saveStashes();
+      renderStashes();
+    }
+  });
+
+  const stashBtn = $('stashBtn');
+  stashBtn?.addEventListener('click', async () => {
+    if (!(HAS_EXT && EXT.tabs)) { fail('Tab stashing needs the installed extension.'); return; }
+    stashBtn.disabled = true;
+    stashBtn.textContent = 'Stashing…';
+    try {
+      const tabs = (await EXT.tabs.query({ currentWindow: true }))
+        .filter(t => t.url && /^https?:\/\//i.test(t.url));
+      if (!tabs.length) { fail('No open web pages to stash.'); return; }
+
+      // Informational, not blocking -- stashing is "park these for later," not
+      // "decide what to keep," so a duplicate isn't wrong, just worth knowing
+      // about. Same normalisation the browser-bookmark importer already uses.
+      const normalize = (u) => String(u || '').trim().toLowerCase().replace(/\/+$/, '');
+      const savedUrls = new Set();
+      (localData.boards || []).forEach(b => (b.bookmarks || []).forEach(bm => savedUrls.add(normalize(bm.url))));
+      const dupeCount = tabs.filter(t => savedUrls.has(normalize(t.url))).length;
+
+      const entry = {
+        id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+        ts: Date.now(),
+        tabs: tabs.map(t => ({ title: t.title || t.url, url: t.url }))
+      };
+      localStashes.unshift(entry);
+      if (localStashes.length > MAX_STASHES) localStashes.length = MAX_STASHES;
+      await saveStashes();
+      renderStashes();
+
+      // The popup is its own window, not a tab in this list, so every matched
+      // tab is safe to close -- no "don't close the tab I'm on" exclusion needed.
+      const ids = tabs.map(t => t.id).filter(id => id != null);
+      try { if (ids.length) await EXT.tabs.remove(ids); } catch { }
+
+      if (dupeCount > 0) {
+        errorMsg.classList.add('qs-info');
+        errorMsg.textContent = `Stashed ${tabs.length} tab${tabs.length === 1 ? '' : 's'} — ${dupeCount} ${dupeCount === 1 ? 'is' : 'are'} already saved as bookmark${dupeCount === 1 ? '' : 's'}.`;
+        errorMsg.style.display = 'block';
+      }
+    } catch (e) {
+      fail('Could not stash tabs.');
+    } finally {
+      stashBtn.disabled = false;
+      stashBtn.textContent = 'Stash all tabs in this window';
+    }
+  });
+
+  renderStashes();
 
   saveBtn.addEventListener('click', async () => {
     const manual = manualFields.style.display !== 'none';
@@ -165,6 +310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       url = activeTab.url;
     }
 
+    errorMsg.classList.remove('qs-info');
     errorMsg.style.display = 'none';
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
@@ -214,10 +360,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (!Array.isArray(target.bookmarks)) target.bookmarks = [];
       target.bookmarks.push(newBookmark);
+
       if (HAS_EXT && EXT.storage) {
-        await EXT.storage.local.set({ data: localData, writer: 'popup-' + newBookmark.id });
+        // Re-fetch settings right before the write instead of reusing the copy
+        // loaded when the popup opened -- the popup can sit open a few seconds,
+        // and writing a stale blob back would clobber anything changed
+        // elsewhere (another tab, the new-tab page) in the meantime.
+        const fresh = (await EXT.storage.local.get('settings')).settings || localSettings || {};
+        fresh.lastSavedBoardId = target.id;
+        await EXT.storage.local.set({ data: localData, settings: fresh, writer: 'popup-' + newBookmark.id });
       } else {
+        if (!localSettings) localSettings = {};
+        localSettings.lastSavedBoardId = target.id;
         localStorage.setItem('markmez_data', JSON.stringify(localData));
+        localStorage.setItem('markmez_settings', JSON.stringify(localSettings));
       }
     } catch (e) {
       fail('Could not save. Your storage may be full.');

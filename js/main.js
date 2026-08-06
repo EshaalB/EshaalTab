@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     SettingsRenderer.applyTheme();
     SettingsRenderer.applyCursor();
     if (settings.backgroundType && settings.backgroundValue) {
-      SettingsRenderer.applyWallpaper(settings.backgroundType, settings.backgroundValue, false);
+      await SettingsRenderer.applyWallpaper(settings.backgroundType, settings.backgroundValue, false);
     }
 
     BoardRenderer.init();
@@ -36,15 +36,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     SettingsRenderer.init();
 
     ViewController.init();
-    document.body.classList.add('loaded');
 
+    PermissionManager.syncAiEnabled(settings.aiAutoSend === true).then(enabled => {
+      if (settings.aiAutoSend && !enabled) {
+        settings.aiAutoSend = false;
+        StorageManager.saveSettings();
+      }
+    });
+
+    if (!settings.onboardingSeen && HAS_EXT) {
+      const finishOnboarding = () => {
+        settings.onboardingSeen = true;
+        StorageManager.saveSettings();
+      };
+      showCustomModal(
+        'Enable browser features?',
+        '<p class="dialog-message">Allow access to tabs, bookmarks and history for tab stashing, browser bookmark import, and combined search. Your data stays on this device. AI-site access is separate and remains off.</p>',
+        () => {
+          finishOnboarding();
+          PermissionManager.requestRecommended().then(granted => {
+            ToastSystem[granted ? 'success' : 'info'](granted ? 'Browser features enabled' : 'Permission request declined');
+          });
+          return true;
+        },
+        'Allow features',
+        false,
+        finishOnboarding
+      );
+    }
     const flushAll = () => { NotesRenderer.flushPending(); StorageManager.flush(); };
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') flushAll();
     });
-    /* pagehide + visibilitychange already cover every path out of the page. A
+    /* pagehide + visibilitychange(hidden) cover navigation and tab-switch. A
        beforeunload listener adds nothing here and disqualifies the page from
-       the back/forward cache just by existing. */
+       the back/forward cache just by existing. window 'blur' was removed because
+       it overrides cross-tab sync when quickly switching tabs. */
     window.addEventListener('pagehide', flushAll);
 
     document.addEventListener('visibilitychange', () => {
@@ -113,5 +140,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (err) {
     console.error('Error initializing EshaalTab:', err);
+  } finally {
+    // Never strand the page hidden if an optional integration fails to start.
+    document.body.classList.add('loaded');
+    document.documentElement.classList.remove('boot-pending');
   }
 });

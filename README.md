@@ -18,17 +18,20 @@ about you.
 bundled with the extension rather than pulled from Google Fonts, so opening a tab
 does not tell anyone, us included, that you opened it.
 
-Three optional features can reach the network, none of them on by default:
+Optional network features are off by default:
 
-- **Weather** — sends the city you type, and the coordinates returned for it, to
-  [Open-Meteo](https://open-meteo.com/). Nothing identifies you.
+- **Weather** - sends the city you type, and the coordinates returned for it, to
+  [Open-Meteo](https://open-meteo.com/). EshaalTab adds no account or advertising
+  identifier; Open-Meteo receives normal connection information for the request.
 - **Remote favicons** — fetches icons from Google/DuckDuckGo, which reveals your
   bookmarked domains to them. Left off, icons come from your browser's own local
   cache via the `favicon` permission.
-- **A wallpaper set from a URL** — EshaalTab asks for access to that one site,
-  downloads the image once, and stores it locally, so it is not refetched on
-  every new tab. Decline, and the URL is used directly, meaning the host sees
-  your IP each time you open a tab. Video wallpapers always stay remote.
+- **A wallpaper set from a URL** - contacts the address you provide and stores
+  the image locally when possible. The host can see the request. Remote videos
+  and images that cannot be stored may be requested again on later new tabs.
+- **AI auto-send** - requests access only to ChatGPT, Claude and Gemini after
+  you enable it, then submits only queries launched from EshaalTab. Turning it
+  off removes that site access.
 
 Everything else — boards, notes, to-dos, wallpapers — stays in
 `chrome.storage.local` on your device. A settings-only subset (theme, colours,
@@ -82,12 +85,9 @@ corner-radius and font controls. Shareable preset codes.
 3. Enable **Developer mode** (top right).
 4. **Load unpacked** → select the project folder.
 
-Works on Chrome, Edge, Brave, Opera and Vivaldi (Chromium 104+, for the `favicon`
-permission).
-
-> **Firefox and Safari are not supported.** Firefox does not implement
-> `chrome_url_overrides.newtab`, so the extension cannot function as a new tab
-> page there.
+The Chrome package works on current Chromium browsers. A separate Firefox
+package uses Firefox's background-script format and supports Firefox 142+.
+Safari has not been tested or packaged.
 
 ---
 
@@ -98,12 +98,15 @@ Each one is requested for a single, specific feature:
 | Permission | Used for |
 |---|---|
 | `storage`, `unlimitedStorage` | Saving your data locally; the quota lift is for wallpapers. |
-| `bookmarks` | Reading your bookmark tree **only** during an explicit import. Never modified. |
-| `tabs` | Listing open tabs for `Ctrl+K` and "Stash all tabs". |
-| `history` | Searching history from the command palette. Matched locally. |
+| `activeTab` | Reading the current page after the user opens the save popup. |
+| `bookmarks` (optional) | Reading your bookmark tree **only** during an explicit import. Never modified. |
+| `tabs` (optional) | Listing open tabs for `Ctrl+K` and "Stash all tabs". |
+| `history` (optional) | Searching history from the command palette. Matched locally. |
 | `favicon` | Site icons from the browser's local cache, avoiding third-party requests. |
 | `contextMenus` | The "Save to EshaalTab" right-click item. |
-| `https://*/*` (optional) | Never requested wholesale. When you paste an image URL for a wallpaper, access to **that one origin** is requested so the image can be downloaded once and stored locally. |
+| `search` | Sending Default searches through Chrome's configured search provider. |
+| `scripting` (optional) | Submitting a user-initiated AI query after consent. |
+| ChatGPT, Claude and Gemini hosts (optional) | Exact site access for optional AI search submission. |
 
 ---
 
@@ -132,7 +135,9 @@ Build a release zip locally:
 ./build-zip.bat
 ```
 
-This bumps the patch version in `manifest.json` and writes `EshaalTab-v<version>.zip`.
+This bumps the patch version in `manifest.json` and writes the Chrome package to
+`release-zips/EshaalTab-v<version>.zip`. Run `build-firefox-zip.bat` for the
+matching Firefox package.
 
 ### Releasing
 

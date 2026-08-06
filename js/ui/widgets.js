@@ -192,12 +192,26 @@ const PomodoroMode = (() => {
       btn.addEventListener('click', () => {
         $$('#pomoPresetRow .et-pomo-preset-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        $('pomoCustomInput').value = '';
         const mins = parseInt(btn.dataset.mins, 10) || 25;
         workDuration = mins * 60;
         timeLeft = workDuration;
         reset();
       });
     });
+
+    const customInput = $('pomoCustomInput');
+    if (customInput) {
+      customInput.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (val > 0 && val <= 999) {
+          $$('#pomoPresetRow .et-pomo-preset-btn').forEach(b => b.classList.remove('active'));
+          workDuration = val * 60;
+          timeLeft = workDuration;
+          reset();
+        }
+      });
+    }
 
     document.addEventListener('keydown', (e) => {
       if (!overlay.classList.contains('open')) return;
@@ -271,6 +285,12 @@ const PomodoroMode = (() => {
     updateDisplay();
     updateRunningUI();
     persistState();
+    // Reset only touches the countdown, never completed-session history, but
+    // the topbar badge and in-modal count only refreshed on complete() -- so
+    // a stale count from an earlier day/session could sit on screen through
+    // a reset instead of re-syncing against today's real data.
+    updateSessions();
+    WidgetsRenderer.initFocusStats();
   }
   function complete() {
     pause();
@@ -382,10 +402,10 @@ const WidgetsRenderer = (() => {
       let iconName = 'sun';
       let greetingText = 'Good morning';
       if (hrs >= 12 && hrs < 17) {
-        iconName = 'coffee';
+        iconName = 'sun';
         greetingText = 'Good afternoon';
       } else if (hrs >= 17 && hrs < 22) {
-        iconName = 'sparkles';
+        iconName = 'sunset';
         greetingText = 'Good evening';
       } else if (hrs >= 22 || hrs < 5) {
         iconName = 'moon';
@@ -393,7 +413,7 @@ const WidgetsRenderer = (() => {
       }
       const name = (StorageManager.getSettings().displayName || '').trim();
       const fullText = name ? `${greetingText}, ${name}` : greetingText;
-      setSafeHTML(greetingEl, `<span class="greeting-icon" style="display:inline-flex;align-items:center;margin-right:6px;vertical-align:middle;">${icon(iconName, 18)}</span><span>${escapeHtml(fullText)}</span>`);
+      setSafeHTML(greetingEl, `<span class="greeting-icon">${icon(iconName, 24)}</span><span>${escapeHtml(fullText)}</span>`);
     }
 
     dateEl.textContent = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(now);
@@ -425,8 +445,18 @@ const WidgetsRenderer = (() => {
     btn.onclick = () => PomodoroMode.enter();
   }
 
+  /* 'default' used to hardcode a Google search URL and call it "Default" --
+     that silently overrode whatever search engine the user actually configured
+     in Chrome, which is exactly what the Chrome Web Store's Single Purpose /
+     search-override policy prohibits for a new-tab extension. It now routes
+     through chrome.search.query() (see searchWithDefaultEngine below), which
+     asks Chrome to run the query with the browser's real default engine. The
+     named engines below (ChatGPT, Claude, DuckDuckGo, ...) are unaffected --
+     picking one of those is an explicit user choice, not a silent override,
+     so they keep their direct URLs. The url() fn here is only the last-resort
+     fallback if chrome.search / browser.search is unavailable. */
   const ENGINES = {
-      default:    { name: 'Default (Google)', url: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}` },
+      default:    { name: 'Default (Browser)', useSystemDefault: true, url: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}` },
       chatgpt:    { name: 'ChatGPT',    ask: true, url: (q) => `https://chatgpt.com/?q=${encodeURIComponent(q)}` },
       claude:     { name: 'Claude',     ask: true, url: (q) => `https://claude.ai/new?q=${encodeURIComponent(q)}` },
       gemini:     { name: 'Gemini',     ask: true, url: (q) => `https://gemini.google.com/app?q=${encodeURIComponent(q)}` },
@@ -439,6 +469,25 @@ const WidgetsRenderer = (() => {
     const e = ENGINES[key] || ENGINES.default;
     return e.ask ? `Ask ${e.name} or type a URL…` : `Search ${e.name} or type a URL…`;
   };
+
+  /* Asks the browser to run the query with whatever engine the user actually
+     has set as their default -- chrome.search.query() on Chromium, the
+     equivalent browser.search.search() on Firefox. Returns true if one of
+     those APIs handled it; the caller only falls back to a hardcoded engine
+     if neither exists (e.g. this build's dev/localhost preview). */
+  function searchWithDefaultEngine(query) {
+    try {
+      if (HAS_EXT && EXT.search && typeof EXT.search.query === 'function') {
+        EXT.search.query({ text: query, disposition: 'NEW_TAB' });
+        return true;
+      }
+      if (HAS_EXT && EXT.search && typeof EXT.search.search === 'function') {
+        EXT.search.search({ query, disposition: 'NEW_TAB' });
+        return true;
+      }
+    } catch { }
+    return false;
+  }
 
   function initNavSearch() {
     const bar = $('navSearchBar');
@@ -549,18 +598,27 @@ const WidgetsRenderer = (() => {
     const executeSearch = () => {
       const val = input ? input.value.trim() : '';
       if (!val) return;
-      let targetUrl;
-      if (/^https?:\/\//i.test(val) || /^localhost(:[0-9]+)?/i.test(val) || /^[a-z0-9-]+(\.[a-z0-9-]+)+\/?.*/i.test(val)) {
-        targetUrl = /^https?:\/\//i.test(val) ? val : 'https://' + val;
-      } else {
-        const eng = ENGINES[currentEngineKey] || ENGINES.default || ENGINES.google;
-        targetUrl = eng.url(val);
+      const isUrl = /^https?:\/\//i.test(val) || /^localhost(:[0-9]+)?/i.test(val) || /^[a-z0-9-]+(\.[a-z0-9-]+)+\/?.*/i.test(val);
+
+      if (isUrl) {
+        const targetUrl = /^https?:\/\//i.test(val) ? val : 'https://' + val;
+        if (HAS_EXT && EXT.tabs && EXT.tabs.create) EXT.tabs.create({ url: targetUrl, active: true });
+        else window.open(targetUrl, '_blank');
+        input.value = '';
+        return;
       }
-      if (HAS_EXT && EXT.tabs && EXT.tabs.create) {
-        EXT.tabs.create({ url: targetUrl, active: true });
-      } else {
-        window.open(targetUrl, '_blank');
+
+      const eng = ENGINES[currentEngineKey] || ENGINES.default;
+      if (eng.useSystemDefault && searchWithDefaultEngine(val)) {
+        input.value = '';
+        return;
       }
+
+      // Only reached for a named engine (ChatGPT, DuckDuckGo, ...), or as the
+      // last-resort fallback if chrome.search/browser.search isn't available.
+      const targetUrl = eng.url(val);
+      if (HAS_EXT && EXT.tabs && EXT.tabs.create) EXT.tabs.create({ url: targetUrl, active: true });
+      else window.open(targetUrl, '_blank');
       input.value = '';
     };
 
@@ -684,10 +742,57 @@ const WidgetsRenderer = (() => {
     const pos = s.clockPosition || 'auto';
     document.body.classList.toggle('clock-pos-corner', pos === 'corner');
     document.body.classList.toggle('clock-pos-center', pos === 'center');
+
+    applyClockAppearance(s);
+  }
+
+  /* Only fonts that actually render are offered. The bundled faces are Orbitron
+     and Caveat; everything else resolves to a system stack that exists on every
+     platform. The previous list advertised Inter/Jakarta/Outfit/Space Grotesk,
+     none of which are loaded and none of which had an entry here -- they all
+     silently fell back to Orbitron, and the storage whitelist then wiped the
+     choice on reload. That is why "some clock fonts do nothing".
+
+     Weight is part of the identity, not just the family: an iOS/Android lock
+     screen clock is thin and wide-tracked, which is what makes it read as a
+     clock rather than a heading. Orbitron 700 is the deliberately heavy one. */
+  const CLOCK_FONT_STACKS = {
+    default:  { stack: "'Orbitron', var(--font-app, sans-serif)", weight: 700, spacing: '0.02em' },
+    thin:     { stack: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', sans-serif", weight: 200, spacing: '-0.02em' },
+    light:    { stack: "'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif", weight: 300, spacing: '-0.01em' },
+    app:      { stack: 'var(--font-app, sans-serif)', weight: 600, spacing: 'normal' },
+    serif:    { stack: "'Lora', Georgia, 'Times New Roman', serif", weight: 400, spacing: 'normal' },
+    mono:     { stack: "'JetBrains Mono', ui-monospace, Consolas, monospace", weight: 400, spacing: '-0.03em' },
+    handwriting: { stack: "'Caveat', cursive", weight: 700, spacing: 'normal' }
+  };
+
+  /* Clock font is clock-only. Shadow opacity/blur are shared: the clock reads
+     them unconditionally (its own rule works with or without a wallpaper), and
+     every other legibility shadow -- greeting, date, weather, pinned-link
+     labels -- reads the SAME two variables through its existing wallpaper-only
+     CSS, so one pair of sliders now controls all of them instead of just the
+     clock. Reading these vars is cheap, so this just runs every time widget
+     visibility is recomputed rather than needing its own call site everywhere. */
+  function applyClockAppearance(s) {
+    const root = document.documentElement.style;
+    const face = CLOCK_FONT_STACKS[s.clockFont] || CLOCK_FONT_STACKS.default;
+    root.setProperty('--clock-font', face.stack);
+    root.setProperty('--clock-weight', String(face.weight));
+    root.setProperty('--clock-tracking', face.spacing);
+    /* Empty string means "follow the accent", which is the default. Setting the
+       property to a real colour is what overrides it; the CSS falls back to
+       var(--accent-color) whenever this is unset. */
+    const custom = /^#[0-9a-f]{6}$/i.test(s.clockColor || '') ? s.clockColor : '';
+    if (custom) root.setProperty('--clock-color', custom);
+    else root.removeProperty('--clock-color');
+    const opacity = typeof s.wpShadowOpacity === 'number' ? s.wpShadowOpacity : 60;
+    const blur = typeof s.wpShadowBlur === 'number' ? s.wpShadowBlur : 20;
+    root.setProperty('--wp-shadow-opacity', String(opacity / 100));
+    root.setProperty('--wp-shadow-blur', blur + 'px');
   }
 
   return { init, updateClock, initWeather, initFocusStats, initNavSearch, applyWidgetVisibility,
-           getEngines: () => ENGINES };
+           applyClockAppearance, getEngines: () => ENGINES };
 })();
 
 const WorkspaceWidget = (() => {
@@ -790,12 +895,15 @@ const WorkspaceWidget = (() => {
   let filterQuery = '';
 
   function getAppIconAttr(name, url) {
-    const s2 = `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(url)}&sz=128`;
-    const primary = APP_ICONS[name] || s2;
-    const fallbacks = [s2];
     const ext = extFaviconUrl(url);
-    if (ext) fallbacks.push(ext);
-    return `src="${primary}" data-fav data-fav-fallbacks="${fallbacks.join('|')}"`;
+    const chain = ext ? [ext] : [];
+    if (remoteFaviconsAllowed()) {
+      if (APP_ICONS[name]) chain.push(APP_ICONS[name]);
+      const remote = faviconSrcSet(url);
+      chain.push(remote.src, ...remote.fallbacks);
+    }
+    const uniq = [...new Set(chain.filter(Boolean))];
+    return `src="${uniq[0] || ''}" data-fav data-fav-url="${String(url).replace(/"/g, '&quot;')}" data-fav-fallbacks="${uniq.slice(1).join('|')}"`;
   }
 
   function getFavorites() {
@@ -1036,7 +1144,7 @@ const TodoWidget = (() => {
     const clearBtn = $('todoClearDone');
     btn?.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
     input?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && input.value.trim()) { TodoManager.add(input.value.trim()); input.value = ''; render(); }
+      if (e.key === 'Enter' && input.value.trim()) { TodoManager.add(input.value.trim()); StorageManager.saveImmediate(); input.value = ''; render(); }
     });
     clearBtn?.addEventListener('click', (e) => { e.stopPropagation(); TodoManager.clearDone(); render(); });
     document.addEventListener('click', (e) => {
@@ -1130,19 +1238,42 @@ const TodoWidget = (() => {
       list.appendChild(row);
     });
   }
-  return { init, render, close };
+  return { init, render, open, close };
 })();
 
 const NotesRenderer = (() => {
   let bound = false;
-  let saveTimer = null;
+  /* The previous version kept its own 300ms timer on top of StorageManager's
+     debounce, and flushPending() only re-armed a save if area.value differed
+     from the in-memory data.notes -- but the input handler had ALREADY copied
+     area.value into data.notes on every keystroke, so that comparison was
+     always false. flush() (on refresh/close) found nothing pending and wrote
+     nothing: the exact "notes disappear on refresh" bug. There is now exactly
+     one debounce (StorageManager's), so flush() always has real work to do. */
+
+  // Snapshot of the field's content when the current edit session began, for
+  // the focus/blur history checkpoint and for the manual Save button's
+  // "anything to save?" check. Null when nothing is being edited.
+  let sessionStart = null;
+
+  // Terminal-style recall: -1 means "not browsing history, this is live text".
+  let historyIndex = -1;
+  let draftBeforeHistory = null;
+
+  function commitSessionToHistory() {
+    if (sessionStart === null) return;
+    const area = $('notesArea');
+    if (area && sessionStart !== area.value) NotesManager.pushHistory(sessionStart);
+    sessionStart = null;
+  }
 
   function flushPending() {
     const area = $('notesArea');
     if (!area || !bound) return;
-    clearTimeout(saveTimer);
-    saveTimer = null;
-    if (StorageManager.getData().notes !== area.value) NotesManager.set(area.value);
+    if (area.value !== NotesManager.get()) {
+      NotesManager.set(area.value);
+    }
+    commitSessionToHistory();
   }
 
   function updateStats(text) {
@@ -1152,27 +1283,41 @@ const NotesRenderer = (() => {
     badge.textContent = `${words} word${words === 1 ? '' : 's'}`;
   }
 
+  function markSaved(saved) {
+    $('notesSaveBtn')?.classList.toggle('is-saved', saved);
+  }
+
   function render() {
     const area = $('notesArea');
     if (!area) return;
     if (document.activeElement !== area) {
       area.value = NotesManager.get();
       updateStats(area.value);
+      markSaved(true);
     }
     ClipboardRenderer.render();
     if (!bound) {
       bound = true;
+
+      area.addEventListener('focus', () => {
+        if (sessionStart === null) sessionStart = area.value;
+      });
+
       area.addEventListener('input', () => {
         const val = area.value;
         StorageManager.getData().notes = val;
         updateStats(val);
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => NotesManager.set(val), 300);
+        markSaved(false);
+        historyIndex = -1;          // fresh typing cancels any history browse
+        NotesManager.set(val);      // debounced write; StorageManager owns the timing
       });
+
       area.addEventListener('blur', () => {
-        clearTimeout(saveTimer);
         NotesManager.set(area.value);
+        markSaved(true);
+        commitSessionToHistory();
       });
+
       area.addEventListener('keydown', (e) => {
         if (e.key === 'Tab') {
           e.preventDefault();
@@ -1182,8 +1327,42 @@ const NotesRenderer = (() => {
           area.selectionStart = area.selectionEnd = start + 2;
           StorageManager.getData().notes = area.value;
           updateStats(area.value);
+          markSaved(false);
+          return;
+        }
+
+        /* Terminal-style recall, gated on the caret sitting at the very start
+           of the field so it never fights normal up/down navigation inside a
+           multi-line note. Repeated presses step further back, like shell
+           history; Down steps forward and lands back on your live draft. */
+        const atStart = area.selectionStart === 0 && area.selectionEnd === 0;
+        if (e.key === 'ArrowUp' && atStart) {
+          const hist = NotesManager.getHistory();
+          if (!hist.length) return;
+          e.preventDefault();
+          if (historyIndex === -1) draftBeforeHistory = area.value;
+          if (historyIndex < hist.length - 1) historyIndex++;
+          area.value = hist[historyIndex];
+          area.selectionStart = area.selectionEnd = 0;
+          updateStats(area.value);
+          markSaved(false);
+        } else if (e.key === 'ArrowDown' && historyIndex !== -1) {
+          e.preventDefault();
+          historyIndex--;
+          area.value = historyIndex === -1 ? (draftBeforeHistory ?? '') : NotesManager.getHistory()[historyIndex];
+          area.selectionStart = area.selectionEnd = area.value.length;
+          updateStats(area.value);
+          markSaved(false);
         }
       });
+
+      $('notesSaveBtn')?.addEventListener('click', () => {
+        NotesManager.setImmediate(area.value);
+        commitSessionToHistory();
+        markSaved(true);
+        ToastSystem.success('Notes saved');
+      });
+
       $('notesExportBtn')?.addEventListener('click', () => {
         NotesManager.set(area.value);
         NotesManager.exportTxt();
@@ -1241,6 +1420,7 @@ const ClipboardRenderer = (() => {
         const title = titleInp ? titleInp.value.trim() : '';
         if (text) {
           ClipboardManager.add(text, title, title);
+          StorageManager.saveImmediate();
           textInp.value = '';
           if (titleInp) titleInp.value = '';
           render();
@@ -1342,6 +1522,7 @@ const HomeRenderer = (() => {
       } else {
         ToastSystem.success('Pinned to Home');
       }
+      StorageManager.saveImmediate();
       renderPinned();
       BoardRenderer.renderBoards();
       return true;
@@ -1364,6 +1545,37 @@ const HomeRenderer = (() => {
     pinned.forEach(bm => {
       const cell = document.createElement('div');
       cell.className = 'dock-pin-wrap';
+      cell.draggable = true;
+      cell.dataset.id = bm.id;
+
+      cell.addEventListener('dragstart', e => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', bm.id);
+        cell.style.opacity = '0.5';
+      });
+      cell.addEventListener('dragend', () => cell.style.opacity = '');
+      cell.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        cell.style.transform = 'scale(1.05)';
+      });
+      cell.addEventListener('dragleave', () => cell.style.transform = '');
+      cell.addEventListener('drop', e => {
+        e.preventDefault();
+        cell.style.transform = '';
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if (draggedId && draggedId !== bm.id) {
+          const arr = Array.from(wrap.children).filter(c => c.dataset.id).map(c => c.dataset.id);
+          const fromIdx = arr.indexOf(draggedId);
+          const toIdx = arr.indexOf(bm.id);
+          if (fromIdx > -1 && toIdx > -1) {
+            arr.splice(fromIdx, 1);
+            arr.splice(toIdx, 0, draggedId);
+            BookmarkManager.reorderPinned(arr);
+            renderPinned();
+          }
+        }
+      });
 
       const a = document.createElement('a');
       a.className = 'dock-pin';

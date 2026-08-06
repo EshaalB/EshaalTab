@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "EshaalTab — New Tab & Bookmark Boards",
+  "name": "EshaalTab - New Tab & Bookmark Boards",
   "version": "2.0.80",
   "description": "Organise bookmarks, search open tabs, and keep quick notes from a personal new tab page.",
   "icons": {
@@ -23,7 +23,7 @@
     }
   },
   "background": {
-    "service_worker": "js/extension/background.js"
+    "scripts": ["js/extension/background.js"]
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'none'"
@@ -33,7 +33,6 @@
     "unlimitedStorage",
     "activeTab",
     "contextMenus",
-    "favicon",
     "search"
   ],
   "optional_permissions": [
@@ -59,7 +58,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "eshaaltab@eshaalb.com",
-      "strict_min_version": "109.0",
+      "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": ["none"]
       }

@@ -14,7 +14,7 @@
   margin: 0 auto;
   backdrop-filter: var(--glass-lg);
   -webkit-backdrop-filter: var(--glass-lg);
-  background: var(--surface-2);
+  background: var(--surface-topbar);
   border: 1px solid var(--border-soft);
   transition: border-color var(--dur-2) var(--ease-out);
 }
@@ -161,8 +161,8 @@
   justify-content: space-between;
   gap: var(--sp-2);
   padding: 8px 12px;
-  background: var(--surface-3, rgba(255, 255, 255, 0.1));
-  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.15));
+  background: var(--surface-2, rgba(255, 255, 255, 0.05));
+  border: 1px solid color-mix(in srgb, var(--accent-color, #6366f1) 45%, var(--border-soft, rgba(255, 255, 255, 0.15)));
   border-radius: var(--r-sm, 8px);
   color: var(--text, #fff);
   font-size: var(--fs-sm, 14px);
@@ -174,15 +174,18 @@
   transition: border-color var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
 }
 
-.et-select-trigger:hover {
-  background: var(--surface-2, rgba(255, 255, 255, 0.14));
-  border-color: color-mix(in srgb, var(--accent-color, #6366f1) 40%, transparent);
+body.theme-light .et-select-trigger {
+  background: #f8fafc;
+  border-color: color-mix(in srgb, var(--accent-color, #6366f1) 45%, #cbd5e1);
+  color: #0f172a;
 }
 
+.et-select-trigger:hover,
 .et-custom-select.open .et-select-trigger,
 .et-select-trigger:focus-visible {
+  background: var(--surface-2, rgba(255, 255, 255, 0.08));
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 30%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 25%, transparent);
 }
 
 .et-select-chevron {
@@ -220,8 +223,6 @@
   min-width: 100%;
   z-index: 999999 !important;
   background: var(--surface-base, #161b22);
-  backdrop-filter: var(--glass-blur, blur(16px));
-  -webkit-backdrop-filter: var(--glass-blur, blur(16px));
   border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.2));
   border-radius: var(--r-sm, 8px);
   padding: 4px;
@@ -473,7 +474,7 @@
 
 .et-board-card-title {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--text, #ffffff);
   white-space: nowrap;
@@ -524,9 +525,9 @@
 
 .et-board-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3) var(--sp-2);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 6px;
+  padding: 12px 10px;
   border-top: 1px solid rgba(var(--board-rgb, 255, 255, 255), 0.05);
   max-height: 280px;
   overflow-y: auto;
@@ -534,69 +535,125 @@
   scrollbar-color: var(--border-soft) transparent;
 }
 
-.et-board-empty {
-  width: 100%;
-  padding: var(--sp-4) var(--sp-2);
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  color: var(--board-text-dim, rgba(255, 255, 255, 0.45));
-  display: flex;
+.et-board-empty-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-}
-
-.et-board-tile {
-  position: relative;          /* anchors .board-pin-badge */
-  width: 100%;
-  height: 48px;
-  background: none;
-  border: none;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: var(--sp-1);
-  padding: var(--sp-1) 2px;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text, #ffffff);
+  background: var(--surface-2, rgba(255, 255, 255, 0.05));
+  border: 1.5px dashed color-mix(in srgb, var(--accent-color, #6366f1) 40%, var(--border-soft, rgba(255, 255, 255, 0.2)));
+  border-radius: var(--r-sm, 10px);
   cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s var(--ease-out);
   user-select: none;
 }
 
-.et-board-tile-icon {
+.empty-btn-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
   height: 20px;
+  border-radius: 6px;
+  background: var(--accent-fill, var(--accent-color, #6366f1));
+  color: var(--accent-contrast, #ffffff);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.et-board-empty-btn:hover {
+  background: color-mix(in srgb, var(--accent-color, #6366f1) 18%, rgba(255, 255, 255, 0.08));
+  border-color: var(--accent-color, #6366f1);
+  color: var(--text, #ffffff);
+}
+
+.et-board-tile {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: var(--r-sm, 8px);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.et-board-tile:hover {
+  background: var(--surface-2, rgba(255, 255, 255, 0.08));
+  border-color: var(--border-soft, rgba(255, 255, 255, 0.12));
+}
+
+.et-board-tile-icon {
+  width: 26px;
+  height: 26px;
   object-fit: contain;
-  transition: transform var(--dur-2) var(--ease-out);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
 }
 
 .et-board-tile:hover .et-board-tile-icon {
-  transform: scale(1.18);
+  transform: scale(1.12);
 }
 
 .et-board-tile-title {
-  font-size: var(--fs-xs);
+  font-size: 11px;
   font-weight: 500;
-  color: var(--board-text-secondary, rgba(255, 255, 255, 0.75));
+  color: var(--text, #ffffff);
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 44px;
-  transition: color var(--dur-1) var(--ease-out);
+  max-width: 100%;
+  width: 100%;
+  opacity: 0.9;
+  display: block;
 }
 
-.et-board-tile:hover .et-board-tile-title {
-  color: var(--board-text, #fff);
-  font-weight: 600;
+.et-board-add-link-btn {
+  opacity: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent-color, #6366f1) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-color, #6366f1) 35%, transparent);
+  color: var(--accent-color, #6366f1);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.et-board-add-link-btn, .et-board-menu-btn {
-  opacity: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--r-sm);
-  background: none;
-  border: none;
-  color: var(--board-text-dim);
+.et-board-add-link-btn:hover {
+  background: var(--accent-color, #6366f1);
+  color: var(--accent-contrast, #ffffff);
+  border-color: var(--accent-color, #6366f1);
+  transform: scale(1.06);
+}
+
+.et-board-menu-btn {
+  opacity: 0.85;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--board-text-dim, var(--text-dim));
   font-size: var(--fs-md);
   cursor: pointer;
   display: flex;
@@ -608,13 +665,14 @@
 
 .et-board-card:hover .et-board-add-link-btn,
 .et-board-card:hover .et-board-menu-btn {
-  opacity: 0.85;
+  opacity: 1;
 }
 
 .et-board-add-link-btn:hover, .et-board-menu-btn:hover {
   opacity: 1;
-  background: var(--board-hover-bg);
-  color: var(--board-text-hover);
+  background: var(--surface-2, rgba(255, 255, 255, 0.12));
+  color: var(--text);
+  border-color: var(--border-soft);
 }
 
 .board-menu {
@@ -894,7 +952,7 @@
 
 .workspace-section-header {
   grid-column: 1 / -1;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1069,9 +1127,7 @@
   position: fixed;
   inset: 0;
   z-index: 30000;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  background: rgba(0, 0, 0, 0.72);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1157,10 +1213,15 @@
   height: calc(100vh - 120px);
 }
 
+/* Alpha-based rather than the opaque --panel, so the notes transparency slider
+   has something to actually act on. Blur keeps text readable over a wallpaper
+   at low opacity. */
 .et-notes-notepad-col, .et-notes-clipboard-col {
   display: flex;
   flex-direction: column;
-  background: var(--panel);
+  background: var(--surface-notes);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
   border: 1px solid var(--panel-border);
   border-radius: var(--r-lg);
   overflow: hidden;
@@ -1202,7 +1263,13 @@
   color: var(--board-text, #fff);
 }
 
-.et-notes-export-btn {
+.et-notes-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.et-notes-export-btn, .et-notes-save-btn {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
@@ -1211,10 +1278,30 @@
   border-radius: var(--r-sm);
   font-size: var(--fs-xs);
   font-weight: 600;
+  cursor: pointer;
+}
+
+.et-notes-export-btn {
   background: var(--accent-fill);
   color: var(--accent-contrast);
   border: none;
-  cursor: pointer;
+}
+
+/* Secondary: Save is the everyday action (or a safety net once autosave is
+   trusted), Export is occasional -- the filled treatment stays on Export so
+   the pair doesn't read as two equally-weighted primary actions. */
+.et-notes-save-btn {
+  background: transparent;
+  color: var(--board-text, #fff);
+  border: 1px solid var(--border-soft);
+}
+.et-notes-save-btn:hover {
+  border-color: var(--border-strong, var(--border-soft));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+}
+.et-notes-save-btn.is-saved {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .et-notes-area {
@@ -1369,8 +1456,7 @@
   position: fixed;
   inset: 0;
   z-index: 4000;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: var(--glass-blur);
+  background: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1850,12 +1936,14 @@ body.theme-light .et-search-modal {
   color: #0f172a !important;
 }
 
-body.theme-light .et-search-input-wrap input {
+body.theme-light .et-search-input-wrap input,
+body.theme-light .et-search-input {
   color: #0f172a !important;
 }
 
-body.theme-light .et-search-input-wrap input::placeholder {
-  color: rgba(15, 23, 42, 0.42) !important;
+body.theme-light .et-search-input-wrap input::placeholder,
+body.theme-light .et-search-input::placeholder {
+  color: rgba(15, 23, 42, 0.55) !important;
   font-weight: 400 !important;
 }
 
@@ -2104,74 +2192,19 @@ img.is-fallback {
   margin-top: 0;
 }
 
-body[data-preset="cyberpunk"] .et-board-card-title,
-body[data-preset="cyberpunk"] .et-home-greeting,
-body[data-preset="cyberpunk"] .et-main-tab.active,
-.preset-btn[data-preset="cyberpunk"] .preset-name {
-  position: relative;
-  display: inline-block;
-  color: var(--text, #ffffff);
-  font-weight: 700;
-  text-shadow: 0 0 6px rgba(0, 255, 204, 0.5);
-}
-
-body[data-preset="cyberpunk"] .et-board-card-title::before,
-body[data-preset="cyberpunk"] .et-board-card-title::after,
-body[data-preset="cyberpunk"] .et-home-greeting::before,
-body[data-preset="cyberpunk"] .et-home-greeting::after,
-.preset-btn[data-preset="cyberpunk"] .preset-name::before,
-.preset-btn[data-preset="cyberpunk"] .preset-name::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.85;
-}
-
-body[data-preset="cyberpunk"] .et-board-card-title:hover::before,
-body[data-preset="cyberpunk"] .et-home-greeting:hover::before,
-.preset-btn[data-preset="cyberpunk"]:hover .preset-name::before {
-  left: 2px;
-  text-shadow: -2px 0 #ff0055;
-  clip: rect(10px, 9999px, 50px, 0);
-  animation: glitch-anim-1 2s infinite linear alternate-reverse;
-}
-
-body[data-preset="cyberpunk"] .et-board-card-title:hover::after,
-body[data-preset="cyberpunk"] .et-home-greeting:hover::after,
-.preset-btn[data-preset="cyberpunk"]:hover .preset-name::after {
-  left: -2px;
-  text-shadow: -2px 0 #00e5ff;
-  clip: rect(40px, 9999px, 80px, 0);
-  animation: glitch-anim-2 2.5s infinite linear alternate-reverse;
-}
-
-@keyframes glitch-anim-1 {
-  0% { clip: rect(12px, 9999px, 44px, 0); transform: skew(0.3deg); }
-  20% { clip: rect(65px, 9999px, 98px, 0); transform: skew(-0.5deg); }
-  40% { clip: rect(32px, 9999px, 12px, 0); transform: skew(0.8deg); }
-  60% { clip: rect(80px, 9999px, 5px, 0); transform: skew(-0.2deg); }
-  80% { clip: rect(5px, 9999px, 70px, 0); transform: skew(0.4deg); }
-  100% { clip: rect(48px, 9999px, 20px, 0); transform: skew(0deg); }
-}
-
-@keyframes glitch-anim-2 {
-  0% { clip: rect(55px, 9999px, 15px, 0); transform: skew(-0.4deg); }
-  20% { clip: rect(10px, 9999px, 80px, 0); transform: skew(0.6deg); }
-  40% { clip: rect(90px, 9999px, 35px, 0); transform: skew(-0.8deg); }
-  60% { clip: rect(25px, 9999px, 60px, 0); transform: skew(0.3deg); }
-  80% { clip: rect(70px, 9999px, 10px, 0); transform: skew(-0.5deg); }
-  100% { clip: rect(30px, 9999px, 95px, 0); transform: skew(0deg); }
-}
-
 .et-board-card,
-.et-search-pill,
 .et-pop-todo,
 .et-set-panel {
   border: var(--border-tactile);
   background: var(--surface-card);
+}
+
+/* The search pill belongs to the top bar, not the board surface. It used to be
+   in the rule above, so the Boards slider silently drove the search bar while
+   the Top bar slider did nothing at all. */
+.et-search-pill {
+  border: var(--border-tactile);
+  background: var(--surface-topbar);
 }
 
 .et-board-card:hover,
@@ -2190,18 +2223,15 @@ body[data-preset="cyberpunk"] .et-home-greeting:hover::after,
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0;
-  transition: transform var(--dur-2) var(--ease-out);
 }
 
 .et-board-tile:hover {
-  transform: scale(1.1);
   border: none !important;
   background: transparent !important;
 }
 
 .et-topbar-btn,
 .et-main-tab,
-.et-board-tile,
 .et-search-engine,
 .et-search-btn,
 .preset-btn {
@@ -2217,7 +2247,6 @@ body[data-preset="cyberpunk"] .et-home-greeting:hover::after,
 
 .et-topbar-btn:active,
 .et-main-tab:active,
-.et-board-tile:active,
 .et-search-btn:active,
 .preset-btn:active {
   transform: scale(0.95) !important;
@@ -2254,24 +2283,34 @@ body[data-preset="cyberpunk"] .et-home-greeting:hover::after,
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 10px 14px;
+  width: 100%;
   border-radius: var(--r-sm, 10px);
-  border: 2px dashed var(--border-soft, rgba(255, 255, 255, 0.15));
+  border: 1.5px dashed var(--border-soft, rgba(255, 255, 255, 0.15));
   background: var(--surface-2, rgba(255, 255, 255, 0.04));
   color: var(--text-dim, rgba(255, 255, 255, 0.7));
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 4px;
+  margin-top: 6px;
+  white-space: nowrap;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
   user-select: none;
 }
 .et-add-board-tile:hover {
   border-color: var(--accent-color);
-  color: var(--accent-ink, var(--accent-color));
+  color: var(--accent-color);
   background: color-mix(in srgb, var(--accent-color) 12%, transparent);
   transform: translateY(-1px);
 }
 .et-add-board-tile:active {
   transform: translateY(0);
+}
+
+/* Wallpaper icon drop shadows */
+body.wallpaper-mode .et-board-tile-icon,
+body:not(.solid-mode) .et-board-tile-icon,
+body.wallpaper-mode .et-search-engine-name,
+body:not(.solid-mode) .et-search-engine-name {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }

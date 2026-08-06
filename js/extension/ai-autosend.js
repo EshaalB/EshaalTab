@@ -47,6 +47,13 @@
     }
   }
 
+  function dispatchEnter(input) {
+    if (!input) return;
+    try {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+    } catch (e) {}
+  }
+
   function trySubmitChatGPT() {
     const input = document.querySelector('#prompt-textarea') || 
                   document.querySelector('textarea[data-id="root"]') ||
@@ -61,6 +68,7 @@
 
     if (sendBtn && !sendBtn.disabled && sendBtn.getAttribute('aria-disabled') !== 'true') {
       sendBtn.click();
+      dispatchEnter(input);
       cleanupUrl();
       return true;
     }
@@ -79,6 +87,7 @@
 
     if (sendBtn && !sendBtn.disabled) {
       sendBtn.click();
+      dispatchEnter(input);
       cleanupUrl();
       return true;
     }
@@ -97,6 +106,7 @@
 
     if (sendBtn && !sendBtn.disabled && sendBtn.getAttribute('aria-disabled') !== 'true') {
       sendBtn.click();
+      dispatchEnter(input);
       cleanupUrl();
       return true;
     }
@@ -114,15 +124,21 @@
       success = trySubmitGemini();
     }
 
-    if (success || attempts >= maxAttempts) {
+    if (success || attempts >= 100) {
       if (timer) clearInterval(timer);
+      if (observer) observer.disconnect();
     }
   }
 
-  const timer = setInterval(tick, 250);
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tick);
-  } else {
-    tick();
+  const timer = setInterval(tick, 100);
+  let observer = null;
+  if (typeof MutationObserver !== 'undefined') {
+    observer = new MutationObserver(tick);
+    const startObserver = () => {
+      if (document.body) observer.observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.body) startObserver();
+    else document.addEventListener('DOMContentLoaded', startObserver);
   }
+  tick();
 })();

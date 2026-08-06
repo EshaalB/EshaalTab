@@ -47,13 +47,30 @@ button, .et-main-tab, .et-topbar-btn, .et-set-tab, .et-add-board-fab {
   }
 }
 
-body.solid-mode .et-topbar-btn {
+/* Solid mode keeps the accent-coloured glyph, so the box behind it must be a
+   neutral tint rather than the accent fill -- accent-on-accent would erase the
+   icon. Driven by the same slider as every other background box; set it to 0%
+   for the old completely bare look. */
+body.solid-mode .et-topbar .et-topbar-btn {
   color: var(--accent-ink, var(--accent-color));
-  background: transparent;
+  background: rgba(var(--board-rgb, 255, 255, 255), calc(var(--widget-bg-alpha, 0.95) * 0.18));
   border: none;
 }
 
 body.solid-mode .et-topbar-btn svg {
+  stroke: var(--accent-ink, var(--accent-color));
+}
+
+/* In solid mode the glyph is accent-coloured, so an accent-tinted hover fill
+   put accent on accent and the icon washed out. Hover lifts the neutral box
+   instead and leaves the glyph's colour alone. */
+body.solid-mode .et-topbar .et-topbar-btn:hover {
+  background: rgba(var(--board-rgb, 255, 255, 255), calc(var(--widget-bg-alpha, 0.95) * 0.34));
+  border: none;
+  color: var(--accent-ink, var(--accent-color));
+}
+
+body.solid-mode .et-topbar .et-topbar-btn:hover svg {
   stroke: var(--accent-ink, var(--accent-color));
 }
 

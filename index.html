@@ -1,8 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="boot-pending">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    html { background: #0d1117; }
+    html.boot-pending body { visibility: hidden !important; }
+  </style>
   <meta name="theme-color" content="#0d1117" />
   <meta name="msapplication-navbutton-color" content="#0d1117" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -14,8 +19,6 @@
   <link rel="icon" type="image/png" sizes="128x128" href="icons/icon128.png" />
   <!-- Blocking, and first: sets the painted background before any CSS renders. -->
   <script src="js/core/boot.js"></script>
-  <!-- Caveat is bundled in fonts/ and declared in tokens.css. This page makes no
-       network requests at all: no fonts, no CDNs, no analytics. -->
   <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
@@ -26,6 +29,7 @@
 
 <video id="video-bg" autoplay loop muted playsinline></video>
 <div id="photo-bg"></div>
+<div id="wallpaper-overlay"></div>
 
 <div class="app">
   <div class="et-topbar">
@@ -49,7 +53,7 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
       </button>
       <button class="et-topbar-btn" id="workspaceBtn" title="Google Workspace">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="18" cy="12" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
       </button>
       <button class="et-topbar-btn" id="topSettingsBtn" title="Settings">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -100,12 +104,18 @@
             <span class="et-notes-title">Notepad</span>
             <span class="et-notes-stats" id="notesStatsBadge">0 words</span>
           </div>
-          <button class="et-notes-export-btn" id="notesExportBtn" title="Export notes as a .txt file" data-no-tooltip>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export .txt
-          </button>
+          <div class="et-notes-header-actions">
+            <button class="et-notes-save-btn" id="notesSaveBtn" title="Save notes now" data-no-tooltip>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save
+            </button>
+            <button class="et-notes-export-btn" id="notesExportBtn" title="Export notes as a .txt file" data-no-tooltip>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export .txt
+            </button>
+          </div>
         </div>
-        <textarea class="et-notes-area" id="notesArea" placeholder="Write something…" spellcheck="true"></textarea>
+        <textarea class="et-notes-area" id="notesArea" placeholder="Write something… (↑ at the start of an empty note recalls your last saved version)" spellcheck="true"></textarea>
       </div>
 
       <!-- Right Column: Clipboard & Command Vault -->
@@ -165,7 +175,7 @@
   <div class="et-search-modal">
     <div class="et-search-input-wrap">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="searchInput" placeholder="Search tabs, bookmarks and history, or / for commands" autocomplete="off" spellcheck="false" />
+      <input type="text" id="searchInput" placeholder="Search bookmarks, history, and shortcuts (web search not supported)" autocomplete="off" spellcheck="false" />
       <kbd class="et-search-esc-hint">Esc</kbd>
     </div>
     <div class="et-search-results" id="searchResults"></div>
@@ -212,6 +222,7 @@
     <button class="et-pomo-preset-btn active" data-mins="25">25</button>
     <button class="et-pomo-preset-btn" data-mins="45">45</button>
     <button class="et-pomo-preset-btn" data-mins="60">60</button>
+    <input type="number" id="pomoCustomInput" placeholder="Min" min="1" max="999" title="Custom minutes" style="width: 50px; padding: 4px; text-align: center; border-radius: var(--r-sm); border: 1px solid var(--border-soft); background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 14px; margin-left: 8px; outline: none;" />
   </div>
 
   <div class="et-flip-container" id="pomoFlipClock" data-no-tooltip>
