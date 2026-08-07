@@ -67,10 +67,13 @@ const PermissionManager = (() => {
   }
 
   async function setAiEnabled(enabled) {
-    if (!(HAS_EXT && EXT.permissions && EXT.scripting)) return false;
+    /* chrome.scripting may not be exposed until its optional permission has
+       actually been granted. Checking the namespace before request() made the
+       first enable attempt return false without ever showing Chrome's prompt. */
+    if (!(HAS_EXT && EXT.permissions?.request)) return false;
     try {
       if (!enabled) {
-        try { await EXT.scripting.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
+        try { await EXT.scripting?.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
         try { await EXT.permissions.remove({ permissions: ['scripting'], origins: AI_ORIGINS }); } catch { }
         return false;
       }
@@ -81,6 +84,11 @@ const PermissionManager = (() => {
         origins: AI_ORIGINS
       });
       if (!granted) return false;
+      if (!EXT.scripting?.registerContentScripts) {
+        console.warn('AI auto-send: scripting API unavailable after permission grant');
+        try { await EXT.permissions.remove({ permissions: ['scripting'], origins: AI_ORIGINS }); } catch { }
+        return false;
+      }
       try { await EXT.scripting.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
       await EXT.scripting.registerContentScripts([{
         id: AI_SCRIPT_ID,
@@ -90,7 +98,10 @@ const PermissionManager = (() => {
         persistAcrossSessions: true
       }]);
       return true;
-    } catch { return false; }
+    } catch (err) {
+      console.warn('AI auto-send could not be enabled:', err);
+      return false;
+    }
   }
 
   async function syncAiEnabled(enabled) {

@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 
 set "RELEASE_DIR=release-zips"
-set "DEST=EshaalTab-Firefox-v2.0.80.zip"
+set "DEST=EshaalTab-Firefox-v2.0.81.zip"
 if not exist "%RELEASE_DIR%" mkdir "%RELEASE_DIR%"
 del /q "%RELEASE_DIR%\EshaalTab-Firefox-v*.zip" >nul 2>&1
 

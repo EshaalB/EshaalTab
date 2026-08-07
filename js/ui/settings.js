@@ -950,7 +950,7 @@ const SettingsRenderer = (() => {
 
         <div class="st-group-title">Your data</div>
         <div class="st-card help-card">
-          ${item('Backup and restore', 'In <b>Data</b> you can export a full JSON backup, restore one, or import from Chrome or Raindrop. <b>Find and remove duplicate bookmarks</b> clears out links you have saved more than once.')}
+          ${item('Backup and restore', 'In <b>Data</b> you can export a full JSON backup, including locally stored wallpapers, restore one, or import from Chrome or Raindrop. <b>Find and remove duplicate bookmarks</b> clears out links you have saved more than once.')}
           ${item('What leaves your browser', 'Your boards, notes and todos stay on your device. There is no EshaalTab account, analytics service or server. A search is sent only when you submit it to your chosen search or AI provider. A wallpaper URL contacts that site when you add it. <b>Load icons from the web</b> is off by default and contacts Google and DuckDuckGo when enabled. The <b>weather widget</b> contacts Open-Meteo after you set a city. AI auto-send is off by default and needs the separate permission described in Widgets.')}
         </div>
       </div>`;
@@ -1516,8 +1516,8 @@ const SettingsRenderer = (() => {
       ToastSystem.info(e.target.checked ? 'Web icons enabled' : 'Web icons off, using your browser cache only');
     });
 
-    $('stExportBtn')?.addEventListener('click', () => {
-      StorageManager.exportJSON();
+    $('stExportBtn')?.addEventListener('click', async () => {
+      await StorageManager.exportJSON();
     });
 
     $('btnImportJsonFile')?.addEventListener('change', (e) => {
@@ -1526,11 +1526,10 @@ const SettingsRenderer = (() => {
       if (!file) return;
       showConfirm('Restore backup',
         `This replaces all current boards, notes, todos and settings with the contents of "${file.name}". Your current data will be exported first as a safety copy. Continue?`, () => {
-        StorageManager.exportJSON();
-        StorageManager.importJSON(file, (ok) => {
+        StorageManager.exportJSON().then(() => StorageManager.importJSON(file, (ok) => {
           if (ok) window.location.reload();
           else ToastSystem.error('That file is not an EshaalTab backup. Export a new one from Backup.');
-        });
+        })).catch(() => ToastSystem.error('Could not create the safety backup. Restore was cancelled.'));
       });
     });
 

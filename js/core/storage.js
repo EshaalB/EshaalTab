@@ -524,13 +524,23 @@ const StorageManager = (() => {
   function getData() { return data; }
   function getSettings() { return settings; }
 
-  function exportJSON() {
-    const blob = new Blob([JSON.stringify({ data, settings }, null, 2)], { type: 'application/json' });
+  async function exportJSON() {
+    /* Wallpaper records contain small ref:<id> pointers, while their binary
+       data is deliberately stored out of line. Include both in a full backup;
+       exporting only data/settings produced a valid-looking JSON file whose
+       wallpaper refs pointed to keys that did not exist on the new install. */
+    const media = {};
+    for (const id of await readMediaIndex()) {
+      const value = await getMedia(id);
+      if (value) media[id] = value;
+    }
+    const backup = { format: 'eshaaltab-backup', version: 2, data, settings, media };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `eshaaltab-backup-${new Date().toLocaleDateString('sv')}.json`;
     a.click();
-    URL.revokeObjectURL(a.href);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -614,17 +624,34 @@ const StorageManager = (() => {
 
   function importJSON(file, onDone) {
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = async e => {
       try {
         const imported = JSON.parse(e.target.result);
         if (!imported || typeof imported !== 'object' || (!imported.data && !imported.settings)) {
           onDone && onDone(false); return;
         }
-        if (imported.data) data = refill(data, capPinnedBookmarks(migrate(imported.data)));
-        if (imported.settings) settings = refill(settings, sanitizeSettings(imported.settings));
+        const restoredData = imported.data ? capPinnedBookmarks(migrate(imported.data)) : data;
+        const restoredSettings = imported.settings ? sanitizeSettings(imported.settings) : settings;
+
+        /* Version 2 backups carry out-of-line wallpaper media. Old backups
+           remain supported; their URL/data wallpapers still restore normally. */
+        if (imported.media && typeof imported.media === 'object' && !Array.isArray(imported.media)) {
+          for (const [id, value] of Object.entries(imported.media)) {
+            if (!/^[a-z0-9_-]{1,128}$/i.test(id)) continue;
+            if (typeof value !== 'string' || !/^data:(image|video)\//i.test(value)) continue;
+            await putMedia(id, value);
+          }
+        }
+        if (imported.data) data = refill(data, restoredData);
+        if (imported.settings) settings = refill(settings, restoredSettings);
         saveImmediate();
+        await pruneMedia();
+        await repairMedia();
         onDone && onDone(true);
-      } catch { onDone && onDone(false); }
+      } catch (err) {
+        handleStorageError('backup restore:', err);
+        onDone && onDone(false);
+      }
     };
     reader.onerror = () => onDone && onDone(false);
     reader.readAsText(file);
