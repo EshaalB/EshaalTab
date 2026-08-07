@@ -141,6 +141,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error('Error initializing EshaalTab:', err);
   } finally {
+    /* Fonts and wallpaper decoding can finish on a different rendering turn.
+       Wait for them plus two animation frames so Chrome commits the restored
+       theme before making the document visible. This removes the last single-
+       frame glimpse of the packaged default theme on extension reload. */
+    try { if (document.fonts?.ready) await document.fonts.ready; } catch { }
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     // Never strand the page hidden if an optional integration fails to start.
     document.body.classList.add('loaded');
     document.documentElement.classList.remove('boot-pending');

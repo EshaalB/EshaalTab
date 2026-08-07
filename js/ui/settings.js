@@ -2273,6 +2273,41 @@ const SettingsRenderer = (() => {
     applyTheme();
   }
 
+  function waitForImagePaint(src) {
+    if (!src) return Promise.resolve();
+    return new Promise(resolve => {
+      const img = new Image();
+      let done = false;
+      const finish = () => { if (!done) { done = true; clearTimeout(timer); resolve(); } };
+      const timer = setTimeout(finish, 5000);
+      img.onload = async () => {
+        try { if (img.decode) await img.decode(); } catch { }
+        finish();
+      };
+      img.onerror = finish;
+      img.src = src;
+    });
+  }
+
+  function waitForVideoPaint(video) {
+    if (!video || video.readyState >= 2) return Promise.resolve();
+    return new Promise(resolve => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        video.removeEventListener('loadeddata', finish);
+        video.removeEventListener('error', finish);
+        resolve();
+      };
+      const timer = setTimeout(finish, 5000);
+      video.addEventListener('loadeddata', finish, { once: true });
+      video.addEventListener('error', finish, { once: true });
+      video.load();
+    });
+  }
+
   async function applyWallpaper(type, value, extract = true) {
     const settings = StorageManager.getSettings();
     settings.backgroundType = type;
@@ -2312,12 +2347,14 @@ const SettingsRenderer = (() => {
     if (type === 'video') {
       if (videoBg) {
         videoBg.src = src;
+        await waitForVideoPaint(videoBg);
         videoBg.classList.add('active');
         if (!document.hidden) videoBg.play().catch(() => {});
       }
       if (photoBg) photoBg.classList.remove('active');
     } else if (type === 'image') {
       if (photoBg) {
+        await waitForImagePaint(src);
         photoBg.style.backgroundImage = `url("${String(src).replace(/"/g, '%22')}")`;
         photoBg.classList.add('active');
       }

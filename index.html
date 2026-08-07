@@ -7,6 +7,16 @@
   <style>
     html { background: #0d1117; }
     html.boot-pending body { visibility: hidden !important; }
+    /* Nothing should animate from the packaged defaults to restored settings
+       while startup is hidden. Re-enable motion only after the final state has
+       been painted; otherwise a 100ms opacity transition is still visible at
+       the exact moment visibility returns. */
+    html.boot-pending body *,
+    html.boot-pending body *::before,
+    html.boot-pending body *::after {
+      transition: none !important;
+      animation: none !important;
+    }
   </style>
   <meta name="theme-color" content="#0d1117" />
   <meta name="msapplication-navbutton-color" content="#0d1117" />
