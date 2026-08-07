@@ -67,26 +67,20 @@ const PermissionManager = (() => {
   }
 
   async function setAiEnabled(enabled) {
-    /* chrome.scripting may not be exposed until its optional permission has
-       actually been granted. Checking the namespace before request() made the
-       first enable attempt return false without ever showing Chrome's prompt. */
-    if (!(HAS_EXT && EXT.permissions?.request)) return false;
+    if (!(HAS_EXT && EXT.permissions?.request && EXT.scripting)) return false;
     try {
       if (!enabled) {
         try { await EXT.scripting?.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
-        try { await EXT.permissions.remove({ permissions: ['scripting'], origins: AI_ORIGINS }); } catch { }
+        try { await EXT.permissions.remove({ origins: AI_ORIGINS }); } catch { }
         return false;
       }
-      // One user gesture, one browser prompt: scripting and every supported AI
-      // origin are granted together instead of interrupting the user repeatedly.
-      const granted = await EXT.permissions.request({
-        permissions: ['scripting'],
-        origins: AI_ORIGINS
-      });
+      // One user gesture and one prompt grants only the exact supported sites.
+      // The base scripting API has no site access without these host grants.
+      const granted = await EXT.permissions.request({ origins: AI_ORIGINS });
       if (!granted) return false;
       if (!EXT.scripting?.registerContentScripts) {
         console.warn('AI auto-send: scripting API unavailable after permission grant');
-        try { await EXT.permissions.remove({ permissions: ['scripting'], origins: AI_ORIGINS }); } catch { }
+        try { await EXT.permissions.remove({ origins: AI_ORIGINS }); } catch { }
         return false;
       }
       try { await EXT.scripting.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
@@ -107,10 +101,7 @@ const PermissionManager = (() => {
   async function syncAiEnabled(enabled) {
     if (!(HAS_EXT && EXT.permissions?.contains && EXT.scripting)) return false;
     try {
-      const granted = await EXT.permissions.contains({
-        permissions: ['scripting'],
-        origins: AI_ORIGINS
-      });
+      const granted = await EXT.permissions.contains({ origins: AI_ORIGINS });
       if (!enabled || !granted) {
         try { await EXT.scripting.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
         return false;

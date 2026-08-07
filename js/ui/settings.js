@@ -701,7 +701,7 @@ const SettingsRenderer = (() => {
                   <label class="st-label" for="stAiAutoSend">Auto-send EshaalTab queries on AI sites</label>
                   <input type="checkbox" id="stAiAutoSend" ${settings.aiAutoSend ? 'checked' : ''} />
                 </div>
-                <div class="st-hint">Off by default. Enabling shows one Chrome prompt for the optional scripting permission and access to ChatGPT, Claude and Gemini. The script only handles a query opened from EshaalTab and does not collect conversations.</div>
+                <div class="st-hint">Off by default. Enabling shows one Chrome prompt for access only to ChatGPT, Claude and Gemini. The script only handles a query opened from EshaalTab and does not collect conversations.</div>
               </div>
             </div>
           </div>

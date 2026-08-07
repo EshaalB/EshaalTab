@@ -93,17 +93,18 @@ stashes them and are not sent to the developer.
 Allows Ctrl+K to display matching history entries. Results are processed
 locally, discarded after use and not sent to the developer.
 
-### scripting (optional)
+### scripting
 
-Requested together with the three AI-site origins in one permission prompt when
-the user enables AI search submission. It is used only to enter and submit the
-query initiated from EshaalTab.
+Provides the packaged script-registration API used by optional AI search
+submission. This permission alone grants no website access. The script can run
+only after the user enables the feature and grants the exact AI-site origins,
+and it only enters and submits a query initiated from EshaalTab.
 
 ## Optional host permission justification
 
 Optional access is limited to ChatGPT, Claude and Gemini. It is not granted at
-installation. When AI search submission is enabled, Chrome requests these sites
-and `scripting` together in one prompt. The packaged content script enters and
+installation. When AI search submission is enabled, Chrome requests these three
+sites in one prompt. The packaged content script enters and
 submits only a query initiated from EshaalTab, does not read existing
 conversations, and is unregistered when the feature is disabled.
 
