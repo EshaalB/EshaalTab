@@ -1,8 +1,16 @@
 /* ai-autosend.js — EshaalTab Content Script
    Auto-submits search queries on ChatGPT, Claude, and Gemini when opened from EshaalTab.
    Runs safely, locally, and with 100% user privacy. */
-(function () {
+(async function () {
   'use strict';
+
+  /* The manifest limits this packaged script to three named AI sites. It does
+     nothing unless the user has enabled auto-send in EshaalTab Settings. */
+  try {
+    const api = (typeof browser !== 'undefined' && browser.storage) ? browser : chrome;
+    const bag = await api.storage.local.get('settings');
+    if (!bag?.settings?.aiAutoSend) return;
+  } catch { return; }
 
   const params = new URLSearchParams(window.location.search);
   const query = (params.get('q') || params.get('prompt') || '').trim();

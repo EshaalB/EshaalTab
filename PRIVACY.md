@@ -86,13 +86,12 @@ search provider or to the provider you explicitly selected. Available providers
 include DuckDuckGo, YouTube, Brave, Perplexity, ChatGPT, Claude and Gemini.
 Their respective privacy policies apply.
 
-AI search submission is disabled by default. Enabling it produces one browser
-permission request for the three supported AI sites. The packaged scripting API
-has no access to those sites unless this request is accepted. When the user
-initiates an AI search, EshaalTab enters and submits that query. It does not
-read existing conversations, collect responses or continue monitoring the site
-for another purpose. Disabling the setting unregisters the content script and
-removes the optional site permissions.
+AI search submission is disabled by default. Installation access is limited to
+the three supported AI sites: ChatGPT, Claude and Gemini. The packaged content
+script exits immediately unless the user has enabled AI auto-send and opened a
+URL containing an EshaalTab query. It then enters and submits that query. It
+does not read existing conversations, collect responses or continue monitoring
+the site for another purpose.
 
 ## Chrome Sync
 

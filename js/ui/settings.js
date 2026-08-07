@@ -701,7 +701,7 @@ const SettingsRenderer = (() => {
                   <label class="st-label" for="stAiAutoSend">Auto-send EshaalTab queries on AI sites</label>
                   <input type="checkbox" id="stAiAutoSend" ${settings.aiAutoSend ? 'checked' : ''} />
                 </div>
-                <div class="st-hint">Off by default. Enabling shows one Chrome prompt for access only to ChatGPT, Claude and Gemini. The script only handles a query opened from EshaalTab and does not collect conversations.</div>
+                <div class="st-hint">Off by default. Access is limited to ChatGPT, Claude and Gemini and is approved with the extension's installation permissions. The packaged script exits immediately while this switch is off and only submits queries opened from EshaalTab; it does not collect conversations.</div>
               </div>
             </div>
           </div>
@@ -1334,17 +1334,10 @@ const SettingsRenderer = (() => {
       ToastSystem.success(s.hidePinnedOnHome ? 'Pinned links hidden on Home' : 'Pinned links visible on Home');
     });
 
-    $('stAiAutoSend')?.addEventListener('change', async (e) => {
-      const wanted = e.target.checked;
-      e.target.disabled = true;
-      const enabled = await PermissionManager.setAiEnabled(wanted);
-      live().aiAutoSend = wanted && enabled;
-      e.target.checked = live().aiAutoSend;
-      e.target.disabled = false;
+    $('stAiAutoSend')?.addEventListener('change', (e) => {
+      live().aiAutoSend = e.target.checked;
       StorageManager.saveSettings();
-      ToastSystem[live().aiAutoSend ? 'success' : 'info'](
-        live().aiAutoSend ? 'AI auto-send enabled' : (wanted ? 'AI-site access was not granted' : 'AI auto-send disabled')
-      );
+      ToastSystem[live().aiAutoSend ? 'success' : 'info'](live().aiAutoSend ? 'AI auto-send enabled' : 'AI auto-send disabled');
     });
     $('stClockPos')?.addEventListener('change', (e) => {
       live().clockPosition = e.target.value;

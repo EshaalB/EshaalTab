@@ -21,10 +21,10 @@ Use it to:
 - Use a focus timer, weather widget and quick links to common web services.
 - Choose colours, local fonts, layouts, and image or video wallpapers.
 
-AI search submission is optional and disabled by default. If enabled, Chrome
-shows one permission request for ChatGPT, Claude, Gemini and the packaged
-submission script. EshaalTab submits only a query started from its new-tab
-search bar and does not read existing conversations.
+AI search submission is optional and disabled by default. Installation access
+is limited to ChatGPT, Claude and Gemini. The packaged content script exits
+immediately while the feature is disabled. EshaalTab submits only a query
+started from its new-tab search bar and does not read existing conversations.
 
 Boards, notes, tasks, stashes, settings and uploaded wallpapers are stored in
 the browser. EshaalTab has no account, advertising, analytics or
@@ -41,8 +41,8 @@ browsing. Boards, saved pages, tab stashes, search, notes, tasks, snippets,
 weather, focus controls and appearance settings all support that start-page
 workflow. The toolbar popup saves the current page and manages tab stashes for
 the same start page; the context-menu and keyboard actions save pages to its
-Inbox. Optional AI-site access only submits a search initiated from EshaalTab
-and remains disabled until the user grants permission.
+Inbox. AI submission remains off until the user enables it and only submits a
+search initiated from EshaalTab.
 
 ## Permission justifications
 
@@ -93,20 +93,13 @@ stashes them and are not sent to the developer.
 Allows Ctrl+K to display matching history entries. Results are processed
 locally, discarded after use and not sent to the developer.
 
-### scripting
+## Host permission justification
 
-Provides the packaged script-registration API used by optional AI search
-submission. This permission alone grants no website access. The script can run
-only after the user enables the feature and grants the exact AI-site origins,
-and it only enters and submits a query initiated from EshaalTab.
-
-## Optional host permission justification
-
-Optional access is limited to ChatGPT, Claude and Gemini. It is not granted at
-installation. When AI search submission is enabled, Chrome requests these three
-sites in one prompt. The packaged content script enters and
-submits only a query initiated from EshaalTab, does not read existing
-conversations, and is unregistered when the feature is disabled.
+Host access is limited to ChatGPT, Claude and Gemini. It supports the extension's
+AI query submission feature and avoids broad access to other websites. The
+packaged content script exits immediately unless AI auto-send is enabled
+and the page URL contains an EshaalTab query. It then enters and submits only
+that query and does not read existing conversations or collect responses.
 
 ## Remote code declaration
 
@@ -156,10 +149,10 @@ user explicitly selects one in the engine picker.
 
 Bookmarks, tabs and history are optional permissions requested from the
 first-run explanation screen. Their data is processed locally for import,
-retrieval and tab stashing. AI `scripting` and the exact ChatGPT, Claude and
-Gemini origins are also optional, disabled by default and requested together
-only when the user enables AI search submission. Disabling that setting
-unregisters the script and removes those permissions.
+retrieval and tab stashing. AI site access is limited at installation to the
+exact ChatGPT, Claude and Gemini origins. AI submission is disabled by default;
+the packaged content script exits immediately unless the user enables it and
+opens an EshaalTab query on one of those sites.
 
 The AI content script is packaged and unminified. It enters and submits only a
 query initiated from EshaalTab and does not read existing conversations or

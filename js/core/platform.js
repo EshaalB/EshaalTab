@@ -57,67 +57,13 @@ const HAS_EXT = (() => {
 
 const PermissionManager = (() => {
   const RECOMMENDED = ['tabs', 'bookmarks', 'history'];
-  const AI_ORIGINS = ['https://chatgpt.com/*', 'https://claude.ai/*', 'https://gemini.google.com/*'];
-  const AI_SCRIPT_ID = 'eshaaltab-ai-autosend';
-
   async function requestRecommended() {
     if (!(HAS_EXT && EXT.permissions?.request)) return false;
     try { return !!(await EXT.permissions.request({ permissions: RECOMMENDED })); }
     catch { return false; }
   }
 
-  async function setAiEnabled(enabled) {
-    if (!(HAS_EXT && EXT.permissions?.request && EXT.scripting)) return false;
-    try {
-      if (!enabled) {
-        try { await EXT.scripting?.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
-        try { await EXT.permissions.remove({ origins: AI_ORIGINS }); } catch { }
-        return false;
-      }
-      // One user gesture and one prompt grants only the exact supported sites.
-      // The base scripting API has no site access without these host grants.
-      const granted = await EXT.permissions.request({ origins: AI_ORIGINS });
-      if (!granted) return false;
-      if (!EXT.scripting?.registerContentScripts) {
-        console.warn('AI auto-send: scripting API unavailable after permission grant');
-        try { await EXT.permissions.remove({ origins: AI_ORIGINS }); } catch { }
-        return false;
-      }
-      try { await EXT.scripting.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
-      await EXT.scripting.registerContentScripts([{
-        id: AI_SCRIPT_ID,
-        matches: AI_ORIGINS,
-        js: ['js/extension/ai-autosend.js'],
-        runAt: 'document_start',
-        persistAcrossSessions: true
-      }]);
-      return true;
-    } catch (err) {
-      console.warn('AI auto-send could not be enabled:', err);
-      return false;
-    }
-  }
-
-  async function syncAiEnabled(enabled) {
-    if (!(HAS_EXT && EXT.permissions?.contains && EXT.scripting)) return false;
-    try {
-      const granted = await EXT.permissions.contains({ origins: AI_ORIGINS });
-      if (!enabled || !granted) {
-        try { await EXT.scripting.unregisterContentScripts({ ids: [AI_SCRIPT_ID] }); } catch { }
-        return false;
-      }
-      const registered = await EXT.scripting.getRegisteredContentScripts({ ids: [AI_SCRIPT_ID] });
-      if (!registered.length) {
-        await EXT.scripting.registerContentScripts([{
-          id: AI_SCRIPT_ID, matches: AI_ORIGINS, js: ['js/extension/ai-autosend.js'],
-          runAt: 'document_start', persistAcrossSessions: true
-        }]);
-      }
-      return true;
-    } catch { return false; }
-  }
-
-  return { requestRecommended, setAiEnabled, syncAiEnabled };
+  return { requestRecommended };
 })();
 
 /* chrome://favicon replacement. _favicon/ only exists on Chromium AND only when

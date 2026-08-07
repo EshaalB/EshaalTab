@@ -37,13 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     ViewController.init();
 
-    PermissionManager.syncAiEnabled(settings.aiAutoSend === true).then(enabled => {
-      if (settings.aiAutoSend && !enabled) {
-        settings.aiAutoSend = false;
-        StorageManager.saveSettings();
-      }
-    });
-
     if (!settings.onboardingSeen && HAS_EXT) {
       const finishOnboarding = () => {
         settings.onboardingSeen = true;

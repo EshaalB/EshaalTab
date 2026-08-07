@@ -29,9 +29,9 @@ Optional network features are off by default:
 - **A wallpaper set from a URL** - contacts the address you provide and stores
   the image locally when possible. The host can see the request. Remote videos
   and images that cannot be stored may be requested again on later new tabs.
-- **AI auto-send** - requests access only to ChatGPT, Claude and Gemini after
-  you enable it, then submits only queries launched from EshaalTab. Turning it
-  off removes that site access.
+- **AI auto-send** - installation access is limited to ChatGPT, Claude and
+  Gemini. The packaged script exits immediately while the feature is off and,
+  when enabled, submits only queries launched from EshaalTab.
 
 Everything else — boards, notes, to-dos, wallpapers — stays in
 `chrome.storage.local` on your device. A settings-only subset (theme, colours,
@@ -105,8 +105,7 @@ Each one is requested for a single, specific feature:
 | `favicon` | Site icons from the browser's local cache, avoiding third-party requests. |
 | `contextMenus` | The "Save to EshaalTab" right-click item. |
 | `search` | Sending Default searches through Chrome's configured search provider. |
-| `scripting` (optional) | Submitting a user-initiated AI query after consent. |
-| ChatGPT, Claude and Gemini hosts (optional) | Exact site access for optional AI search submission. |
+| ChatGPT, Claude and Gemini hosts | Narrow site access for optional AI search submission; no other sites are included. |
 
 ---
 
