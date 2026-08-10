@@ -1,14 +1,13 @@
-/* Loaded last. Cross-cutting accent mapping, press-feedback, solid-mode tweaks
-   and reduced-motion, all of which win over component rules cleanly. */
-
-.et-topbar-btn.is-active, .et-topbar-btn.active {
+.et-topbar-btn.is-active,
+.et-topbar-btn.active {
   background: transparent;
   color: var(--text);
   border: none;
   opacity: 1;
   transform: scale(1.08);
 }
-.et-topbar-btn.is-active svg, .et-topbar-btn.active svg {
+.et-topbar-btn.is-active svg,
+.et-topbar-btn.active svg {
   stroke: #ffffff;
 }
 body.theme-light .et-topbar-btn.is-active {
@@ -20,26 +19,45 @@ body.theme-light .et-topbar-btn.is-active svg {
   stroke: var(--accent-ink, var(--accent-color, #000));
 }
 
-.et-add-board-fab, .et-notes-export-btn, .et-clip-add-btn {
+.et-add-board-fab,
+.et-notes-export-btn,
+.et-clip-add-btn {
   background: var(--accent-fill);
   color: var(--accent-contrast);
   border-color: var(--accent-color);
 }
 
-.et-main-tab.active, .et-set-tab.active {
+.et-main-tab.active,
+.et-set-tab.active {
   background: var(--accent-fill);
   color: var(--accent-contrast);
   border-color: var(--accent-color);
   box-shadow: none;
-}/* Micro-interaction feedback */
-button, .et-main-tab, .et-topbar-btn, .et-set-tab, .et-add-board-fab {
-  transition: transform var(--dur-2) cubic-bezier(0.2, 0.8, 0.2, 1), background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
-}button:active, .et-main-tab:active, .et-topbar-btn:active, .et-set-tab:active, .et-add-board-fab:active {
+}
+button,
+.et-main-tab,
+.et-topbar-btn,
+.et-set-tab,
+.et-add-board-fab {
+  transition:
+    transform var(--dur-2) cubic-bezier(0.2, 0.8, 0.2, 1),
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
+}
+button:active,
+.et-main-tab:active,
+.et-topbar-btn:active,
+.et-set-tab:active,
+.et-add-board-fab:active {
   transform: scale(0.95);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
@@ -47,13 +65,12 @@ button, .et-main-tab, .et-topbar-btn, .et-set-tab, .et-add-board-fab {
   }
 }
 
-/* Solid mode keeps the accent-coloured glyph, so the box behind it must be a
-   neutral tint rather than the accent fill -- accent-on-accent would erase the
-   icon. Driven by the same slider as every other background box; set it to 0%
-   for the old completely bare look. */
 body.solid-mode .et-topbar .et-topbar-btn {
   color: var(--accent-ink, var(--accent-color));
-  background: rgba(var(--board-rgb, 255, 255, 255), calc(var(--widget-bg-alpha, 0.95) * 0.18));
+  background: rgba(
+    var(--board-rgb, 255, 255, 255),
+    calc(var(--widget-bg-alpha, 0.95) * 0.18)
+  );
   border: none;
 }
 
@@ -61,11 +78,11 @@ body.solid-mode .et-topbar-btn svg {
   stroke: var(--accent-ink, var(--accent-color));
 }
 
-/* In solid mode the glyph is accent-coloured, so an accent-tinted hover fill
-   put accent on accent and the icon washed out. Hover lifts the neutral box
-   instead and leaves the glyph's colour alone. */
 body.solid-mode .et-topbar .et-topbar-btn:hover {
-  background: rgba(var(--board-rgb, 255, 255, 255), calc(var(--widget-bg-alpha, 0.95) * 0.34));
+  background: rgba(
+    var(--board-rgb, 255, 255, 255),
+    calc(var(--widget-bg-alpha, 0.95) * 0.34)
+  );
   border: none;
   color: var(--accent-ink, var(--accent-color));
 }
@@ -80,4 +97,26 @@ body.solid-mode .et-search-btn:not(.et-search-submit) {
 
 body.solid-mode .et-search-btn:not(.et-search-submit) svg {
   stroke: var(--accent-ink, var(--accent-color));
+}
+
+body.performance-mode::before,
+body.performance-mode::after {
+  display: none !important;
+}
+
+body.performance-mode *,
+body.performance-mode *::before,
+body.performance-mode *::after {
+  animation: none !important;
+  transition: none !important;
+  box-shadow: none !important;
+}
+
+body.performance-mode .et-home-time,
+body.performance-mode .clock-colon,
+body.performance-mode .et-home-greeting,
+body.performance-mode .et-home-date-row,
+body.performance-mode .et-weather-inline,
+body.performance-mode .dock-pin-label {
+  text-shadow: none !important;
 }

@@ -1,16 +1,18 @@
-@echo off
+﻿@echo off
 setlocal
 cd /d "%~dp0"
 
 set "RELEASE_DIR=release-zips"
-set "DEST=EshaalTab-Firefox-v2.0.84.zip"
 if not exist "%RELEASE_DIR%" mkdir "%RELEASE_DIR%"
 del /q "%RELEASE_DIR%\EshaalTab-Firefox-v*.zip" >nul 2>&1
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$ErrorActionPreference = 'Stop';" ^
   "$rootDir = (Get-Location).Path;" ^
-  "$destPath = Join-Path (Join-Path $rootDir '%RELEASE_DIR%') '%DEST%';" ^
+  "$manifestPath = Join-Path $rootDir 'manifest.firefox.json';" ^
+  "$manifest = Get-Content $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json;" ^
+  "$dest = 'EshaalTab-Firefox-v' + $manifest.version + '.zip';" ^
+  "$destPath = Join-Path (Join-Path $rootDir '%RELEASE_DIR%') $dest;" ^
   "if (Test-Path $destPath) { Remove-Item $destPath -Force };" ^
   "Add-Type -AssemblyName 'System.IO.Compression';" ^
   "Add-Type -AssemblyName 'System.IO.Compression.FileSystem';" ^
@@ -29,6 +31,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "  if (-not $skip) { [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $relPath) | Out-Null; $shipped++ };" ^
   "};" ^
   "$archive.Dispose(); $zipStream.Dispose();" ^
-  "Write-Host ('Successfully built %DEST% -- ' + $shipped + ' files packaged');"
+  "Write-Host ('Successfully built ' + $dest + ' -- ' + $shipped + ' files packaged');"
 
 endlocal
+
+
+

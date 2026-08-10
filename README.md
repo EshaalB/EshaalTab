@@ -49,7 +49,8 @@ Full detail: **[PRIVACY.md](PRIVACY.md)**
 layouts. Right-click any link to pin it to Home.
 
 **Home as a launcher** — Up to 5 pinned links, one click each. No folders, no
-hover menus.
+hover menus. Fresh installs start with a Quick Links board containing YouTube
+and Gmail.
 
 **Command palette (`Ctrl+K`)** — Search open tabs, bookmarks and history in one
 list, or type `/` for commands: `/focus`, `/mode`, `/new`, `/notes`, `/stash`,
@@ -61,14 +62,17 @@ EshaalTab". Lands in your Inbox board.
 **Multi-engine search** — Google, DuckDuckGo, YouTube, Perplexity, Brave
 Research, plus ChatGPT, Claude and Gemini with automatic prompt submission.
 
-**Pomodoro timer** — Flip-clock focus timer with presets and session tracking.
+**Pomodoro timer** — Dark flip-clock focus timer with presets, an iPhone-style
+duration wheel, hour/minute or minute/second entry, and session tracking.
 Survives a refresh.
 
 **Notepad & snippets** — Scratchpad with word count and `.txt` export, plus a
 clipboard vault for commands you keep re-typing.
 
-**Themes & wallpapers** — HSL-derived palettes, image/video wallpapers, custom
-corner-radius and font controls. Shareable preset codes.
+**Quick Settings & Customize** — Common Home visibility, preset, colour and
+wallpaper actions are separated from detailed wallpaper, typography, clock,
+search and weather controls. Includes saved wallpapers, shareable theme codes
+and an optional performance mode.
 
 ---
 

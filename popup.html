@@ -1,189 +1,402 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Quick Save to EshaalTab</title>
-  <link rel="stylesheet" href="css/tokens.css" />
-  <link rel="stylesheet" href="css/components.css" />
-  <style>
-    /* Defaults only -- popup.js overwrites these from the saved settings so the
-       popup matches the new tab instead of being permanently dark + purple. */
-    :root {
-      --accent-color: #6366f1;
-      --accent-contrast: #ffffff;
-      --bg: #0d1117;
-      --text: #ffffff;
-      --text-dim: rgba(255,255,255,0.5);
-      --line: rgba(255,255,255,0.1);
-      --field: rgba(255,255,255,0.08);
-      --field-line: rgba(255,255,255,0.16);
-      --radius: 8px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body {
-      width: 320px;
-      padding: 16px;
-      background: var(--bg);
-      color: var(--text);
-      border-radius: 12px;
-    }
-    .qs-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px;
-    }
-    .qs-title { font-size: 18px; font-weight: 700; color: var(--text); }
-    .qs-subtitle { font-size: 10px; color: var(--text-dim); }
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quick Save to EshaalTab</title>
+    <link rel="stylesheet" href="css/tokens.css" />
+    <link rel="stylesheet" href="css/search-controls.css" />
+    <style>
+      :root {
+        --accent-color: #6366f1;
+        --accent-contrast: #ffffff;
+        --bg: #0d1117;
+        --surface-base: #161b22;
+        --text: #ffffff;
+        --text-dim: rgba(255, 255, 255, 0.6);
+        --line: rgba(255, 255, 255, 0.12);
+        --field: rgba(255, 255, 255, 0.07);
+        --field-line: rgba(255, 255, 255, 0.14);
+        --radius: 8px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      html {
+        background: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 0;
+        width: 360px;
+        min-height: auto;
+        overflow: hidden;
+      }
+      body {
+        width: 360px;
+        max-width: 100vw;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--text);
+        min-height: auto !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+      }
+      .qs-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 10px;
+      }
+      .qs-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.01em;
+      }
+      .qs-subtitle {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-dim);
+      }
 
-    .tab-card {
-      display: flex; gap: 10px; align-items: center;
-      background: transparent; border: none;
-      padding: 4px 0; margin-bottom: 12px;
-    }
-    .tab-icon { width: 24px; height: 24px; border-radius: 4px; flex-shrink: 0; }
-    .tab-info { overflow: hidden; flex: 1; }
-    .tab-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tab-url { font-size: 10px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tab-card {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        background: var(--field);
+        border: 1px solid var(--field-line);
+        border-radius: var(--radius);
+        padding: 10px 12px;
+        margin-bottom: 14px;
+      }
+      .tab-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        object-fit: contain;
+      }
+      .tab-info {
+        overflow: hidden;
+        flex: 1;
+      }
+      .tab-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+      }
+      .tab-url {
+        font-size: 11px;
+        color: var(--text-dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+      }
 
-    .field-group { margin-bottom: 10px; }
-    .field-label { font-size: 10px; font-weight: 500; color: var(--text-dim); margin-bottom: 4px; display: block; }
-    .qs-input {
-      width: 100%;
-      background: var(--field);
-      border: 1px solid var(--field-line);
-      border-radius: calc(var(--radius) - 2px);
-      padding: 8px 10px;
-      color: var(--text);
-      font-size: 13px;
-      outline: none;
-    }
-    .qs-input:focus-visible, .qs-save-btn:focus-visible {
-      outline: 2px solid var(--accent-color); outline-offset: 2px;
-    }
+      .field-group {
+        margin-bottom: 12px;
+        position: relative;
+      }
+      .field-group.fg-select {
+        z-index: 10;
+      }
+      .field-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+        display: block;
+        letter-spacing: 0.01em;
+      }
+      .qs-input {
+        width: 100%;
+        height: 38px;
+        background: var(--field);
+        border: 1px solid var(--field-line);
+        border-radius: var(--radius);
+        padding: 0 12px;
+        color: var(--text);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.15s ease, background 0.15s ease;
+      }
+      .qs-input:focus {
+        border-color: var(--accent-color);
+        background: var(--surface-3, var(--field));
+      }
+      .qs-input:focus-visible,
+      .qs-save-btn:focus-visible,
+      .qs-stash-btn:focus-visible {
+        outline: 2px solid var(--accent-color);
+        outline-offset: 2px;
+      }
 
-    .qs-save-btn {
-      width: 100%;
-      background: var(--accent-color);
-      border: none;
-      color: var(--accent-contrast);
-      padding: 10px;
-      border-radius: var(--radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-      transition: filter 0.15s;
-      margin-top: 4px;
-    }
-    .qs-save-btn:hover { filter: brightness(1.12); }
-    .qs-save-btn[disabled] { opacity: 0.6; cursor: default; }
-    .qs-stash-btn {
-      width: 100%;
-      background: transparent;
-      border: 1px solid var(--field-line);
-      color: var(--text-dim);
-      padding: 8px;
-      border-radius: var(--radius);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-    .qs-stash-btn:hover { color: var(--text); border-color: var(--text-dim); }
-    .qs-stash-btn[disabled] { opacity: 0.5; cursor: default; }
+      #boardSelectContainer .et-custom-select {
+        width: 100%;
+      }
+      #boardSelectContainer .et-select-trigger {
+        height: 38px;
+        padding: 0 12px;
+        background: var(--field);
+        border: 1px solid var(--field-line);
+        border-radius: var(--radius);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+      }
+      #boardSelectContainer .et-select-trigger:hover {
+        border-color: var(--border-strong, var(--text-dim));
+        background: var(--surface-3, var(--field));
+      }
+      #boardSelectContainer .et-select-menu {
+        max-height: 160px;
+        overflow-x: hidden !important;
+        box-shadow: var(--e3);
+        border-radius: min(var(--r-sm, 8px), 12px);
+      }
+      #boardSelectContainer .et-select-options-list {
+        max-height: 120px;
+        overflow-y: auto;
+        overflow-x: hidden !important;
+      }
+      #boardSelectContainer .et-select-options-list::-webkit-scrollbar {
+        width: 4px;
+      }
+      #boardSelectContainer .et-select-options-list::-webkit-scrollbar-thumb {
+        background: var(--field-line);
+        border-radius: 4px;
+      }
 
-    .qs-stash-section { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
-    .qs-stash-heading {
-      font-size: 10px; font-weight: 600; color: var(--text-dim);
-      text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;
-    }
-    .qs-stash-list {
-      display: flex; flex-direction: column; gap: 6px;
-      max-height: 190px; overflow-y: auto;
-    }
-    .qs-stash-empty { font-size: 10px; color: var(--text-dim); padding: 6px 0; }
-    .qs-stash-item {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px; border-radius: var(--radius);
-      background: var(--field); border: 1px solid var(--field-line);
-    }
-    .qs-stash-info { flex: 1; min-width: 0; }
-    .qs-stash-time { font-size: 13px; font-weight: 600; color: var(--text); }
-    .qs-stash-tabs {
-      font-size: 10px; color: var(--text-dim); margin-top: 1px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .qs-stash-actions { display: flex; gap: 4px; flex-shrink: 0; }
-    .qs-stash-icon-btn {
-      width: 26px; height: 26px; border-radius: calc(var(--radius) - 2px);
-      border: 1px solid var(--field-line); background: transparent; color: var(--text-dim);
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; padding: 0;
-    }
-    .qs-stash-icon-btn:hover { color: var(--text); border-color: var(--text-dim); }
-    .qs-stash-icon-btn.qs-del-btn:hover { color: #ef4444; border-color: #ef4444; }
-    .qs-stash-icon-btn[disabled] { opacity: 0.5; cursor: default; }
-    .qs-success {
-      display: none;
-      text-align: center;
-      padding: 12px 0;
-      color: #10b981;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    .qs-error {
-      display: none;
-      text-align: center;
-      padding: 10px 0 0;
-      color: #ef4444;
-      font-size: 13px;
-    }
-    .qs-error.qs-info { color: var(--text-dim); }
-    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-  </style>
-</head>
-<body>
+      .qs-save-btn {
+        width: 100%;
+        height: 40px;
+        background: var(--accent-color);
+        border: none;
+        color: var(--accent-contrast);
+        padding: 0 16px;
+        border-radius: var(--radius);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: filter 0.15s ease, transform 0.1s ease;
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-color) 30%, transparent);
+      }
+      .qs-save-btn:hover {
+        filter: brightness(1.1);
+      }
+      .qs-save-btn:active {
+        transform: scale(0.98);
+      }
+      .qs-save-btn[disabled] {
+        opacity: 0.6;
+        cursor: default;
+      }
 
-<div class="qs-header">
-  <span class="qs-title">EshaalTab</span>
-  <span class="qs-subtitle">Save &amp; Stash Tabs</span>
-</div>
+      .qs-stash-btn {
+        width: 100%;
+        height: 38px;
+        background: var(--field);
+        border: 1px solid var(--field-line);
+        color: var(--text);
+        padding: 0 12px;
+        border-radius: var(--radius);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: background 0.15s ease, border-color 0.15s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .qs-stash-btn:hover {
+        background: var(--surface-3, var(--field));
+        border-color: var(--border-strong, var(--text-dim));
+      }
+      .qs-stash-btn[disabled] {
+        opacity: 0.5;
+        cursor: default;
+      }
 
-<div class="tab-card">
-  <img id="tabFavicon" class="tab-icon" alt="" style="display:none;" />
-  <div class="tab-info">
-    <div id="tabTitle" class="tab-name">Loading active tab...</div>
-    <div id="tabUrl" class="tab-url"></div>
-  </div>
-</div>
+      .qs-stash-section {
+        margin-top: 16px;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+      .qs-stash-heading {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+      }
+      .qs-stash-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 220px;
+        overflow-y: auto;
+        padding-right: 2px;
+      }
+      .qs-stash-empty {
+        font-size: 12px;
+        color: var(--text-dim);
+        padding: 6px 0;
+      }
+      .qs-stash-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: var(--radius);
+        background: var(--field);
+        border: 1px solid var(--field-line);
+      }
+      .qs-stash-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .qs-stash-time {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .qs-stash-tabs {
+        font-size: 11px;
+        color: var(--text-dim);
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .qs-stash-actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .qs-stash-icon-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: calc(var(--radius) - 2px);
+        border: 1px solid var(--field-line);
+        background: transparent;
+        color: var(--text-dim);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        padding: 0;
+        transition: color 0.15s, border-color 0.15s, background 0.15s;
+      }
+      .qs-stash-icon-btn:hover {
+        color: var(--text);
+        background: var(--surface-3, var(--field));
+        border-color: var(--text-dim);
+      }
+      .qs-stash-icon-btn.qs-del-btn:hover {
+        color: #ef4444;
+        border-color: #ef4444;
+        background: rgba(239, 68, 68, 0.1);
+      }
+      .qs-stash-icon-btn[disabled] {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .qs-success {
+        display: none;
+        text-align: center;
+        padding: 12px 0;
+        color: #22c55e;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .qs-error {
+        display: none;
+        text-align: center;
+        padding: 10px 0 0;
+        color: #ef4444;
+        font-size: 13px;
+      }
+      .qs-error.qs-info {
+        color: var(--text-dim);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="qs-header">
+      <span class="qs-title">EshaalTab</span>
+      <span class="qs-subtitle">Quick Save &amp; Stash</span>
+    </div>
 
-<div class="field-group" id="manualFields" style="display:none;">
-  <label class="field-label" for="manualTitle">Title</label>
-  <input type="text" id="manualTitle" class="qs-input" placeholder="Page title" />
-  <label class="field-label" for="manualUrl" style="margin-top:8px;">URL</label>
-  <input type="text" id="manualUrl" class="qs-input" placeholder="https://example.com" />
-</div>
+    <div class="tab-card">
+      <img id="tabFavicon" class="tab-icon" alt="" style="display: none" />
+      <div class="tab-info">
+        <div id="tabTitle" class="tab-name">Loading active tab...</div>
+        <div id="tabUrl" class="tab-url"></div>
+      </div>
+    </div>
 
-<div class="field-group">
-  <label class="field-label">Target Board</label>
-  <div id="boardSelectContainer"></div>
-</div>
+    <div class="field-group" id="manualFields" style="display: none">
+      <label class="field-label" for="manualTitle">Title</label>
+      <input
+        type="text"
+        id="manualTitle"
+        class="qs-input"
+        placeholder="Page title"
+      />
+      <label class="field-label" for="manualUrl" style="margin-top: 10px"
+        >URL</label
+      >
+      <input
+        type="text"
+        id="manualUrl"
+        class="qs-input"
+        placeholder="Page URL"
+      />
+    </div>
 
-<div class="field-group">
-  <label class="field-label">Tags (comma separated)</label>
-  <input type="text" id="tagInput" class="qs-input" placeholder="e.g. dev, reading, video" />
-</div>
+    <div class="field-group fg-select">
+      <label class="field-label">Target Board</label>
+      <div id="boardSelectContainer"></div>
+    </div>
 
-<button id="saveBtn" class="qs-save-btn">Save Bookmark</button>
-<button id="stashBtn" class="qs-stash-btn" title="Save every tab in this window here, then close them">Stash all tabs in this window</button>
-<div id="successMsg" class="qs-success">Saved to EshaalTab!</div>
-<div id="errorMsg" class="qs-error" role="alert"></div>
+    <button id="saveBtn" class="qs-save-btn">Save Bookmark</button>
+    <button
+      id="stashBtn"
+      class="qs-stash-btn"
+      title="Save every tab in this window here, then close them"
+    >
+      Stash all tabs in this window
+    </button>
+    <div id="successMsg" class="qs-success">Saved to EshaalTab!</div>
+    <div id="errorMsg" class="qs-error" role="alert"></div>
 
-<div class="qs-stash-section">
-  <div class="qs-stash-heading">Stashed Tabs</div>
-  <div id="stashList" class="qs-stash-list"></div>
-</div>
+    <div class="qs-stash-section">
+      <div class="qs-stash-heading">Stashed Tabs</div>
+      <div id="stashList" class="qs-stash-list"></div>
+    </div>
 
-<script src="js/core/platform.js"></script>
-<script src="js/extension/popup.js"></script>
-</body>
+    <script src="js/core/platform.js"></script>
+    <script src="js/extension/popup.js"></script>
+  </body>
 </html>

@@ -1,0 +1,253 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [
+      "js/core/storage.js"
+    ],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font-size",
+        "value": "11px",
+        "createdAt": "2026-08-05T21:40:27.787Z",
+        "reason": "User confirmed 11px is the intentional micro tier for compact popovers"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "13px",
+        "createdAt": "2026-08-05T21:40:28.115Z",
+        "reason": "User confirmed 13px is the intentional micro-tier body size in compact popovers/popup"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "popup.html"
+        ],
+        "createdAt": "2026-08-05T21:40:28.368Z",
+        "reason": "tabFavicon has no src and stays display:none until JS assigns a real one"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "*",
+        "files": [
+          "popup.html"
+        ],
+        "createdAt": "2026-08-05T21:42:14.654Z",
+        "reason": "popup.html is its own documented 320px shell register per DESIGN.md Shapes section"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "*",
+        "files": [
+          "popup.html"
+        ],
+        "createdAt": "2026-08-05T21:42:14.915Z",
+        "reason": "popup.html uses its own documented Micro/popup type scale per DESIGN.md"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "popup.html"
+        ],
+        "createdAt": "2026-08-05T21:42:15.112Z",
+        "reason": "popup.html success-green intentionally distinct per DESIGN.md Colors Utility note"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "css/layout.css"
+        ],
+        "createdAt": "2026-08-05T21:44:45.973Z",
+        "reason": "Pre-existing legacy literals not yet captured in DESIGN.md frontmatter; documentation gap, not drift"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "*",
+        "files": [
+          "css/layout.css"
+        ],
+        "createdAt": "2026-08-05T21:44:46.239Z",
+        "reason": "Pre-existing legacy literals not yet captured in DESIGN.md frontmatter; documentation gap, not drift"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "css/settings.css"
+        ],
+        "createdAt": "2026-08-05T21:47:00.934Z",
+        "reason": "Pre-existing legacy literals not yet captured in DESIGN.md frontmatter; documentation gap, not drift"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "*",
+        "files": [
+          "css/settings.css"
+        ],
+        "createdAt": "2026-08-05T21:47:01.402Z",
+        "reason": "Pre-existing legacy literals not yet captured in DESIGN.md frontmatter; documentation gap, not drift"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "css/settings.css"
+        ],
+        "createdAt": "2026-08-05T21:47:01.768Z",
+        "reason": "Pre-existing legacy literals not yet captured in DESIGN.md frontmatter; documentation gap, not drift"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "js/ui/widgets.js"
+        ],
+        "createdAt": "2026-08-05T21:59:46.791Z",
+        "reason": "Both imgs get src via spread helper (getAppIconAttr/faviconAttr) with real fallback chains wired through wireFavicons(); scanner cannot see through the spread, but src is never actually empty"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "popup.html"
+        ],
+        "createdAt": "2026-08-05T22:13:32.539Z",
+        "reason": "Intentional 3-step popup scale (18/13/10px), documented in DESIGN.md Typography Micro tier; ratios (1.38x, 1.3x) already clear the stated 1.25x threshold but the detector still fires on this small a surface"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "js/ui/render.js"
+        ],
+        "createdAt": "2026-08-06T20:22:50.756Z",
+        "reason": "src is supplied by faviconAttr() spread immediately before this attribute; scanner cannot see through the template interpolation"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "css/tokens.css"
+        ],
+        "createdAt": "2026-08-06T20:24:57.538Z",
+        "reason": "User-selectable font-family choices (font picker options), not brand typography drift"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "css/components.css"
+        ],
+        "createdAt": "2026-08-06T20:25:14.007Z",
+        "reason": "Tracked as dedicated hardcoded-value tokenization task; large legacy file predates DESIGN.md"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-08-06T20:29:22.798Z",
+        "reason": "Inter is EshaalTab's documented body font in DESIGN.md, not incidental drift"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "index.html"
+        ],
+        "createdAt": "2026-08-06T20:29:22.968Z",
+        "reason": "Font list is the user-facing font-picker option set (Clock Time Font / App Font selects), not applied UI typography"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#4382ec",
+        "createdAt": "2026-08-06T21:03:06.182Z",
+        "reason": "Pre-existing color-mix() fallback for --accent-color before it resolves, not new drift"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "*",
+        "files": [
+          "css/components.css"
+        ],
+        "createdAt": "2026-08-06T21:20:53.009Z",
+        "reason": "Pre-existing legacy literals not yet captured in DESIGN.md frontmatter; documentation gap, not drift"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "*",
+        "files": [
+          "css/components.css"
+        ],
+        "createdAt": "2026-08-06T21:20:53.122Z",
+        "reason": "Pre-existing legacy literals not yet captured in DESIGN.md frontmatter; documentation gap, not drift"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "*",
+        "files": [
+          "css/settings.css"
+        ],
+        "createdAt": "2026-08-06T21:22:13.178Z",
+        "reason": "Pre-existing legacy literals not yet captured in DESIGN.md frontmatter; documentation gap, not drift"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "css/components.css"
+        ],
+        "createdAt": "2026-08-06T21:46:18.659Z",
+        "reason": "System font stack fallbacks (SF Pro Display, Consolas), not bundled brand typography"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "js/extension/popup.js"
+        ],
+        "createdAt": "2026-08-07T14:21:49.950Z",
+        "reason": "Literal is a stored data value (default board tint written into localData), not styling; popup.js has no stylesheet"
+      },
+      {
+        "rule": "overused-font",
+        "value": "roboto slab",
+        "createdAt": "2026-08-07T14:21:50.108Z",
+        "reason": "Bundled local slab-serif face (roboto-slab-latin.woff2) offered as an opt-in app font; substring-matched against Roboto, which is a different family and not the default UI face"
+      },
+      {
+        "rule": "overused-font",
+        "value": "roboto",
+        "createdAt": "2026-08-07T14:27:29.603Z",
+        "reason": "Never a chosen brand face here: all 4 occurrences are either the bundled 'Roboto Slab' slab-serif (an opt-in app font) or Roboto in its standard system-stack fallback position. Primary UI face is Inter."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#6366f1",
+        "createdAt": "2026-08-09T19:07:23.593Z",
+        "reason": "Default accent fallback inside var(--accent-color, #6366f1), not drift"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "6px",
+        "createdAt": "2026-08-09T19:07:23.746Z",
+        "reason": "Pre-existing legacy control radius, predates DESIGN.md scale"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "4px",
+        "createdAt": "2026-08-09T19:07:23.907Z",
+        "reason": "Pre-existing legacy control radius, predates DESIGN.md scale"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "popup.html"
+        ],
+        "createdAt": "2026-08-09T19:07:24.065Z",
+        "reason": "Intentional accent save-button shadow with real 2px offset (not a zero-offset halo)"
+      }
+    ]
+  }
+}

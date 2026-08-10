@@ -1,7 +1,5 @@
-/* App shell: wallpaper layers, topbar, nav tabs, view switching,
-   home hero (clock pill, greeting, date, pinned chips) and toasts. */
-
-#video-bg, #photo-bg {
+#video-bg,
+#photo-bg {
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -22,13 +20,11 @@
   background-repeat: no-repeat;
 }
 
-#video-bg.active, #photo-bg.active {
+#video-bg.active,
+#photo-bg.active {
   opacity: 1;
 }
 
-/* Optional dark scrim over the wallpaper, independent of the text-shadow
-   controls -- a bright/white wallpaper can wash out the top-bar icons even
-   when clock/greeting text is perfectly legible via shadow alone. */
 #wallpaper-overlay {
   position: fixed;
   inset: 0;
@@ -50,15 +46,9 @@ body:not(.wallpaper-mode)::before {
   z-index: 0;
   pointer-events: none;
   background-image: var(--texture-paper);
-  opacity: 0.4;
-  mix-blend-mode: overlay;
+  opacity: 0.16;
 }
 
-/* A flat fill reads as empty next to a photo, because a real surface is never
-   one uniform value. Three wide, very low-contrast pools of the seed colour --
-   plus a soft vignette -- give the eye some falloff to travel across without
-   introducing a second hue or a visible gradient band. Derived from the accent
-   so it re-tints itself with every preset instead of being a fixed look. */
 body.solid-mode.ambient-on::after {
   content: "";
   position: fixed;
@@ -66,34 +56,63 @@ body.solid-mode.ambient-on::after {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(70% 55% at 12% 8%,  color-mix(in srgb, var(--accent-color) 20%, transparent), transparent 72%),
-    radial-gradient(60% 50% at 88% 18%, color-mix(in srgb, var(--accent-color) 12%, transparent), transparent 70%),
-    radial-gradient(65% 55% at 72% 95%, color-mix(in srgb, var(--accent-color) 16%, transparent), transparent 72%),
-    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.20) 100%);
+    radial-gradient(
+      70% 55% at 12% 8%,
+      color-mix(in srgb, var(--accent-color) 20%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      60% 50% at 88% 18%,
+      color-mix(in srgb, var(--accent-color) 12%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      65% 55% at 72% 95%,
+      color-mix(in srgb, var(--accent-color) 16%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      120% 90% at 50% 50%,
+      transparent 55%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
 }
 
 body.theme-light.solid-mode.ambient-on::after {
   background:
-    radial-gradient(70% 55% at 12% 8%,  color-mix(in srgb, var(--accent-color) 26%, transparent), transparent 72%),
-    radial-gradient(60% 50% at 88% 18%, color-mix(in srgb, var(--accent-color) 16%, transparent), transparent 70%),
-    radial-gradient(65% 55% at 72% 95%, color-mix(in srgb, var(--accent-color) 22%, transparent), transparent 72%),
-    radial-gradient(120% 90% at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.07) 100%);
+    radial-gradient(
+      70% 55% at 12% 8%,
+      color-mix(in srgb, var(--accent-color) 26%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      60% 50% at 88% 18%,
+      color-mix(in srgb, var(--accent-color) 16%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      65% 55% at 72% 95%,
+      color-mix(in srgb, var(--accent-color) 22%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      120% 90% at 50% 50%,
+      transparent 60%,
+      rgba(0, 0, 0, 0.07) 100%
+    );
 }
 
 .app {
   position: relative;
   z-index: 1;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   padding: 28px 0 var(--sp-6) 0;
   visibility: hidden;
 }
 
-/* The static shell exists before storage-backed settings and renderers are
-   ready. Keep it out of the first paint so users never see a half-built topbar
-   or the wrong widget visibility for a frame; the boot-painted background
-   remains visible while initialization completes. */
 body.loaded .app {
   visibility: visible;
 }
@@ -135,25 +154,33 @@ body.loaded .app {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Only the box fades, never the glyph: element-level opacity would dim the
-     icon itself and make it hard to read. The alpha lives in the background
-     colour so the icon stays fully opaque at any setting. */
-  background: rgba(var(--accent-rgb, 99, 102, 241), var(--widget-bg-alpha, 0.95));
+
+  background: rgba(
+    var(--accent-rgb, 99, 102, 241),
+    var(--widget-bg-alpha, 0.95)
+  );
   color: var(--accent-contrast, #ffffff);
-  /* No border, and the shadow fades with the same alpha: at 0% the box has to
-     disappear completely, and a border or a leftover drop shadow would still
-     outline where it used to be. */
+
   border: none;
   outline: none;
   cursor: pointer;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, calc(var(--widget-bg-alpha, 0.95) * 0.22));
-  transition: opacity var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out), border-radius var(--dur-2) var(--ease-out);
+  box-shadow: 0 3px 10px
+    rgba(0, 0, 0, calc(var(--widget-bg-alpha, 0.95) * 0.22));
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out),
+    border-radius var(--dur-2) var(--ease-out);
   padding: 0;
 }
 
 .et-topbar-btn:hover {
   opacity: 1;
-  background: rgba(var(--accent-rgb, 99, 102, 241), var(--widget-bg-alpha, 0.95));
+  background: rgba(
+    var(--accent-rgb, 99, 102, 241),
+    var(--widget-bg-alpha, 0.95)
+  );
   color: var(--accent-contrast, #ffffff);
   transform: translateY(-1px);
 }
@@ -161,13 +188,6 @@ body.loaded .app {
 body.theme-light .et-topbar-btn {
   border: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, calc(var(--widget-bg-alpha, 0.95) * 0.12));
-}
-
-.greeting-icon {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 8px;
-  vertical-align: middle;
 }
 
 .et-topbar-btn svg {
@@ -187,7 +207,7 @@ body.theme-light .et-topbar-btn {
   padding: 4px;
   background: var(--surface-topbar);
   border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.14));
-  border-radius: var(--r-pill);
+  border-radius: var(--r-md, 12px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -206,13 +226,17 @@ body.theme-light .et-topbar-btn {
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm, 8px);
   font-size: var(--fs-sm);
   font-weight: 500;
   font-family: inherit;
   color: var(--text, #ffffff);
   opacity: 0.75;
-  transition: color 0.15s ease, background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease;
   position: relative;
   white-space: nowrap;
 }
@@ -228,6 +252,16 @@ body.theme-light .et-topbar-btn {
   color: var(--accent-contrast, #ffffff) !important;
   font-weight: 600;
   opacity: 1 !important;
+}
+
+body.radius-round .et-main-tabs,
+body.radius-round .et-main-tab {
+  border-radius: var(--r-pill, 9999px) !important;
+}
+
+body.radius-sharp .et-main-tabs,
+body.radius-sharp .et-main-tab {
+  border-radius: 0 !important;
 }
 
 body.theme-light .et-main-tab:not(.active) {
@@ -261,8 +295,10 @@ body.theme-light .et-main-tabs {
 .et-view-home.active {
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding: 14vh var(--sp-6) 0;
+  justify-content: center;
+  overflow-y: auto;
+
+  padding: 0 var(--sp-6) clamp(56px, 10vh, 120px);
 }
 
 .et-view-notes.active {
@@ -315,15 +351,18 @@ body.theme-light .et-main-tabs {
   box-shadow: none;
 }
 
-/* Weight and tracking come from the chosen clock face, not from here -- a thin
-   iOS-style clock and a heavy Orbitron one are the same element with different
-   variables. Hardcoding weight:600 here used to flatten every face to the same
-   thickness, which is why they all looked like "generic thick ones". */
 .et-home-time {
   display: inline-flex;
   align-items: baseline;
   justify-content: center;
-  font-family: var(--clock-font, 'Orbitron', var(--font-app, sans-serif));
+  font-family: var(
+    --clock-font,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif
+  );
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-display);
   font-weight: var(--clock-weight, 600);
@@ -331,42 +370,42 @@ body.theme-light .et-main-tabs {
   line-height: 1;
 }
 
-/* Only the clock digits/colon get a shadow regardless of wallpaper -- that was
-   the explicit ask for the clock specifically. Everything else that reads
-   these same two variables (greeting, date, weather, pinned labels, further
-   down this file) keeps its existing wallpaper-only gating, so one pair of
-   sliders controls all of them without turning shadows on where there is no
-   wallpaper to need them for. */
-.et-home-clock .et-home-time,
-.et-home-clock .clock-colon {
-  text-shadow: 0 4px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.6));
+body.wallpaper-mode .et-home-clock .et-home-time,
+body.wallpaper-mode .et-home-clock .clock-colon {
+  text-shadow: 0 4px var(--wp-shadow-blur, 20px)
+    rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.6));
 }
 
-body:not(.wallpaper-mode) *:not(.et-home-clock .et-home-time):not(.et-home-clock .clock-colon),
-body.solid-mode *:not(.et-home-clock .et-home-time):not(.et-home-clock .clock-colon) {
+body:not(.wallpaper-mode) *,
+body.solid-mode * {
   text-shadow: none !important;
-  box-shadow: none !important;
 }
 
-/* --clock-color is only set when the user picks one explicitly; unset means
-   "follow the accent", which is the default look. */
 .clock-digits {
-  color: var(--clock-color, color-mix(in srgb, var(--accent-color) 75%, var(--text)));
+  color: var(
+    --clock-color,
+    color-mix(in srgb, var(--accent-color) 75%, var(--text))
+  );
 }
 
-/* Same colour as the digits. It was accent-coloured, which made the separator
-   read as a different element from the time it belongs to. */
 .clock-colon {
   display: inline-block;
   margin: 0 2px;
-  color: var(--clock-color, color-mix(in srgb, var(--accent-color) 75%, var(--text)));
+  color: var(
+    --clock-color,
+    color-mix(in srgb, var(--accent-color) 75%, var(--text))
+  );
 }
 
 .clock-ampm {
   font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
-  opacity: 0.65;
+  color: var(
+    --clock-color,
+    color-mix(in srgb, var(--accent-color) 75%, var(--text))
+  );
+  opacity: 1;
   margin-left: 4px;
   text-transform: uppercase;
 }
@@ -384,8 +423,14 @@ body.solid-mode *:not(.et-home-clock .et-home-time):not(.et-home-clock .clock-co
 body.wallpaper-mode .et-home-greeting {
   color: #ffffff !important;
   opacity: 0.98;
-  text-shadow: 0 2px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.7)),
-               0 1px calc(var(--wp-shadow-blur, 20px) * 0.15) rgba(0, 0, 0, calc(var(--wp-shadow-opacity, 0.7) * 0.67));
+  text-shadow:
+    0 2px var(--wp-shadow-blur, 20px)
+      rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.7)),
+    0 1px calc(var(--wp-shadow-blur, 20px) * 0.15)
+      rgba(
+        var(--wp-shadow-rgb, 0, 0, 0),
+        calc(var(--wp-shadow-opacity, 0.7) * 0.67)
+      );
 }
 
 .et-home-date-row {
@@ -400,7 +445,8 @@ body.wallpaper-mode .et-home-greeting {
   line-height: 1;
 }
 
-.et-home-date, .et-weather-inline {
+.et-home-date,
+.et-weather-inline {
   font-size: clamp(18px, 1.6vw, 24px);
   font-weight: 600;
   line-height: 1;
@@ -413,7 +459,9 @@ body.wallpaper-mode .et-home-greeting {
 
 .et-weather-inline {
   cursor: pointer;
-  transition: opacity var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+  transition:
+    opacity var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
 }
 
 .et-weather-inline:hover {
@@ -426,8 +474,14 @@ body.wallpaper-mode .et-home-date-row,
 body.wallpaper-mode .et-home-date,
 body.wallpaper-mode .et-weather-inline {
   color: rgba(255, 255, 255, 0.92) !important;
-  text-shadow: 0 2px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.7)),
-               0 1px calc(var(--wp-shadow-blur, 20px) * 0.15) rgba(0, 0, 0, calc(var(--wp-shadow-opacity, 0.7) * 0.67));
+  text-shadow:
+    0 2px var(--wp-shadow-blur, 20px)
+      rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.7)),
+    0 1px calc(var(--wp-shadow-blur, 20px) * 0.15)
+      rgba(
+        var(--wp-shadow-rgb, 0, 0, 0),
+        calc(var(--wp-shadow-opacity, 0.7) * 0.67)
+      );
 }
 
 body.solid-mode.theme-light .et-home-greeting {
@@ -442,8 +496,7 @@ body.solid-mode.theme-light .et-weather-inline {
   text-shadow: none !important;
 }
 
-body.clock-pos-corner .et-home-clock,
-body.wallpaper-mode:not(.clock-pos-center) .et-home-clock {
+body.clock-pos-corner .et-home-clock {
   position: fixed;
   bottom: var(--sp-8);
   left: var(--sp-8);
@@ -456,24 +509,17 @@ body.wallpaper-mode:not(.clock-pos-center) .et-home-clock {
   box-shadow: none;
 }
 
-/* Corner/wallpaper placement only changes the size. It used to also force
-   weight:600 and color:var(--text), which silently discarded both the chosen
-   clock face's weight and any custom clock colour the moment the clock was not
-   centred. */
-body.clock-pos-corner .et-home-time,
-body.wallpaper-mode:not(.clock-pos-center) .et-home-time {
+body.clock-pos-corner .et-home-time {
   font-size: clamp(54px, 7vw, calc(96px * var(--ui-scale)));
 }
 
 body.clock-pos-corner .clock-digits,
-body.wallpaper-mode:not(.clock-pos-center) .clock-digits,
 body.clock-pos-corner .clock-colon,
-body.wallpaper-mode:not(.clock-pos-center) .clock-colon {
+body.clock-pos-corner .clock-ampm {
   color: var(--clock-color, var(--text));
 }
 
-body.clock-pos-corner .et-home-greeting,
-body.wallpaper-mode:not(.clock-pos-center) .et-home-greeting {
+body.clock-pos-corner .et-home-greeting {
   font-size: clamp(22px, 2.2vw, 30px);
   font-weight: 600;
   color: var(--text);
@@ -481,8 +527,7 @@ body.wallpaper-mode:not(.clock-pos-center) .et-home-greeting {
   margin-bottom: var(--sp-1);
 }
 
-body.clock-pos-corner .et-home-date-row,
-body.wallpaper-mode:not(.clock-pos-center) .et-home-date-row {
+body.clock-pos-corner .et-home-date-row {
   justify-content: flex-start;
   color: var(--text-dim);
 }
@@ -523,19 +568,15 @@ body.clock-pos-corner .et-home-date-row {
   justify-content: flex-start !important;
 }
 
-body.wallpaper-mode .et-home-center {
-  margin-top: calc(4vh * var(--ui-scale));
-}
-
 body.wallpaper-mode #navSearchBar {
-  max-width: min(500px, 85vw);
+  max-width: min(calc(680px * var(--ui-scale)), 90vw);
 }
 
 body.wallpaper-mode .et-search-pill,
 body.wallpaper-mode .et-main-tabs {
-  background: rgba(var(--board-rgb, 12, 16, 24), var(--board-opacity, 0.75)) !important;
+  background: var(--surface-topbar) !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.24) !important;
 }
 
 body.wallpaper-mode:not(.theme-light) .et-search-engine {
@@ -577,8 +618,11 @@ body.wallpaper-mode .dock-pin-label {
   font-size: 11px;
   font-weight: 600;
   color: #ffffff !important;
-  text-shadow: 0 2px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.6)),
-               0 1px calc(var(--wp-shadow-blur, 20px) * 0.15) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.6));
+  text-shadow:
+    0 2px var(--wp-shadow-blur, 20px)
+      rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.6)),
+    0 1px calc(var(--wp-shadow-blur, 20px) * 0.15)
+      rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.6));
   background: rgba(0, 0, 0, 0.5);
   padding: 2px 8px;
   border-radius: var(--r-pill);
@@ -608,17 +652,36 @@ body.wallpaper-mode .dock-pin-label {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 76px;
+  /* Matching Chrome shortcut tile hover card width and padding */
+  width: calc(104px * var(--ui-scale));
+  padding: calc(12px * var(--ui-scale)) calc(6px * var(--ui-scale));
+  border-radius: var(--r-md, 12px);
+  background: transparent;
   flex-shrink: 0;
+  transition: background var(--dur-2) var(--ease-out);
+}
+
+.dock-pin-wrap:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+body.theme-light:not(.wallpaper-mode) .dock-pin-wrap:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+body.tiles-circle .dock-pin-wrap {
+  border-radius: var(--r-md, 12px);
+}
+
+body.radius-sharp .dock-pin-wrap {
+  border-radius: 0;
 }
 
 .dock-pin {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--sp-2);
-  width: 76px;
-  flex-shrink: 0;
+  width: 100%;
   padding: 0;
   background: none;
   border: none;
@@ -626,78 +689,128 @@ body.wallpaper-mode .dock-pin-label {
   text-decoration: none;
   color: inherit;
   font: inherit;
-  transition: transform var(--dur-2) var(--ease-out);
 }
 
-.dock-pin-wrap .dock-pin { width: 100%; }
+/* The "Add pin" button is a bare .dock-pin appended straight into the flex
+   row (real pins are wrapped in .dock-pin-wrap). Give it the same fixed cell width as a wrap. */
+.et-home-pinned > .dock-pin-add {
+  width: calc(104px * var(--ui-scale));
+  padding: calc(12px * var(--ui-scale)) calc(6px * var(--ui-scale));
+  flex-shrink: 0;
+}
 
-.dock-pin:hover .dock-pin-icon,
-.dock-pin-wrap:hover .dock-pin-icon { transform: scale(1.12); }
-.dock-pin:active .dock-pin-icon { transform: scale(0.94); }
-
-/* Chrome-style tile: the favicon sits on a filled surface rather than floating
-   bare on the wallpaper. Shape follows the user's corner choice via --r-md, and
-   goes fully round under the 'circle' option. */
 .dock-pin-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--r-md);
-  box-shadow: none;
-  transition: transform var(--dur-2) var(--ease-out),
-              background var(--dur-2) var(--ease-out),
-              border-color var(--dur-2) var(--ease-out);
+  width: calc(48px * var(--ui-scale));
+  height: calc(48px * var(--ui-scale));
+  background: rgba(var(--board-rgb, 0, 0, 0), var(--board-opacity, 0));
+  border: none !important;
+  border-radius: var(--r-md, 12px);
+  box-shadow: none !important;
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out);
 }
 
-body.tiles-circle .dock-pin-icon { border-radius: 50%; }
+body.tiles-circle .dock-pin-icon,
+body.tiles-circle .et-topbar-btn,
+body.tiles-circle .et-search-engine-btn,
+body.tiles-circle .et-pomo-toggle-btn,
+body.tiles-circle .qs-stash-icon-btn,
+body.tiles-circle .et-board-card-header button,
+body.tiles-circle .dock-pin-remove,
+body.tiles-circle .dock-pin-menu-btn {
+  border-radius: 50% !important;
+}
+
+body.radius-sharp .dock-pin-icon,
+body.radius-sharp .dock-pin-remove,
+body.radius-sharp .dock-pin-menu-btn {
+  border-radius: 0 !important;
+}
 
 .dock-pin:hover .dock-pin-icon,
 .dock-pin-wrap:hover .dock-pin-icon {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
+  background: rgba(var(--board-rgb, 0, 0, 0), min(0.85, calc(var(--board-opacity, 0) + 0.15)));
+  border: none !important;
+}
+
+body.wallpaper-mode .dock-pin-icon {
+  background: rgba(0, 0, 0, var(--board-opacity, 0)) !important;
+  border: none !important;
+}
+
+body.wallpaper-mode .dock-pin:hover .dock-pin-icon {
+  background: rgba(0, 0, 0, min(0.85, calc(var(--board-opacity, 0) + 0.2))) !important;
+  border: none !important;
+}
+
+body.theme-light:not(.wallpaper-mode) .dock-pin-icon {
+  background: rgba(0, 0, 0, var(--board-opacity, 0)) !important;
+  border: none !important;
+}
+
+body.theme-light:not(.wallpaper-mode) .dock-pin:hover .dock-pin-icon {
+  background: rgba(0, 0, 0, min(0.35, calc(var(--board-opacity, 0) + 0.1))) !important;
+  border: none !important;
 }
 
 .dock-pin-fav {
-  width: 34px;
-  height: 34px;
+  width: calc(26px * var(--ui-scale));
+  height: calc(26px * var(--ui-scale));
   object-fit: contain;
 }
 
 .dock-pin-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 500;
   color: var(--text, #1e293b);
-  max-width: 76px;
+  max-width: calc(92px * var(--ui-scale));
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
+  margin-top: calc(8px * var(--ui-scale));
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
 }
 
+body.wallpaper-mode .dock-pin-label,
 body:not(.solid-mode) .dock-pin-label {
-  color: var(--text);
-  text-shadow: 0 1px calc(var(--wp-shadow-blur, 20px) * 0.2) rgba(0, 0, 0, calc(var(--wp-shadow-opacity, 0.6) * 1.33)),
-               0 2px var(--wp-shadow-blur, 20px) rgba(0, 0, 0, var(--wp-shadow-opacity, 0.6));
+  color: #ffffff !important;
+  text-shadow:
+    0 1px 3px
+      rgba(
+        var(--wp-shadow-rgb, 0, 0, 0),
+        calc(var(--wp-shadow-opacity, 0.6) * 0.9)
+      ),
+    0 2px var(--wp-shadow-blur, 20px)
+      rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.6)) !important;
+}
+
+body.solid-mode .dock-pin-label {
+  color: var(--text) !important;
+  text-shadow: none !important;
 }
 
 .dock-pin-remove,
 .dock-pin-menu-btn {
   position: absolute;
-  top: -4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
+  top: calc(6px * var(--ui-scale));
+  right: calc(6px * var(--ui-scale));
+  width: calc(24px * var(--ui-scale));
+  height: calc(24px * var(--ui-scale));
   padding: 0;
-  border-radius: 50%;
-  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.2));
-  background: var(--surface-2, rgba(0, 0, 0, 0.65));
-  color: var(--text, #fff);
-  font-size: 14px;
+  border-radius: 50% !important;
+  border: none !important;
+  background: transparent;
+  color: var(--text-dim, rgba(255, 255, 255, 0.85));
+  font-size: 16px;
   font-weight: bold;
   line-height: 1;
   display: flex;
@@ -705,7 +818,9 @@ body:not(.solid-mode) .dock-pin-label {
   justify-content: center;
   cursor: pointer;
   opacity: 0;
-  transition: opacity var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out);
+  transition:
+    opacity var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
   z-index: 2;
 }
 
@@ -720,9 +835,14 @@ body:not(.solid-mode) .dock-pin-label {
 
 .dock-pin-remove:hover,
 .dock-pin-menu-btn:hover {
-  background: var(--accent-color);
-  color: var(--accent-contrast);
-  border-color: var(--accent-color);
+  background: transparent;
+  color: #ffffff;
+}
+
+body.theme-light:not(.wallpaper-mode) .dock-pin-remove:hover,
+body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
+  background: transparent;
+  color: var(--text);
 }
 
 .dock-pin-remove:focus-visible,
@@ -732,47 +852,55 @@ body:not(.solid-mode) .dock-pin-label {
 }
 
 @media (hover: none) {
-  .dock-pin-remove, .dock-pin-menu-btn { opacity: 1; }
+  .dock-pin-remove,
+  .dock-pin-menu-btn {
+    opacity: 1;
+  }
 }
 
-/* Mixed against `transparent`, not a hardcoded white. Mixing the accent into
-   rgba(255,255,255,…) washed out to near-white in light mode, so the Add-pin
-   tile and its hover state were nearly invisible against a pale page -- it only
-   ever looked right on a dark background. Mixing toward transparent keeps the
-   accent's own hue in both themes. */
 .dock-pin-add .dock-pin-icon {
-  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
-  border: 1.5px dashed color-mix(in srgb, var(--accent-color) 45%, transparent);
-  color: var(--text-dim);
-  box-shadow: none;
+  background: rgba(var(--board-rgb, 0, 0, 0), min(0.95, calc(var(--board-opacity, 0.4) * 1.5 + 0.15))) !important;
+  border: none !important;
+  color: var(--accent-color) !important;
+  box-shadow: none !important;
 }
+
 .dock-pin-add:hover .dock-pin-icon {
-  background: color-mix(in srgb, var(--accent-color) 26%, transparent);
-  border-color: var(--accent-color);
-  color: var(--accent-color);
+  background: rgba(var(--board-rgb, 0, 0, 0), min(0.98, calc(var(--board-opacity, 0.4) * 1.8 + 0.25))) !important;
+  color: var(--accent-color) !important;
+  border: none !important;
 }
-.dock-pin-add .dock-pin-label { color: var(--text-dim); font-weight: 500; }
+
+.dock-pin-add .dock-pin-label {
+  color: var(--accent-color) !important;
+  font-weight: 600;
+}
 
 @media (max-width: 560px) {
-  .et-home-pinned { gap: var(--sp-3); max-width: 96vw; }
-  .dock-pin-wrap, .dock-pin { width: 60px; }
-  .dock-pin-icon { width: 40px; height: 40px; }
-  .dock-pin-fav { width: 28px; height: 28px; }
-  .dock-pin-label { font-size: var(--fs-xs); max-width: 60px; }
+  .et-home-pinned {
+    gap: var(--sp-3);
+    max-width: 96vw;
+  }
+  .dock-pin-wrap,
+  .dock-pin,
+  .et-home-pinned > .dock-pin-add {
+    width: 60px;
+  }
+  .dock-pin-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .dock-pin-fav {
+    width: 28px;
+    height: 28px;
+  }
+  .dock-pin-label {
+    font-size: var(--fs-xs);
+    max-width: 60px;
+  }
 }
 
 @media (max-height: 720px) {
-}
-
-.et-toast-container {
-  position: fixed;
-  bottom: 24px;
-  left: 24px;
-  z-index: 2000;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  pointer-events: none;
 }
 
 .et-toast-container {
@@ -791,9 +919,9 @@ body:not(.solid-mode) .dock-pin-label {
 .toast-msg {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: var(--r-md, 10px);
+  gap: 0;
+  padding: 7px 10px;
+  border-radius: 6px;
   width: fit-content;
   max-width: 300px;
   background: var(--accent-fill, var(--accent-color, #6366f1));
@@ -801,64 +929,55 @@ body:not(.solid-mode) .dock-pin-label {
   border: none;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   pointer-events: auto;
-  transform: translateY(12px) scale(0.95);
+  transform: translateY(6px);
   opacity: 0;
-  animation: toastSlideIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition: transform 0.2s var(--ease-out), opacity 0.2s var(--ease-out);
+  animation: toastSlideIn 0.08s ease-out forwards;
+  transition:
+    transform 0.08s ease-out,
+    opacity 0.08s ease-out;
 }
 
 .toast-msg.is-exiting {
-  transform: translateY(10px) scale(0.94) !important;
+  transform: translateY(6px) !important;
   opacity: 0 !important;
 }
 
 .toast-msg.toast-pulse {
-  animation: toastPulse 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: none;
 }
 
 .toast-msg.default,
 .toast-msg.info {
   background: var(--accent-fill, var(--accent-color, #6366f1));
   color: var(--accent-contrast, #ffffff);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-color, #6366f1) 35%, transparent);
+  box-shadow: none;
 }
 
 .toast-msg.success {
   background: #10b981;
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  box-shadow: none;
 }
 
 .toast-msg.error {
   background: #ef4444;
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+  box-shadow: none;
 }
 
 .toast-msg.warning {
   background: #f59e0b;
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+  box-shadow: none;
 }
 
 .toast-msg.loading {
   background: var(--surface-card, #1e293b);
   color: var(--text, #ffffff);
   border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.15));
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
-}
-
-.toast-icon.is-spinning svg {
-  animation: toastSpinner 1s linear infinite;
-}
-
-.toast-msg .toast-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  box-shadow: none;
 }
 
 .toast-msg .toast-text {
@@ -869,41 +988,29 @@ body:not(.solid-mode) .dock-pin-label {
 .toast-msg .toast-action-btn {
   margin-left: var(--sp-2);
   padding: 4px 10px;
-  border-radius: var(--r-pill);
+  border-radius: 4px;
   cursor: pointer;
-  background: var(--accent-color);
-  color: var(--accent-contrast);
-  border: none;
+  background: rgba(255, 255, 255, 0.18);
+  color: inherit;
+  border: 1px solid currentColor;
   font-size: var(--fs-xs);
   font-weight: 600;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: background 0.1s ease;
 }
 
 .toast-msg .toast-action-btn:hover {
-  transform: scale(1.04);
-  filter: brightness(1.1);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 @keyframes toastSlideIn {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.92);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
-}
-
-@keyframes toastPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
-
-@keyframes toastSpinner {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 .et-pomo-toggle-btn {
@@ -927,41 +1034,284 @@ body:not(.solid-mode) .dock-pin-label {
   color: var(--accent-contrast);
 }
 
-/* Responsive Polish for Various Desktop Screen & Split-Screen Sizes */
 @media (max-width: 1024px) {
   .et-topbar {
     padding: var(--sp-2) var(--sp-4);
   }
-  .et-pop-workspace, .et-pop-todo, .et-pop-pinned {
+  .et-pop-workspace,
+  .et-pop-todo,
+  .et-pop-pinned {
     max-width: calc(100vw - 32px);
   }
 }
 
 @media (max-width: 768px) {
-  .et-topbar-center {
+  .app {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .et-topbar {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    row-gap: 8px;
+    min-height: auto;
+    padding: 4px 12px 8px;
+  }
+
+  .et-top-left,
+  .et-top-right {
+    padding: 0;
+    gap: 8px;
+  }
+
+  .et-top-left {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .et-top-right {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .et-main-tabs,
+  .et-main-tabs.et-main-tabs {
+    position: static;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+    transform: none;
+  }
+
+  .et-view-home.active {
+    padding: 0 14px clamp(36px, 7vh, 72px);
+  }
+
+  .et-home-center {
+    max-width: 100%;
+    gap: clamp(16px, 4vh, 28px);
+  }
+
+  .et-boards-area {
+    padding: 12px 12px 72px;
+  }
+
+  .et-board-grid {
+    max-width: 100%;
+    gap: 12px;
+  }
+
+  .et-view-notes.active {
+    min-height: 0;
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding: 12px;
+  }
+
+  .et-notes-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    max-width: 100%;
+    height: auto;
+    min-height: 100%;
+  }
+
+  .et-notes-notepad-col,
+  .et-notes-clipboard-col {
+    min-height: min(520px, max(240px, calc(100dvh - 150px)));
+  }
+}
+
+@media (min-width: 561px) and (max-width: 768px) {
+  .et-topbar {
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto;
+    row-gap: 0;
+    padding: 4px 12px 8px;
+  }
+  .et-top-left {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .et-top-right {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .et-main-tabs,
+  .et-main-tabs.et-main-tabs {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .et-topbar-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .et-main-tab {
+    padding: 6px 12px;
+  }
+  .et-home-time {
+    font-size: clamp(2.7rem, 16vw, 4.5rem);
+  }
+  .et-home-greeting {
+    max-width: 92vw;
+    text-align: center;
+  }
+  .et-search-pill {
+    max-width: 100%;
+  }
+  .et-search-engine-name,
+  .search-btn-label {
     display: none;
-  }
-  .et-clock {
-    font-size: clamp(3rem, 10vw, 5.5rem);
-  }
-  .et-greeting {
-    font-size: var(--fs-md);
-  }
-  .et-boards-grid {
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: var(--sp-3);
   }
 }
 
 @media (max-height: 720px) {
-  .et-home-hero {
-    gap: var(--sp-2);
-    margin-bottom: var(--sp-4);
+  .app {
+    padding-top: 8px;
   }
-  .et-clock {
-    font-size: clamp(3.2rem, 8vh, 5rem);
+  .et-view-home.active {
+    padding-bottom: clamp(20px, 6vh, 40px);
+  }
+  .et-home-center {
+    gap: 14px;
+  }
+  .et-home-time {
+    font-size: clamp(2.8rem, 12vh, 5rem);
   }
   .et-workspace-grid {
     max-height: 320px;
+  }
+}
+
+@media (max-height: 480px) {
+  .et-view-home.active {
+    justify-content: flex-start;
+    padding-top: 12px;
+    padding-bottom: 20px;
+  }
+  .et-home-center {
+    justify-content: flex-start;
+  }
+  .et-home-time {
+    font-size: clamp(2.4rem, 18vh, 4rem);
+  }
+}
+
+@media (max-width: 600px) {
+  .app {
+    padding-top: max(4px, env(safe-area-inset-top));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .et-topbar {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 44px 44px;
+    gap: 4px 8px;
+    padding: 2px max(8px, env(safe-area-inset-right)) 6px
+      max(8px, env(safe-area-inset-left));
+  }
+
+  .et-top-left,
+  .et-top-right {
+    gap: 4px;
+  }
+
+  .et-top-left {
+    justify-self: start;
+  }
+  .et-top-right {
+    justify-self: end;
+  }
+
+  .et-topbar-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .et-topbar-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .et-main-tabs,
+  .et-main-tabs.et-main-tabs {
+    width: min(100%, 310px);
+    min-height: 42px;
+    padding: 3px;
+  }
+
+  .et-main-tab {
+    flex: 1;
+    min-height: 36px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+
+  .et-view-home.active {
+    padding-inline: max(12px, env(safe-area-inset-left));
+  }
+
+  .et-home-center {
+    width: 100%;
+  }
+  .et-home-time {
+    font-size: clamp(3rem, 19vw, 5rem);
+  }
+
+  .et-boards-area {
+    margin-top: 0;
+    padding: 8px max(10px, env(safe-area-inset-left))
+      calc(72px + env(safe-area-inset-bottom));
+  }
+
+  .et-board-grid {
+    align-items: center;
+    gap: 10px;
+  }
+
+  .et-board-col {
+    width: min(100%, var(--board-col-w, 270px));
+    max-width: 100%;
+    gap: 10px;
+  }
+
+  .et-board-card-header {
+    min-height: 44px;
+  }
+  .et-board-card-right button,
+  .et-board-chevron {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .et-view-notes.active {
+    padding: 8px;
+  }
+  .et-notes-notepad-col,
+  .et-notes-clipboard-col {
+    min-height: min(440px, calc(100dvh - 124px));
+  }
+}
+
+@media (max-width: 360px) {
+  .et-topbar {
+    padding-inline: 6px;
+  }
+  .et-topbar-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .et-main-tab {
+    font-size: 12px;
+  }
+  .et-home-greeting {
+    font-size: var(--fs-sm);
   }
 }

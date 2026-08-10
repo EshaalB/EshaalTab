@@ -1,0 +1,363 @@
+.et-search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 14vh;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  transition: none !important;
+}
+
+.et-search-overlay.open,
+.et-search-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.et-search-modal {
+  width: min(92vw, calc(620px * var(--ui-scale)));
+  background: var(--panel, #121620);
+  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.2));
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  contain: layout paint;
+  transform: none !important;
+  transition: none !important;
+  color: var(--text, #ffffff);
+}
+
+.et-search-modal *,
+.et-search-modal *::before,
+.et-search-modal *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.et-search-overlay.open .et-search-modal,
+.et-search-overlay.active .et-search-modal {
+  transform: none !important;
+  transition: none !important;
+}
+
+.et-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-soft, rgba(255, 255, 255, 0.12));
+}
+
+.et-search-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  color: var(--text-dim, rgba(255, 255, 255, 0.5));
+  transition: color var(--dur-1) var(--ease-out);
+}
+
+.et-search-input-wrap:focus-within .et-search-icon {
+  color: var(--accent-color, #6366f1);
+}
+
+.et-search-input-wrap input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: var(--fs-base, 15px);
+  font-weight: 500;
+  color: var(--text, #ffffff);
+  font-family: inherit;
+}
+
+.et-search-input-wrap input::placeholder {
+  color: rgba(255, 255, 255, 0.42) !important;
+  font-weight: 400 !important;
+  opacity: 1 !important;
+}
+
+.et-search-esc-hint {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim, rgba(255, 255, 255, 0.8));
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.18));
+  border-radius: var(--r-sm, 6px);
+  padding: 3px 8px;
+  font-family: inherit;
+}
+
+.et-search-results {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: var(--sp-2);
+}
+
+.et-notes-grid {
+  display: grid;
+  grid-template-columns: 1fr calc(340px * var(--ui-scale));
+  gap: calc(20px * var(--ui-scale));
+  width: 100%;
+  max-width: min(94vw, calc(1080px * var(--ui-scale)));
+  height: calc(100vh - 120px);
+}
+
+.et-notes-notepad-col,
+.et-notes-clipboard-col {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-notes);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--e2);
+  position: relative;
+}
+
+.et-notes-binder-strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.et-notes-binder-hole {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-pill);
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.et-notes-header,
+.et-clip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px var(--sp-6) var(--sp-3);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.et-notes-title,
+.et-clip-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--board-text, #fff);
+}
+
+.et-notes-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.et-notes-export-btn,
+.et-notes-save-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: inherit;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.et-notes-export-btn {
+  background: var(--accent-fill);
+  color: var(--accent-contrast);
+  border: none;
+}
+
+.et-notes-save-btn {
+  background: transparent;
+  color: var(--board-text, #fff);
+  border: 1px solid var(--border-soft);
+}
+
+.et-notes-save-btn:hover {
+  border-color: var(--border-strong, var(--border-soft));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+}
+
+.et-notes-save-btn.is-saved {
+  opacity: 0.6;
+}
+
+.et-notes-area {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  padding: var(--sp-5) var(--sp-6);
+  caret-color: var(--accent-ink, var(--accent-color));
+  background: transparent;
+}
+
+.et-clip-add-wrap {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.et-clip-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-2);
+  font-size: var(--fs-xs);
+  font-family: inherit;
+  background: rgba(var(--board-rgb, 255, 255, 255), 0.06);
+  border: none;
+  border-radius: var(--r-sm);
+  color: var(--board-text, #fff);
+  outline: none;
+}
+
+.et-clip-add-btn {
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--accent-fill);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.et-clip-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-2) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.et-clip-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-8) var(--sp-4);
+  color: var(--board-text-dim, rgba(255, 255, 255, 0.45));
+  font-size: var(--fs-xs);
+  text-align: center;
+}
+
+.et-clip-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  background: rgba(var(--board-rgb, 255, 255, 255), 0.04);
+  border: 1px solid rgba(var(--board-rgb, 255, 255, 255), 0.06);
+  transition:
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
+}
+
+.et-clip-item:hover {
+  background: rgba(var(--board-rgb, 255, 255, 255), 0.08);
+  border-color: rgba(var(--board-rgb, 255, 255, 255), 0.12);
+}
+
+.et-clip-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.et-clip-item-text {
+  font-size: var(--fs-sm);
+  color: var(--board-text, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.et-clip-item-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.et-clip-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(var(--board-rgb, 255, 255, 255), 0.15);
+  background: rgba(var(--board-rgb, 255, 255, 255), 0.06);
+  color: var(--board-text, #fff);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.et-clip-copy-btn:hover {
+  background: var(--accent-color);
+  color: var(--accent-contrast);
+  border-color: var(--accent-color);
+}
+
+.et-clip-copy-btn.copied {
+  background: var(--success);
+  color: var(--text);
+  border-color: var(--success);
+}
+
+.et-clip-del-btn {
+  background: transparent;
+  border: none;
+  color: var(--board-text-dim, rgba(255, 255, 255, 0.4));
+  font-size: var(--fs-md);
+  cursor: pointer;
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-sm);
+  line-height: 1;
+  transition:
+    color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.et-clip-del-btn:hover {
+  color: var(--danger-text);
+  background: var(--danger-fill, rgba(239, 68, 68, 0.12));
+}

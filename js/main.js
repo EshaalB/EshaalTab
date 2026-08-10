@@ -1,7 +1,4 @@
-/* Entry point: loads state, applies theme/cursor/wallpaper, boots every renderer,
-   flushes pending writes on hide, wires Escape-closes-everything, and re-syncs
-   when another tab changes storage. */
-'use strict';
+"use strict";
 
 async function repaintAll() {
   SettingsRenderer.applyPresetShell();
@@ -9,22 +6,31 @@ async function repaintAll() {
   SettingsRenderer.applyCursor();
   const s = StorageManager.getSettings();
   if (s.backgroundType && s.backgroundValue) {
-    await SettingsRenderer.applyWallpaper(s.backgroundType, s.backgroundValue, false);
+    await SettingsRenderer.applyWallpaper(
+      s.backgroundType,
+      s.backgroundValue,
+      false,
+    );
   }
   WidgetsRenderer.applyWidgetVisibility();
   TodoWidget.render();
   ViewController.show(TabManager.get());
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   try {
+    await window.SettingsReady;
     const { settings } = await StorageManager.load();
 
     SettingsRenderer.applyPresetShell();
     SettingsRenderer.applyTheme();
     SettingsRenderer.applyCursor();
     if (settings.backgroundType && settings.backgroundValue) {
-      await SettingsRenderer.applyWallpaper(settings.backgroundType, settings.backgroundValue, false);
+      await SettingsRenderer.applyWallpaper(
+        settings.backgroundType,
+        settings.backgroundValue,
+        false,
+      );
     }
 
     BoardRenderer.init();
@@ -43,47 +49,73 @@ document.addEventListener('DOMContentLoaded', async () => {
         StorageManager.saveSettings();
       };
       showCustomModal(
-        'Enable browser features?',
+        "Enable browser features?",
         '<p class="dialog-message">Allow access to tabs, bookmarks and history for tab stashing, browser bookmark import, and combined search. Your data stays on this device. AI-site access is separate and remains off.</p>',
         () => {
           finishOnboarding();
-          PermissionManager.requestRecommended().then(granted => {
-            ToastSystem[granted ? 'success' : 'info'](granted ? 'Browser features enabled' : 'Permission request declined');
+          PermissionManager.requestRecommended().then((granted) => {
+            ToastSystem[granted ? "success" : "info"](
+              granted
+                ? "Browser features enabled"
+                : "Permission request declined",
+            );
           });
           return true;
         },
-        'Allow features',
+        "Allow features",
         false,
-        finishOnboarding
+        finishOnboarding,
       );
     }
-    const flushAll = () => { NotesRenderer.flushPending(); StorageManager.flush(); };
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') flushAll();
+    const flushAll = () => {
+      NotesRenderer.flushPending();
+      StorageManager.flush();
+    };
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushAll();
     });
-    /* pagehide + visibilitychange(hidden) cover navigation and tab-switch. A
-       beforeunload listener adds nothing here and disqualifies the page from
-       the back/forward cache just by existing. window 'blur' was removed because
-       it overrides cross-tab sync when quickly switching tabs. */
-    window.addEventListener('pagehide', flushAll);
 
-    document.addEventListener('visibilitychange', () => {
-      const v = $('video-bg');
+    window.addEventListener("pagehide", flushAll);
+
+    document.addEventListener("visibilitychange", () => {
+      const v = $("video-bg");
       if (!v || !v.src) return;
       if (document.hidden) v.pause();
-      else if (v.classList.contains('active')) v.play().catch(() => {});
+      else if (
+        v.classList.contains("active") &&
+        !StorageManager.getSettings().performanceMode
+      )
+        v.play().catch(() => {});
     });
 
-    window.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape') return;
+    window.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
 
-      const modal = $('appDynamicModal');
-      if (modal) { modal.remove(); return; }
-      if ($('pomodoroOverlay')?.classList.contains('open')) { PomodoroMode.exit(); return; }
-      if (SearchRenderer.isOpen()) { SearchRenderer.close(); return; }
-      if ($('sidesheetOverlay')?.classList.contains('open')) { SettingsRenderer.closeSideSheet(); return; }
-      if ($('workspacePopover')?.classList.contains('open')) { WorkspaceWidget.close(); return; }
-      if ($('todoPopover')?.classList.contains('open')) { TodoWidget.close(); return; }
+      const modal = $("appDynamicModal");
+      if (modal) {
+        modal.remove();
+        return;
+      }
+      if ($("pomodoroOverlay")?.classList.contains("open")) {
+        PomodoroMode.exit();
+        return;
+      }
+      if (SearchRenderer.isOpen()) {
+        SearchRenderer.close();
+        return;
+      }
+      if ($("sidesheetOverlay")?.classList.contains("open")) {
+        SettingsRenderer.closeSideSheet();
+        return;
+      }
+      if ($("workspacePopover")?.classList.contains("open")) {
+        WorkspaceWidget.close();
+        return;
+      }
+      if ($("todoPopover")?.classList.contains("open")) {
+        TodoWidget.close();
+        return;
+      }
       ContextMenu.hide();
     });
 
@@ -95,9 +127,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         NotesRenderer.flushPending();
         StorageManager.flush();
 
-        const notesEl = $('notesArea');
-        const dirtyNotes = notesEl && notesEl.value !== StorageManager.getData().notes
-          ? notesEl.value : null;
+        const notesEl = $("notesArea");
+        const dirtyNotes =
+          notesEl && notesEl.value !== StorageManager.getData().notes
+            ? notesEl.value
+            : null;
 
         await StorageManager.load();
 
@@ -110,38 +144,43 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       EXT.storage.onChanged.addListener((changes, area) => {
         try {
-          if (area !== 'local') return;
+          if (area !== "local") return;
           if (!changes.data && !changes.settings) return;
-          /* Our own writes carry a stamp that starts with this page's writer id.
-             Anything else -- the popup, the service worker, another new tab --
-             is a genuine external change worth reloading for. */
+
           if (StorageManager.isOwnWriter(changes.writer?.newValue)) return;
 
           const ae = document.activeElement;
-          const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable);
+          const typing =
+            ae &&
+            (ae.tagName === "INPUT" ||
+              ae.tagName === "TEXTAREA" ||
+              ae.isContentEditable);
           if (typing) {
             if (!pendingSync) {
               pendingSync = true;
-              const onBlur = () => { ae.removeEventListener('blur', onBlur); if (pendingSync) applySync(); };
-              ae.addEventListener('blur', onBlur);
+              const onBlur = () => {
+                ae.removeEventListener("blur", onBlur);
+                if (pendingSync) applySync();
+              };
+              ae.addEventListener("blur", onBlur);
             }
             return;
           }
           applySync();
-        } catch { }
+        } catch {}
       });
     }
   } catch (err) {
-    console.error('Error initializing EshaalTab:', err);
+    console.error("Error initializing EshaalTab:", err);
   } finally {
-    /* Fonts and wallpaper decoding can finish on a different rendering turn.
-       Wait for them plus two animation frames so Chrome commits the restored
-       theme before making the document visible. This removes the last single-
-       frame glimpse of the packaged default theme on extension reload. */
-    try { if (document.fonts?.ready) await document.fonts.ready; } catch { }
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    // Never strand the page hidden if an optional integration fails to start.
-    document.body.classList.add('loaded');
-    document.documentElement.classList.remove('boot-pending');
+    try {
+      if (document.fonts?.ready) await document.fonts.ready;
+    } catch {}
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve)),
+    );
+
+    document.body.classList.add("loaded");
+    document.documentElement.classList.remove("boot-pending");
   }
 });

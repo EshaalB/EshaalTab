@@ -1,51 +1,83 @@
-/* Design tokens + reset. Every colour is named once per theme here, so a
-   component never needs a body.theme-light twin just to swap a value.
-   --board-* are also written at runtime by settings.js from the generated palette.
-   --ui-scale steps up on large displays; container widths multiply by it. */
-
-/* Local variable fonts. One WOFF2 per family covers every UI weight from
-   400-700, keeps every offered font functional offline, and avoids leaking a
-   new-tab open to a third-party font host. */
-@font-face { font-family: 'Inter'; src: url('../fonts/inter-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
-@font-face { font-family: 'Outfit'; src: url('../fonts/outfit-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
-@font-face { font-family: 'JetBrains Mono'; src: url('../fonts/jetbrains-mono-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
-@font-face { font-family: 'Lexend'; src: url('../fonts/lexend-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
-@font-face { font-family: 'Lora'; src: url('../fonts/lora-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
-@font-face { font-family: 'Roboto Slab'; src: url('../fonts/roboto-slab-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
+@import url("https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap");
 
 @font-face {
-  font-family: 'Caveat';
+  font-family: "Inter";
+  src: url("../fonts/inter-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Outfit";
+  src: url("../fonts/outfit-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/jetbrains-mono-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Lexend";
+  src: url("../fonts/lexend-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Lora";
+  src: url("../fonts/lora-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Roboto Slab";
+  src: url("../fonts/roboto-slab-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Caveat";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('../fonts/caveat-700-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-                 U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
-                 U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url("../fonts/caveat-700-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Caveat';
+  font-family: "Caveat";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('../fonts/caveat-700-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
-                 U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
-                 U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  src: url("../fonts/caveat-700-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Orbitron';
+  font-family: "Orbitron";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('../fonts/orbitron-700.ttf') format('truetype');
+  src: url("../fonts/orbitron-700.ttf") format("truetype");
 }
 @font-face {
-  font-family: 'Orbitron';
+  font-family: "Orbitron";
   font-style: normal;
   font-weight: 800;
   font-display: swap;
-  src: url('../fonts/orbitron-800.ttf') format('truetype');
+  src: url("../fonts/orbitron-800.ttf") format("truetype");
 }
 
 * {
@@ -56,10 +88,47 @@
 
 body {
   color: var(--text);
-  font-family: var(--font-app, 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
+  font-family: var(
+    --font-app,
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif
+  );
   min-height: 100vh;
   background: var(--page-bg);
   overflow: hidden;
+}
+
+body.font-handwriting {
+  --font-app: "Patrick Hand", "Comic Neue", cursive, sans-serif;
+  --fs-xs: 13px;
+  --fs-sm: 15px;
+  --fs-base: 16px;
+  letter-spacing: 0.015em;
+  font-weight: 500;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.font-handwriting .st-label,
+body.font-handwriting .et-set-label,
+body.font-handwriting .field-label,
+body.font-handwriting label,
+body.font-handwriting button,
+body.font-handwriting input,
+body.font-handwriting textarea,
+body.font-handwriting .et-search-input,
+body.font-handwriting .sr-title,
+body.font-handwriting .sr-sub,
+body.font-handwriting .dock-pin-title {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-style: normal;
 }
 
 *:focus-visible {
@@ -69,15 +138,11 @@ body {
 
 input::placeholder,
 textarea::placeholder {
-  /* Was a hardcoded white at 42% opacity, so on a light-mode near-white
-     background the placeholder text was nearly invisible. --text-dim already
-     flips per theme (light body sets a dark, low-opacity value). */
   color: var(--text-dim) !important;
   font-weight: 400 !important;
   opacity: 1 !important;
   text-shadow: none !important;
 }
-
 
 ::-webkit-scrollbar {
   width: 6px;
@@ -95,24 +160,36 @@ textarea::placeholder {
 }
 
 :root {
-  --e1: 0 2px 8px rgba(0, 0, 0, 0.18);
-  --e2: 0 4px 16px rgba(0, 0, 0, 0.28);
-  --e3: 0 8px 24px rgba(0, 0, 0, 0.38);
-  --e4: 0 16px 42px rgba(0, 0, 0, 0.52);
-  --e-sheet: -8px 0 32px rgba(0, 0, 0, 0.45);
+  --shadow-tint: color-mix(in srgb, var(--accent-color, #6366f1) 22%, #020617);
+  --shadow-contact: color-mix(in srgb, var(--shadow-tint) 14%, transparent);
+  --shadow-ambient: color-mix(in srgb, var(--shadow-tint) 22%, transparent);
+
+  --e1:
+    0 1px 2px var(--shadow-contact),
+    0 4px 10px -1px var(--shadow-ambient);
+  --e2:
+    0 2px 4px var(--shadow-contact),
+    0 8px 18px -2px var(--shadow-ambient);
+  --e3:
+    0 3px 6px var(--shadow-contact),
+    0 12px 28px -3px var(--shadow-ambient);
+  --e4:
+    0 4px 8px var(--shadow-contact),
+    0 20px 42px -4px var(--shadow-ambient);
+  --e-sheet:
+    -4px 0 8px var(--shadow-contact),
+    -12px 0 32px -4px var(--shadow-ambient);
   --glass: none;
   --glass-lg: none;
   --hair: 1px solid var(--border-soft);
 
-  /* Matches the values that used to be hardcoded into the clock's text-shadow;
-     settings.js overrides these once loaded. */
   --wp-shadow-opacity: 0.6;
   --wp-shadow-blur: 20px;
+  --wp-shadow-rgb: 0, 0, 0;
 
   --accent-color: #ffffff;
   --accent-contrast: #14151a;
-  /* One accent, no gradient. The second accent was only ever a gradient stop and
-     it made every surface a two-colour guess that was easy to make unreadable. */
+
   --accent-fill: var(--accent-color);
 
   --board-rgb: 255, 255, 255;
@@ -126,19 +203,20 @@ textarea::placeholder {
 
   --surface: rgba(var(--board-rgb), var(--board-opacity, 0.08));
   --surface-card: rgba(var(--board-rgb), var(--board-opacity, 0.08));
-  --surface-2: rgba(var(--board-rgb), calc(var(--board-opacity, 0.08) * 1.2 + 0.02));
-  --surface-3: rgba(var(--board-rgb), calc(var(--board-opacity, 0.08) * 1.5 + 0.05));
+  --surface-2: rgba(
+    var(--board-rgb),
+    calc(var(--board-opacity, 0.08) * 1.2 + 0.02)
+  );
+  --surface-3: rgba(
+    var(--board-rgb),
+    calc(var(--board-opacity, 0.08) * 1.5 + 0.05)
+  );
 
-  /* Per-region transparency. Each defaults to the board value so an install
-     that never touches these looks exactly as before, but the topbar/search,
-     the widget icon buttons and the notes surface can each be dialled
-     independently of the boards. */
   --topbar-opacity: var(--board-opacity, 0.08);
   --notes-opacity: var(--board-opacity, 0.08);
-  --surface-topbar: rgba(var(--board-rgb), calc(var(--topbar-opacity) * 1.2 + 0.02));
+  --surface-topbar: rgba(var(--board-rgb), var(--topbar-opacity));
   --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
-  /* Alpha of the filled box behind a widget icon. Applied to the background
-     colour, never to the element, so the glyph stays crisp as the box fades. */
+
   --widget-bg-alpha: 0.95;
   --text: rgba(255, 255, 255, 0.95);
   --text-dim: rgba(255, 255, 255, 0.65);
@@ -147,26 +225,30 @@ textarea::placeholder {
   --border-strong: rgba(255, 255, 255, 0.22);
   --track: rgba(255, 255, 255, 0.18);
 
-  --op-primary: 1.0;
+  --op-primary: 1;
   --op-secondary: 0.78;
   --op-muted: 0.52;
   --op-faint: 0.32;
 
-  --surface-base: #0d1117;
-  --surface-chip: rgba(255, 255, 255, 0.10);
+  --surface-base: #080e1a;
+  --surface-chip: rgba(255, 255, 255, 0.1);
+  /* Neutral (non-accent-tinted) surfaces for UI panels like settings cards */
+  --surface-panel: rgba(255, 255, 255, 0.045);
+  --surface-panel-2: rgba(255, 255, 255, 0.065);
   --border-tactile: 1px solid var(--border-soft);
   --border-tactile-accent: 1px solid var(--accent-color);
 
-  --panel: color-mix(in srgb, var(--accent-color, #4382ec) 14%, #10141e);
-  --panel-border: color-mix(in srgb, var(--accent-color, #4382ec) 25%, transparent);
-  --panel-hover: color-mix(in srgb, var(--accent-color, #4382ec) 22%, transparent);
+  /* Slate-toned dark base — subtle cool blue-grey undertone */
+  --panel: #0f1623;
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --panel-hover: rgba(255, 255, 255, 0.06);
 
-  --glass-fill: rgba(16, 18, 26, 0.55);
-  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-fill: rgba(10, 14, 26, 0.58);
+  --glass-border: rgba(255, 255, 255, 0.12);
   --glass-blur: none;
   --scrim: rgba(0, 0, 0, 0.55);
 
-  --page-bg: #0d1117;
+  --page-bg: #0b1020;
 
   --paper: rgba(255, 255, 255, 0.035);
   --danger: #ef4444;
@@ -176,7 +258,7 @@ textarea::placeholder {
   --success-border: rgba(16, 185, 129, 0.5);
 
   --ui-scale: 1;
- 
+
   --fs-xs: calc(13px * var(--ui-scale));
   --fs-sm: calc(14px * var(--ui-scale));
   --fs-base: calc(15px * var(--ui-scale));
@@ -232,17 +314,47 @@ textarea::placeholder {
   --bp-xl: 1280px;
 }
 
-@media (min-width: 1800px) { :root { --ui-scale: 1.12; } }
-@media (min-width: 2200px) { :root { --ui-scale: 1.3;  } }
-@media (min-width: 2800px) { :root { --ui-scale: 1.55; } }
-@media (min-width: 3400px) { :root { --ui-scale: 1.8;  } }
+@media (min-width: 1800px) {
+  :root {
+    --ui-scale: 1.12;
+  }
+}
+@media (min-width: 2200px) {
+  :root {
+    --ui-scale: 1.3;
+  }
+}
+@media (min-width: 2800px) {
+  :root {
+    --ui-scale: 1.55;
+  }
+}
+@media (min-width: 3400px) {
+  :root {
+    --ui-scale: 1.8;
+  }
+}
 
 body.theme-light {
-  --e1: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --e2: 0 4px 16px rgba(0, 0, 0, 0.10);
-  --e3: 0 8px 24px rgba(0, 0, 0, 0.14);
-  --e4: 0 16px 40px rgba(0, 0, 0, 0.20);
-  --e-sheet: -8px 0 32px rgba(0, 0, 0, 0.18);
+  --shadow-tint: color-mix(in srgb, var(--accent-color, #4382ec) 25%, #0f172a);
+  --shadow-contact: color-mix(in srgb, var(--shadow-tint) 7%, transparent);
+  --shadow-ambient: color-mix(in srgb, var(--shadow-tint) 14%, transparent);
+
+  --e1:
+    0 1px 2px var(--shadow-contact),
+    0 4px 10px -1px var(--shadow-ambient);
+  --e2:
+    0 2px 4px var(--shadow-contact),
+    0 8px 18px -2px var(--shadow-ambient);
+  --e3:
+    0 3px 6px var(--shadow-contact),
+    0 12px 28px -3px var(--shadow-ambient);
+  --e4:
+    0 4px 8px var(--shadow-contact),
+    0 20px 42px -4px var(--shadow-ambient);
+  --e-sheet:
+    -4px 0 8px var(--shadow-contact),
+    -12px 0 32px -4px var(--shadow-ambient);
   --hair: 1px solid var(--border-soft);
 
   --board-border: transparent;
@@ -254,17 +366,15 @@ body.theme-light {
 
   --surface: rgba(0, 0, 0, 0.04);
   --surface-2: rgba(0, 0, 0, 0.06);
-  --surface-3: rgba(0, 0, 0, 0.10);
-  /* Light mode tints with black, not white, so the same opacity sliders read as
-     "more visible" in both themes instead of vanishing against a pale page. */
-  --surface-topbar: rgba(0, 0, 0, calc(var(--topbar-opacity) * 0.8 + 0.02));
-  --surface-notes: rgba(0, 0, 0, calc(var(--notes-opacity) * 0.8));
+  --surface-3: rgba(0, 0, 0, 0.1);
+  --surface-topbar: rgba(var(--board-rgb), var(--topbar-opacity));
+  --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
   --surface-base: #f4f6f8;
-  /* Was a fixed 0.95, so the Boards transparency slider did nothing whatsoever
-     in light mode. Scaled and clamped so a card stays legible on a pale page
-     across the slider's full range instead of disappearing at low values. */
-  --surface-card: rgba(255, 255, 255, clamp(0.15, calc(0.35 + var(--board-opacity, 0.08) * 3), 0.96));
+  --surface-card: rgba(var(--board-rgb), var(--board-opacity, 0.08));
   --surface-chip: rgba(0, 0, 0, 0.05);
+  /* Neutral (non-accent-tinted) surfaces for UI panels in light mode */
+  --surface-panel: rgba(0, 0, 0, 0.04);
+  --surface-panel-2: rgba(0, 0, 0, 0.065);
   --border-tactile: 1px solid var(--border-soft);
   --border-tactile-accent: 1px solid var(--accent-color);
   --text: rgba(0, 0, 0, 0.88);
@@ -274,9 +384,9 @@ body.theme-light {
   --border-strong: rgba(0, 0, 0, 0.2);
   --track: rgba(0, 0, 0, 0.2);
 
-  --panel: color-mix(in srgb, var(--accent-color, #4382ec) 12%, #ffffff);
-  --panel-border: color-mix(in srgb, var(--accent-color, #4382ec) 25%, transparent);
-  --panel-hover: color-mix(in srgb, var(--accent-color, #4382ec) 16%, transparent);
+  --panel: #ffffff;
+  --panel-border: rgba(0, 0, 0, 0.12);
+  --panel-hover: rgba(0, 0, 0, 0.04);
 
   --glass-fill: rgba(255, 255, 255, 0.62);
   --glass-border: rgba(255, 255, 255, 0.75);

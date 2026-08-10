@@ -17,6 +17,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "  $ver = '{0}.{1}.{2}' -f $Matches[1], $Matches[2], ([int]$Matches[3] + 1);" ^
   "  $out = [Regex]::Replace($raw, '(\"version\"\s*:\s*\")\d+\.\d+\.\d+(\")', ('${1}' + $ver + '${2}'), 1);" ^
   "  [IO.File]::WriteAllText($path, $out, [Text.UTF8Encoding]::new($false));" ^
+  "  $firefoxPath = 'manifest.firefox.json';" ^
+  "  if (Test-Path $firefoxPath) {" ^
+  "    $firefoxRaw = Get-Content $firefoxPath -Raw -Encoding UTF8;" ^
+  "    $firefoxOut = [Regex]::Replace($firefoxRaw, '(\"version\"\s*:\s*\")\d+\.\d+\.\d+(\")', ('${1}' + $ver + '${2}'), 1);" ^
+  "    [IO.File]::WriteAllText($firefoxPath, $firefoxOut, [Text.UTF8Encoding]::new($false));" ^
+  "  };" ^
   "  $dest = '%NAME%-v' + $ver + '.zip';" ^
   "  $destPath = Join-Path (Join-Path (Get-Location) '%RELEASE_DIR%') $dest;" ^
   "  if (Test-Path $destPath) { Remove-Item $destPath -Force };" ^

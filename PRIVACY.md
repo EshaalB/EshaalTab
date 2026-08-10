@@ -103,9 +103,9 @@ browser account; EshaalTab operates no synchronisation server.
 ## Retention and deletion
 
 Data remains in browser storage until the user deletes it or uninstalls the
-extension. Individual items can be removed in the interface. Settings > Data >
-Reset removes EshaalTab data and restores defaults. Export creates a local JSON
-backup before a reset if the user chooses to do so.
+extension. Individual items can be removed in the interface. Settings > Privacy
+& data > Factory reset removes EshaalTab data and restores defaults. Export
+creates a local JSON backup, including locally stored wallpapers.
 
 ## Information not used
 
