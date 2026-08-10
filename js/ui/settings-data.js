@@ -224,14 +224,6 @@
   function bindDataEvents() {
     const settings = liveSettings();
 
-    $("stAiAutoSend")?.addEventListener("change", (e) => {
-      settings.aiAutoSend = e.target.checked;
-      StorageManager.saveSettings();
-      ToastSystem[settings.aiAutoSend ? "success" : "info"](
-        settings.aiAutoSend ? "AI auto-send enabled" : "AI auto-send disabled",
-      );
-    });
-
     $("btnImportBrowser")?.addEventListener("click", () => {
       if (!(HAS_EXT && EXT.bookmarks)) {
         ToastSystem.error(
@@ -515,20 +507,13 @@
             </button>
             <div class="st-accordion-body">
               <div class="st-card" style="display:flex; flex-direction:column; gap:14px;">
-            <div>
-              <div class="st-row">
-                <label class="st-label" for="stAiAutoSend">Auto-send queries on AI sites</label>
-                <input type="checkbox" id="stAiAutoSend" ${settings.aiAutoSend ? "checked" : ""} />
-              </div>
-              <div class="st-hint">Only queries launched by EshaalTab are submitted automatically. Conversations are never collected.</div>
-            </div>
-            <div style="border-top:1px solid var(--border-soft); padding-top:12px;">
-            <div class="st-row">
-              <label class="st-label" for="stRemoteFavicons">Load icons from the web</label>
-              <input type="checkbox" id="stRemoteFavicons" ${settings.remoteFavicons ? "checked" : ""} />
-            </div>
-            <div class="st-hint">Off by default. When on, sites you bookmark are sent to DuckDuckGo and Google to fetch nicer icons. Your browser's own cached icons are always used first.</div>
-            </div>
+                <div>
+                  <div class="st-row">
+                    <label class="st-label" for="stRemoteFavicons">Load icons from the web</label>
+                    <input type="checkbox" id="stRemoteFavicons" ${settings.remoteFavicons ? "checked" : ""} />
+                  </div>
+                  <div class="st-hint">Off by default. When on, sites you bookmark are sent to DuckDuckGo and Google to fetch nicer icons. Your browser's own cached icons are always used first.</div>
+                </div>
               </div>
             </div>
           </div>

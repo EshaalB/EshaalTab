@@ -22,10 +22,6 @@ Use it to:
 - Use Quick Settings for common changes or Customize for detailed wallpaper,
   clock, search and weather controls, with an optional performance mode.
 
-AI search submission is optional and disabled by default. If enabled, Chrome
-asks for access to ChatGPT, Claude, and Gemini. EshaalTab submits only the query
-you entered from its new-tab search bar. It does not read conversations.
-
 Boards, notes, tasks, settings, and uploaded wallpapers are stored in the
 browser. EshaalTab has no account, advertising, analytics, or developer server.
 See the privacy policy for details about optional network features.
@@ -39,8 +35,7 @@ EshaalTab replaces Chrome's New Tab page with a personal start page for
 organising and opening links and short-term work items. Users can save links,
 find saved or recently used pages, search the web, and keep notes and tasks from
 that page. The toolbar and context-menu actions only save the current page to
-the same new-tab start page. Optional AI-site access only submits a search the
-user started from EshaalTab and is disabled until the user grants permission.
+the same new-tab start page.
 
 ## Permission justifications
 
@@ -56,11 +51,6 @@ Allows user-uploaded image and video wallpapers to be stored locally without fai
 ### activeTab
 
 Lets the toolbar button read the current page's title and URL after the user clicks it, so that page can be saved to EshaalTab.
-
-### scripting
-
-Used only for the optional AI search integration. After the user enables it and grants site access, EshaalTab submits the query the user entered to the selected
-AI website.
 
 ### contextMenus
 
@@ -86,10 +76,3 @@ Allows Ctrl+K to find open tabs and lets the user stash open tabs. Access is req
 ### history (optional)
 
 Allows Ctrl+K to show matching pages from browser history. Access is requested from the user and results are used only inside the search panel.
-
-## Optional host permission justification
-
-Access to ChatGPT, Claude, and Gemini is used only for optional AI search
-submission. It is disabled by default. When the user enables it, Chrome asks for
-permission before EshaalTab can submit the query entered on the new-tab page.
-The extension does not read conversations or collect page content.

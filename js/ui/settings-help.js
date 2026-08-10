@@ -60,7 +60,7 @@
         <div class="st-group-title">Your data</div>
         <div class="st-card help-card">
           ${item("Backup and restore", "In <b>Privacy &amp; data</b> you can export a full JSON backup, including locally stored wallpapers, restore one, or import from Chrome or Raindrop. Duplicate cleanup keeps the first copy of a repeated URL.")}
-          ${item("What leaves your browser", "Your boards, notes and todos stay on your device. There is no EshaalTab account, analytics service or server. A search is sent only when you submit it to your chosen search or AI provider. A wallpaper URL contacts that site when you add it. <b>Load icons from the web</b> is off by default and contacts Google and DuckDuckGo when enabled. Weather contacts Open-Meteo after you set a city. AI auto-send is off by default and needs separate permission in <b>Privacy &amp; data</b>.")}
+          ${item("What leaves your browser", "Your boards, notes and todos stay on your device. There is no EshaalTab account, analytics service or server. A search is sent only when you submit it to your chosen search or AI provider. A wallpaper URL contacts that site when you add it. <b>Load icons from the web</b> is off by default and contacts Google and DuckDuckGo when enabled. Weather contacts Open-Meteo after you set a city.")}
         </div>
       </div>`;
   }

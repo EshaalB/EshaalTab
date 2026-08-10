@@ -46,9 +46,8 @@ recent feature-selection process directly).
   window.
 - The Ctrl+K command palette is the unified entry point across open tabs,
   browsing history, saved boards/links, notes, and todos.
-- A background service worker and a small set of content scripts (e.g.
-  auto-submitting a URL-carried prompt into ChatGPT/Claude/Gemini) support
-  specific opt-in workflows; none run silently beyond their stated purpose.
+- A background service worker handles background actions; no content scripts
+  or host permissions are required for extension features.
 - Distributed through the Chrome Web Store and Firefox AMO — both stores'
   review policies (Single Purpose, narrow permissions, accurate listing text)
   are a standing operating constraint on this project, not a one-time

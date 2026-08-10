@@ -45,9 +45,6 @@ is not sent to the developer.
 - **Browser bookmarks:** after optional bookmark access is granted, the bookmark
   tree is read only when you confirm an import. EshaalTab does not edit or delete
   browser bookmarks.
-- **AI-site controls:** when optional AI search submission is enabled, the
-  content script locates the selected site's prompt field and Send control. It
-  does not read existing conversations.
 
 ## Network features
 
@@ -79,19 +76,12 @@ When you provide a wallpaper URL, the browser contacts that address. Its host
 can see the request. Images are stored locally when possible. Remote videos and
 images that cannot be stored may be requested again on later new tabs.
 
-### Search and AI search submission
+### Search and AI providers
 
 When you submit a search, the query is sent to the browser's configured default
 search provider or to the provider you explicitly selected. Available providers
 include DuckDuckGo, YouTube, Brave, Perplexity, ChatGPT, Claude and Gemini.
 Their respective privacy policies apply.
-
-AI search submission is disabled by default. Installation access is limited to
-the three supported AI sites: ChatGPT, Claude and Gemini. The packaged content
-script exits immediately unless the user has enabled AI auto-send and opened a
-URL containing an EshaalTab query. It then enters and submits that query. It
-does not read existing conversations, collect responses or continue monitoring
-the site for another purpose.
 
 ## Chrome Sync
 

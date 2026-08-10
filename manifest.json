@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EshaalTab - New Tab & Bookmark Boards",
-  "version": "2.0.129",
+  "version": "2.0.130",
   "description": "Organise bookmarks, search open tabs, and keep quick notes from a personal new tab page.",
   "icons": {
     "16": "icons/icon16.png",
@@ -37,22 +37,6 @@
     "search"
   ],
   "optional_permissions": ["bookmarks", "tabs", "history"],
-  "host_permissions": [
-    "https://chatgpt.com/*",
-    "https://claude.ai/*",
-    "https://gemini.google.com/*"
-  ],
-  "content_scripts": [
-    {
-      "matches": [
-        "https://chatgpt.com/*",
-        "https://claude.ai/*",
-        "https://gemini.google.com/*"
-      ],
-      "js": ["js/extension/ai-autosend.js"],
-      "run_at": "document_start"
-    }
-  ],
   "commands": {
     "save-current-tab": {
       "suggested_key": {
