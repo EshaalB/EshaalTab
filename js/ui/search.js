@@ -57,7 +57,8 @@ const SearchRenderer = (() => {
 
     if (overlay) {
       overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) close();
+        if (e.target === overlay && !gestureStartedIn(overlay.firstElementChild))
+          close();
       });
     }
 
@@ -318,12 +319,23 @@ const SearchRenderer = (() => {
 
   function noteRowHtml(it) {
     return `
-      <div class="search-result-item" data-act="note">
+      <div class="search-result-item" data-act="note" data-note-id="${escapeHtml(it.id || "")}">
         <div class="sr-info">
-          <div class="sr-title">Notepad</div>
+          <div class="sr-title">${escapeHtml(it.title || "Notepad")}</div>
           <div class="sr-sub">${it.snippet}</div>
         </div>
         <span class="sr-badge sr-badge-dim">Note</span>
+      </div>`;
+  }
+  function sessionRowHtml(it) {
+    const n = it.tabs.length;
+    return `
+      <div class="search-result-item" data-act="session" data-session-id="${escapeHtml(it.id)}">
+        <div class="sr-info">
+          <div class="sr-title">${escapeHtml(SessionManager.displayName(it))}</div>
+          <div class="sr-sub">${n} tab${n === 1 ? "" : "s"} · ${escapeHtml(it.tabs.slice(0, 3).map((t) => t.title || t.url).join(", "))}</div>
+        </div>
+        <span class="sr-badge sr-badge-dim">Session</span>
       </div>`;
   }
   function todoRowHtml(it) {
@@ -362,10 +374,19 @@ const SearchRenderer = (() => {
     ]);
     const history = hist.filter((h) => !seen.has(h.url));
 
-    const noteText =
-      typeof NotesManager !== "undefined" ? NotesManager.get() : "";
-    const noteHit =
-      noteText && noteText.toLowerCase().includes(trimmed.toLowerCase());
+    // Search across every note tab, not just the active one.
+    const noteHits =
+      typeof NotesManager !== "undefined"
+        ? NotesManager.list()
+            .filter((n) =>
+              (n.text || "").toLowerCase().includes(trimmed.toLowerCase()),
+            )
+            .map((n) => ({
+              id: n.id,
+              title: n.title,
+              snippet: buildSnippet(n.text, trimmed),
+            }))
+        : [];
     const todoHits =
       typeof TodoManager !== "undefined"
         ? TodoManager.getAll()
@@ -386,9 +407,17 @@ const SearchRenderer = (() => {
       },
       { label: "Todos", kind: "todo", items: todoHits },
       {
+        label: "Sessions",
+        kind: "session",
+        items:
+          typeof SessionManager !== "undefined"
+            ? SessionManager.search(trimmed)
+            : [],
+      },
+      {
         label: "Notes",
         kind: "note",
-        items: noteHit ? [{ snippet: buildSnippet(noteText, trimmed) }] : [],
+        items: noteHits,
       },
       { label: "History", kind: "history", items: history },
     ].filter((s) => s.items.length);
@@ -413,7 +442,9 @@ const SearchRenderer = (() => {
                   ? todoRowHtml(it)
                   : sec.kind === "note"
                     ? noteRowHtml(it)
-                    : rowHtml(it, sec.kind),
+                    : sec.kind === "session"
+                      ? sessionRowHtml(it)
+                      : rowHtml(it, sec.kind),
               )
               .join(""),
         )
@@ -441,6 +472,9 @@ const SearchRenderer = (() => {
         } else if (el.dataset.act === "note") {
           close();
           ViewController.show("notes");
+          const noteId = el.dataset.noteId;
+          if (noteId && noteId !== NotesManager.getActiveId())
+            NotesRenderer.switchTo(noteId);
           const area = $("notesArea");
           if (area) {
             const idx = area.value.toLowerCase().indexOf(trimmed.toLowerCase());
@@ -451,6 +485,10 @@ const SearchRenderer = (() => {
         } else if (el.dataset.act === "todo") {
           close();
           TodoWidget.open();
+          return;
+        } else if (el.dataset.act === "session") {
+          close();
+          SessionsRenderer.open();
           return;
         } else {
           if (e.ctrlKey || e.metaKey || e.shiftKey)

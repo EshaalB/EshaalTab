@@ -301,7 +301,6 @@ body.theme-light .search-result-item.kb-active {
 .et-pomo-preset-btn:active,
 .toast-action-btn:active,
 .et-clip-add-btn:active,
-.et-add-board-fab:active,
 .mynt-seg-btn:active {
   transform: translateY(1px);
   transition-duration: var(--dur-1);
@@ -377,7 +376,6 @@ body.theme-light .search-result-item.kb-active {
 
 @media (max-width: 600px) {
   .et-pop-todo,
-  .et-pop-pinned,
   .et-pop-workspace {
     inset: auto 8px max(8px, env(safe-area-inset-bottom)) 8px !important;
     width: auto;

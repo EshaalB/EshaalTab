@@ -11,17 +11,7 @@
     applyWallpaperOverlay,
   } = S;
   const renderSideSheetContent = (...a) => S.renderSideSheetContent(...a);
-  const pendingFrames = new Map();
-  function paintNextFrame(key, fn) {
-    if (pendingFrames.has(key)) return;
-    pendingFrames.set(
-      key,
-      requestAnimationFrame(() => {
-        pendingFrames.delete(key);
-        fn();
-      }),
-    );
-  }
+  const paintNextFrame = S.createFrameScheduler();
 
   function bindWidgetEvents() {
     const live = () => StorageManager.getSettings();
@@ -197,6 +187,40 @@
       });
     });
 
+    $("stBreaksEnabled")?.addEventListener("change", (e) => {
+      live().breaks.enabled = e.target.checked;
+      const body = $("stBreaksBody");
+      if (body) body.style.display = e.target.checked ? "flex" : "none";
+      StorageManager.save();
+      BreakTimer.restart();
+      ToastSystem[e.target.checked ? "success" : "info"](
+        e.target.checked
+          ? `Break reminder every ${live().breaks.everyMin} minutes`
+          : "Break reminders off",
+      );
+    });
+
+    $("stBreaksEvery")?.addEventListener("change", (e) => {
+      live().breaks.everyMin = parseInt(e.target.value, 10);
+      StorageManager.save();
+      // The countdown restarts from now rather than keeping the old due time,
+      // which would otherwise fire at the previous interval one last time.
+      BreakTimer.restart();
+      ToastSystem.success(`Reminding you every ${live().breaks.everyMin} minutes`);
+    });
+
+    $("stBreaksMessage")?.addEventListener("change", (e) => {
+      const val = e.target.value.trim();
+      live().breaks.message =
+        val.slice(0, 120) || StorageManager.DEFAULT_SETTINGS.breaks.message;
+      StorageManager.save();
+    });
+
+    $("stBreaksSound")?.addEventListener("change", (e) => {
+      live().breaks.sound = e.target.checked;
+      StorageManager.save();
+    });
+
     $("stWeatherApplyBtn")?.addEventListener("click", () => {
       const s = live();
       s.weatherCity = $("stWeatherCity").value.trim();
@@ -214,6 +238,7 @@
     );
     const enabledEngs =
       settings.enabledEngines || StorageManager.DEFAULT_SETTINGS.enabledEngines;
+    const breaks = settings.breaks || StorageManager.DEFAULT_SETTINGS.breaks;
     return `
         <div class="st-container">
           <div class="st-accordion is-expanded">
@@ -335,10 +360,15 @@
               ${CustomSelect.render({
                 id: "stClockPos",
                 value:
-                  settings.clockPosition === "corner" ? "corner" : "center",
+                  settings.clockPosition === "corner"
+                    ? "bottom-left"
+                    : settings.clockPosition || "center",
                 options: [
                   { value: "center", label: "Centered" },
-                  { value: "corner", label: "Bottom left" },
+                  { value: "top-left", label: "Top left" },
+                  { value: "top-right", label: "Top right" },
+                  { value: "bottom-left", label: "Bottom left" },
+                  { value: "bottom-right", label: "Bottom right" },
                 ],
                 style: "width:220px;",
               })}
@@ -428,6 +458,49 @@
           </div>`
               : ""
           }
+
+          <div class="st-accordion" data-accordion-key="breaks">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Break reminders${breaks.enabled ? ` <span class="st-group-note">Every ${breaks.everyMin}m</span>` : ""}</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
+                <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px; padding:0;">
+                  <input type="checkbox" id="stBreaksEnabled" ${breaks.enabled ? "checked" : ""} />
+                  <span class="st-label" style="font-weight:600;">Remind me to take a break</span>
+                </label>
+                <div class="st-hint">A nudge on this page while it is open. No background timers and no notification permission.</div>
+                <div id="stBreaksBody" style="display:${breaks.enabled ? "flex" : "none"}; flex-direction:column; gap:10px;">
+                  <div class="st-row">
+                    <label class="st-label" for="stBreaksEvery">Every</label>
+                    ${CustomSelect.render({
+                      id: "stBreaksEvery",
+                      value: String(breaks.everyMin),
+                      options: StorageManager.BREAK_INTERVALS.map((m) => ({
+                        value: String(m),
+                        label:
+                          m >= 60
+                            ? `${m / 60} hour${m > 60 ? "s" : ""}`
+                            : `${m} minutes`,
+                      })),
+                      style: "width:160px;",
+                    })}
+                  </div>
+                  <div class="st-row" style="flex-direction:column; align-items:stretch; gap:6px;">
+                    <label class="st-label" for="stBreaksMessage">What it should say</label>
+                    <input type="text" id="stBreaksMessage" class="st-input" maxlength="120"
+                           value="${escapeHtml(breaks.message || "")}"
+                           placeholder="${escapeHtml(StorageManager.DEFAULT_SETTINGS.breaks.message)}" />
+                  </div>
+                  <label class="st-row" style="cursor:pointer;">
+                    <span class="st-label">Play a chime</span>
+                    <input type="checkbox" id="stBreaksSound" ${breaks.sound !== false ? "checked" : ""} />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
 
           ${
             w.weather

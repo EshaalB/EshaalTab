@@ -37,11 +37,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     WidgetsRenderer.init();
     TodoWidget.init();
     WorkspaceWidget.init();
+    SessionsRenderer.init();
     HomeRenderer.init();
     SearchRenderer.init();
     SettingsRenderer.init();
 
     ViewController.init();
+
+    BreakTimer.init();
+
+    // Started after the widgets register their reminder sources.
+    ReminderKit.start();
 
     if (!settings.onboardingSeen && HAS_EXT) {
       const finishOnboarding = () => {
@@ -108,14 +114,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         SettingsRenderer.closeSideSheet();
         return;
       }
-      if ($("workspacePopover")?.classList.contains("open")) {
-        WorkspaceWidget.close();
-        return;
-      }
-      if ($("todoPopover")?.classList.contains("open")) {
-        TodoWidget.close();
-        return;
-      }
+      // The popovers keep their own list, so Escape does not need a rung per
+      // widget here — it just dismisses whichever one is showing.
+      if (PopoverRegistry.closeTop()) return;
       ContextMenu.hide();
     });
 
@@ -127,17 +128,39 @@ document.addEventListener("DOMContentLoaded", async () => {
         NotesRenderer.flushPending();
         StorageManager.flush();
 
+        // #notesArea exists from page load but stays empty until the Notes
+        // view is opened, so its value is only authoritative once the user has
+        // actually edited it. Without this guard a tab that never visited
+        // Notes writes "" back over the stored note on every remote change.
+        //
+        // The note id is captured alongside the text: `load()` replaces the
+        // whole data object, and the incoming copy can have a different note
+        // active, so the text has to go back to the note it was typed in
+        // rather than to whichever one happens to be active afterwards.
         const notesEl = $("notesArea");
-        const dirtyNotes =
-          notesEl && notesEl.value !== StorageManager.getData().notes
-            ? notesEl.value
+        const dirty =
+          notesEl &&
+          NotesRenderer.hasLiveEdits() &&
+          notesEl.value !== NotesManager.get()
+            ? { id: NotesManager.getActiveId(), text: notesEl.value }
             : null;
 
         await StorageManager.load();
 
-        if (dirtyNotes !== null) {
-          StorageManager.getData().notes = dirtyNotes;
-          StorageManager.save();
+        if (dirty) {
+          // Into the note tab itself, which is what the editor renders from.
+          // Writing to `data.notes` only fed the legacy mirror, so the rescued
+          // keystrokes were dropped on the next repaint.
+          const note = StorageManager.getData().noteTabs.find(
+            (n) => n.id === dirty.id,
+          );
+          if (note) {
+            note.text = dirty.text;
+            note.updatedAt = Date.now();
+            if (StorageManager.getData().activeNoteId === dirty.id)
+              StorageManager.getData().notes = dirty.text;
+            StorageManager.save();
+          }
         }
         await repaintAll();
       };

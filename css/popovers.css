@@ -1,6 +1,6 @@
 .et-pop-todo,
-.et-pop-pinned,
-.et-pop-workspace {
+.et-pop-workspace,
+.et-pop-sessions {
   position: fixed;
   z-index: 1500;
   width: calc(340px * var(--ui-scale));
@@ -18,15 +18,223 @@
 
 .et-pop-todo.open,
 .et-pop-todo.active,
-.et-pop-pinned.open,
-.et-pop-pinned.active,
 .et-pop-workspace.open,
-.et-pop-workspace.active {
+.et-pop-workspace.active,
+.et-pop-sessions.open,
+.et-pop-sessions.active {
   display: flex;
 }
 
+/* Sessions list
+   Rows stay compact until expanded; the tab list only renders for the session
+   the user opened, so a 40-tab session costs nothing while collapsed. */
+.et-pop-sessions {
+  width: calc(380px * var(--ui-scale));
+}
+
+.et-session-save-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin: 0 var(--sp-2) var(--sp-3) 0;
+}
+
+.et-session-save-btn {
+  flex: 1;
+  padding: 7px var(--sp-3);
+  border-radius: var(--r-sm, 8px);
+  border: 1px solid transparent;
+  background: var(--accent-color);
+  color: var(--accent-contrast);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--dur-1) var(--ease-out);
+}
+
+.et-session-save-btn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.et-session-save-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.et-session-keep {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.et-session {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm, 8px);
+  background: var(--surface-3, rgba(255, 255, 255, 0.04));
+}
+
+.et-session-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 6px 2px;
+}
+
+.et-session-toggle {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.et-session-chevron {
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.et-session-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.et-session-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.et-session-name {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--board-text, #fff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.et-session-count {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.et-session-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.et-session-btn {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--r-sm, 6px);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.et-session-btn:hover {
+  background: var(--surface-2, rgba(255, 255, 255, 0.08));
+  color: var(--board-text, #fff);
+}
+
+.et-session-btn.danger:hover {
+  background: var(--danger-soft, rgba(239, 68, 68, 0.15));
+  color: var(--danger, #ef4444);
+}
+
+.et-session-tabs {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-soft);
+  padding: 4px;
+  gap: 1px;
+}
+
+.et-session-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 24px;
+  border-radius: var(--r-sm, 6px);
+  cursor: pointer;
+}
+
+.et-session-tab:hover {
+  background: var(--surface-2, rgba(255, 255, 255, 0.08));
+}
+
+.et-session-tab-fav {
+  flex: 0 0 auto;
+  border-radius: 3px;
+}
+
+.et-session-tab-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.et-session-tab:hover .et-session-tab-title {
+  color: var(--board-text, #fff);
+}
+
+.et-session-tab-del {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.et-session-tab:hover .et-session-tab-del {
+  opacity: 1;
+}
+
+.et-session-tab-del:hover {
+  background: var(--danger-soft, rgba(239, 68, 68, 0.15));
+  color: var(--danger, #ef4444);
+}
+
+.et-session-empty {
+  padding: var(--sp-4) var(--sp-2);
+  text-align: center;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
 .et-pop-header,
-.et-pinned-pop-header,
 .et-workspace-header {
   display: flex;
   align-items: center;
@@ -36,7 +244,6 @@
 }
 
 .et-pop-title,
-.et-pinned-pop-title,
 .et-workspace-title {
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -56,8 +263,7 @@
   border: none;
 }
 
-.et-pop-clear-btn,
-.et-pinned-pop-open {
+.et-pop-clear-btn {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -68,13 +274,11 @@
   transition: opacity var(--dur-1) var(--ease-out);
 }
 
-.et-pop-clear-btn:hover,
-.et-pinned-pop-open:hover {
+.et-pop-clear-btn:hover {
   opacity: 0.8;
 }
 
-.et-pop-list,
-.et-pinned-pop-list {
+.et-pop-list {
   overflow-y: auto;
   padding-right: var(--sp-2);
   display: flex;
@@ -349,7 +553,6 @@ body.theme-light .et-ws-tab.is-active {
   display: none;
 }
 
-.pinned-pop-empty,
 .todo-pop-empty {
   padding: var(--sp-5) var(--sp-2);
   text-align: center;
@@ -398,7 +601,7 @@ body.theme-light .et-ws-tab.is-active {
 }
 
 .todo-pop-row.done .todo-pop-check {
-  background: var(--accent-color);
+  background: var(--accent-fill, var(--accent-color));
 }
 
 .todo-pop-text {

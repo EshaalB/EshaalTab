@@ -43,8 +43,7 @@
   color: var(--text-dim);
 }
 
-.dialog-input,
-.add-link-input {
+.dialog-input {
   width: 100%;
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-sm);
@@ -59,8 +58,7 @@
     box-shadow var(--dur-1) var(--ease-out);
 }
 
-.dialog-input:focus,
-.add-link-input:focus {
+.dialog-input:focus {
   border-color: var(--accent-color);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 20%, transparent);
 }
@@ -584,4 +582,115 @@
   bottom: 22px;
   font-size: var(--fs-xs);
   color: rgba(255, 255, 255, 0.18);
+}
+
+/* Break nudge ------------------------------------------------------------ */
+
+/* Deliberately not a toast: a break reminder that can be missed is pointless,
+   so it takes the screen and waits for an answer. */
+.et-break-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6);
+  background: rgba(8, 9, 12, 0.55);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  animation: et-break-in var(--dur-2, 220ms) var(--ease-out, ease-out);
+}
+
+.et-break-overlay[hidden] {
+  display: none;
+}
+
+.et-break-card {
+  width: min(420px, 100%);
+  padding: var(--sp-6);
+  border-radius: var(--r-lg, 18px);
+  background: var(--board-bg, rgba(24, 25, 32, 0.96));
+  border: 1px solid var(--board-border, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  color: var(--board-text, #f4f4f6);
+  text-align: center;
+  animation: et-break-rise var(--dur-2, 220ms) var(--ease-out, ease-out);
+}
+
+.et-break-icon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: var(--sp-3);
+}
+
+.et-break-title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-lg, 1.15rem);
+  font-weight: 650;
+}
+
+.et-break-msg {
+  margin: 0 0 var(--sp-5);
+  color: var(--board-text-secondary, rgba(244, 244, 246, 0.7));
+  font-size: var(--fs-sm, 0.9rem);
+  line-height: 1.5;
+}
+
+.et-break-actions {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.et-break-btn {
+  flex: 1 1 auto;
+  min-width: 130px;
+  padding: 10px 18px;
+  border-radius: var(--r-sm, 10px);
+  border: 1px solid var(--board-border, rgba(255, 255, 255, 0.14));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    background var(--dur-1, 140ms) var(--ease-out, ease-out),
+    border-color var(--dur-1, 140ms) var(--ease-out, ease-out);
+}
+
+.et-break-btn:hover {
+  background: rgba(127, 127, 127, 0.14);
+}
+
+.et-break-btn.primary {
+  background: var(--accent-fill, var(--accent-color));
+  border-color: transparent;
+  color: var(--accent-contrast, #fff);
+}
+
+.et-break-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+@keyframes et-break-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes et-break-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .et-break-overlay,
+  .et-break-card {
+    animation: none;
+  }
 }

@@ -46,6 +46,45 @@ function safeHref(url) {
   return "https://" + s;
 }
 
+ 
+// Where the in-flight pointer gesture started, so a drag that begins inside a
+// panel and ends outside it is not mistaken for a click-away.
+//
+// Cleared once the gesture is over. Holding the node indefinitely kept a
+// detached element alive and, worse, left `gestureStartedIn` answering "yes"
+// for every later event — so a click that arrives without a fresh pointerdown
+// (keyboard-triggered, synthetic) could never dismiss the panel.
+let gestureOrigin = null;
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    gestureOrigin = e.target;
+  },
+  true,
+);
+["pointerup", "pointercancel"].forEach((evt) =>
+  document.addEventListener(
+    evt,
+    () => {
+      // After the click that follows this gesture has been dispatched, so the
+      // click handlers still see where the drag started.
+      setTimeout(() => {
+        gestureOrigin = null;
+      }, 0);
+    },
+    true,
+  ),
+);
+
+ 
+function gestureStartedIn(el) {
+  return !!(el && gestureOrigin && el.contains(gestureOrigin));
+}
+ 
+function keepOpenFor(el, event) {
+  return !!(el && (el.contains(event.target) || gestureStartedIn(el)));
+}
+
 const IS_EXT_PROTOCOL =
   typeof location !== "undefined" &&
   (location.protocol === "chrome-extension:" ||
@@ -347,13 +386,38 @@ const CustomTooltip = (() => {
     const rect = target.getBoundingClientRect();
     const tooltipRect = tooltipEl.getBoundingClientRect();
 
-    let top =
-      rect.top < 100 ? rect.bottom + 8 : rect.top - tooltipRect.height - 8;
+    // Determine available vertical and horizontal space
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceLeft = rect.left;
+    const spaceRight = window.innerWidth - rect.right;
+
+    let top;
+    // Prefer placing in the side with more available vertical clearance
+    if (spaceBelow >= tooltipRect.height + 12 && spaceAbove < 90) {
+      top = rect.bottom + 8;
+    } else if (spaceAbove >= tooltipRect.height + 12) {
+      top = rect.top - tooltipRect.height - 8;
+    } else {
+      top = rect.bottom + 8;
+    }
+
     let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+
+    // Edge alignment when trigger is in screen corners
+    if (rect.left < 80) {
+      left = Math.max(12, rect.left);
+    } else if (rect.right > window.innerWidth - 80) {
+      left = Math.min(window.innerWidth - tooltipRect.width - 12, rect.right - tooltipRect.width);
+    }
 
     left = Math.max(
       10,
       Math.min(left, window.innerWidth - tooltipRect.width - 10),
+    );
+    top = Math.max(
+      8,
+      Math.min(top, window.innerHeight - tooltipRect.height - 8),
     );
 
     tooltipEl.style.top = `${top}px`;
@@ -629,3 +693,93 @@ if (document.readyState === "loading") {
   CustomTooltip.init();
   probeFaviconApi();
 }
+
+/**
+ * Single registry for the top-bar popovers (todo, sessions, workspace, logo
+ * menu).
+ *
+ * Each popover used to close itself from its own document-click listener while
+ * its trigger button called `stopPropagation()`. That combination meant
+ * opening one popover never closed the others, so clicking Sessions with the
+ * todo list open simply left both on screen. Opening now goes through here,
+ * which closes every other registered popover first.
+ */
+const PopoverRegistry = (() => {
+  const entries = [];
+  let listening = false;
+
+  /**
+   * @param {string} name Stable id, used for `closeAll(except)`.
+   * @param {() => HTMLElement|null} el Resolves the popover element.
+   * @param {() => void} close Closes this popover.
+   */
+  function register(name, el, close) {
+    if (entries.some((e) => e.name === name)) return;
+    entries.push({ name, el, close });
+
+    if (listening) return;
+    listening = true;
+    document.addEventListener("click", (event) => {
+      entries.forEach((entry) => {
+        const node = entry.el();
+        if (!node || !node.classList.contains("open")) return;
+        if (keepOpenFor(node, event)) return;
+        if (event.target.closest?.(`[data-popover-trigger="${entry.name}"]`))
+          return;
+        entry.close();
+      });
+    });
+  }
+
+  /**
+   * Anchors a popover to its trigger, clamped into the viewport.
+   *
+   * Flips above the trigger in the lower half of the screen so a popover
+   * opened from a bottom-row button is not pinned off-screen.
+   *
+   * @param {HTMLElement} pop The popover.
+   * @param {HTMLElement} btn The trigger it hangs off.
+   * @param {{width?: number, align?: "left"|"right"}} [opts]
+   */
+  function position(pop, btn, opts = {}) {
+    const { width = 340, align = "left" } = opts;
+    const r = btn.getBoundingClientRect();
+
+    if (align === "right") {
+      pop.style.left = "auto";
+      pop.style.right = `${Math.max(16, window.innerWidth - r.right)}px`;
+    } else {
+      pop.style.right = "auto";
+      pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - width))}px`;
+    }
+
+    if (r.top > window.innerHeight / 2) {
+      pop.style.top = "auto";
+      pop.style.bottom = `${Math.max(8, window.innerHeight - r.top + 8)}px`;
+    } else {
+      pop.style.bottom = "auto";
+      pop.style.top = `${r.bottom + 8}px`;
+    }
+  }
+
+  function closeAll(except) {
+    entries.forEach((entry) => {
+      if (entry.name === except) return;
+      if (entry.el()?.classList.contains("open")) entry.close();
+    });
+  }
+
+  /** Closes the topmost open popover. Returns true when one was closed. */
+  function closeTop() {
+    const open = entries.filter((e) => e.el()?.classList.contains("open"));
+    if (!open.length) return false;
+    open[open.length - 1].close();
+    return true;
+  }
+
+  function anyOpen() {
+    return entries.some((e) => e.el()?.classList.contains("open"));
+  }
+
+  return { register, position, closeAll, closeTop, anyOpen };
+})();

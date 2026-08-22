@@ -2,6 +2,12 @@
 
 const NotesRenderer = (() => {
   let bound = false;
+  let tabsBound = false;
+
+  // True once the user has actually edited the textarea in this page. Until
+  // then the textarea's value is not authoritative and must never be written
+  // back over stored notes (see the sync guard in js/main.js).
+  let dirty = false;
 
   let sessionStart = null;
 
@@ -18,11 +24,28 @@ const NotesRenderer = (() => {
 
   function flushPending() {
     const area = $("notesArea");
-    if (!area || !bound) return;
+    if (!area || !bound || !dirty) return;
     if (area.value !== NotesManager.get()) {
       NotesManager.set(area.value);
     }
     commitSessionToHistory();
+  }
+
+  // The textarea only holds real content once it has been rendered *and*
+  // edited. Anything else is an empty placeholder that must not be persisted.
+  function hasLiveEdits() {
+    return bound && dirty;
+  }
+
+  // Rate-limited: `input` fires per keystroke, and once someone is sitting at
+  // the cap every further character would otherwise raise its own toast.
+  let truncWarnedAt = 0;
+  function warnTruncated() {
+    if (Date.now() - truncWarnedAt < 10000) return;
+    truncWarnedAt = Date.now();
+    ToastSystem.info(
+      `Note is full at ${NotesManager.MAX_CHARS.toLocaleString()} characters — the rest was not saved.`,
+    );
   }
 
   function updateStats(text) {
@@ -36,6 +59,136 @@ const NotesRenderer = (() => {
     $("notesSaveBtn")?.classList.toggle("is-saved", saved);
   }
 
+  // Commits whatever is in the textarea to the *current* note before the
+  // active note changes underneath it, so switching tabs can't lose edits.
+  function commitCurrent() {
+    const area = $("notesArea");
+    if (!area || !bound) return;
+    if (area.value !== NotesManager.get()) NotesManager.setImmediate(area.value);
+    commitSessionToHistory();
+  }
+
+  function switchTo(id) {
+    if (id === NotesManager.getActiveId()) return;
+    commitCurrent();
+    NotesManager.setActive(id);
+    const area = $("notesArea");
+    if (area) {
+      area.value = NotesManager.get();
+      updateStats(area.value);
+      markSaved(true);
+    }
+    historyIndex = -1;
+    sessionStart = null;
+    renderTabs();
+  }
+
+  function renderTabs() {
+    const strip = $("notesTabs");
+    if (!strip) return;
+    const notes = NotesManager.list();
+    const activeId = NotesManager.getActiveId();
+    const atLimit = notes.length >= NotesManager.MAX_TABS;
+
+    setSafeHTML(
+      strip,
+      notes
+        .map(
+          (n) => `
+        <button
+          type="button"
+          class="et-notes-tab ${n.id === activeId ? "is-active" : ""}"
+          role="tab"
+          aria-selected="${n.id === activeId}"
+          data-id="${escapeHtml(n.id)}"
+          title="${escapeHtml(n.title)} — double-click to rename"
+        >
+          <span class="et-notes-tab-label">${escapeHtml(n.title)}</span>
+          ${notes.length > 1 ? `<span class="et-notes-tab-close" role="button" aria-label="Delete ${escapeHtml(n.title)}">&times;</span>` : ""}
+        </button>`,
+        )
+        .join("") +
+        `<button type="button" class="et-notes-tab-add" id="notesTabAdd" ${atLimit ? "disabled" : ""} title="${atLimit ? `Limit is ${NotesManager.MAX_TABS} notes` : "New note"}">+</button>`,
+    );
+
+    if (!tabsBound) {
+      tabsBound = true;
+
+      strip.addEventListener("click", (e) => {
+        if (e.target.closest("#notesTabAdd")) {
+          // Must commit *before* adding: `add` makes the new note active, so
+          // committing afterwards would write the old note's text into it.
+          commitCurrent();
+          const made = NotesManager.add();
+          if (!made) {
+            ToastSystem.info(`Notepad holds ${NotesManager.MAX_TABS} notes.`);
+            return;
+          }
+          const area = $("notesArea");
+          if (area) {
+            area.value = "";
+            updateStats("");
+            markSaved(true);
+            area.focus();
+          }
+          sessionStart = null;
+          renderTabs();
+          return;
+        }
+
+        const tab = e.target.closest(".et-notes-tab");
+        if (!tab) return;
+        const id = tab.dataset.id;
+
+        if (e.target.closest(".et-notes-tab-close")) {
+          e.stopPropagation();
+          const note = NotesManager.list().find((n) => n.id === id);
+          const doDelete = () => {
+            const wasActive = id === NotesManager.getActiveId();
+            if (wasActive) commitSessionToHistory();
+            if (!NotesManager.remove(id)) return;
+            const area = $("notesArea");
+            if (wasActive && area) {
+              area.value = NotesManager.get();
+              updateStats(area.value);
+              markSaved(true);
+              sessionStart = null;
+            }
+            renderTabs();
+            ToastSystem.info("Note deleted");
+          };
+          if (note && note.text.trim()) {
+            showCustomModal(
+              "Delete note?",
+              `<p class="dialog-message">“${escapeHtml(note.title)}” has content. This cannot be undone.</p>`,
+              () => {
+                doDelete();
+                return true;
+              },
+              "Delete",
+            );
+          } else {
+            doDelete();
+          }
+          return;
+        }
+
+        switchTo(id);
+      });
+
+      strip.addEventListener("dblclick", (e) => {
+        const tab = e.target.closest(".et-notes-tab");
+        if (!tab) return;
+        const id = tab.dataset.id;
+        const note = NotesManager.list().find((n) => n.id === id);
+        if (!note) return;
+        showPrompt("Rename note", "Note name:", note.title, (val) => {
+          if (val && val.trim() && NotesManager.rename(id, val)) renderTabs();
+        });
+      });
+    }
+  }
+
   function render() {
     const area = $("notesArea");
     if (!area) return;
@@ -44,6 +197,7 @@ const NotesRenderer = (() => {
       updateStats(area.value);
       markSaved(true);
     }
+    renderTabs();
     ClipboardRenderer.render();
     if (!bound) {
       bound = true;
@@ -54,15 +208,26 @@ const NotesRenderer = (() => {
 
       area.addEventListener("input", () => {
         const val = area.value;
-        StorageManager.getData().notes = val;
+        dirty = true;
         updateStats(val);
         markSaved(false);
         historyIndex = -1;
         NotesManager.set(val);
+
+        // A note over the cap is stored short. Saying so once, and pulling the
+        // textarea back to what was actually kept, beats letting someone paste
+        // a long document and only discover the missing tail later.
+        if (NotesManager.lastWriteTruncated()) {
+          area.value = NotesManager.get();
+          updateStats(area.value);
+          warnTruncated();
+        }
       });
 
       area.addEventListener("blur", () => {
-        NotesManager.set(area.value);
+        // Write through immediately rather than via the 120ms debounce, so the
+        // "saved" badge below is truthful and a fast tab-close can't drop it.
+        NotesManager.setImmediate(area.value);
         markSaved(true);
         commitSessionToHistory();
       });
@@ -75,9 +240,10 @@ const NotesRenderer = (() => {
           area.value =
             area.value.substring(0, start) + "  " + area.value.substring(end);
           area.selectionStart = area.selectionEnd = start + 2;
-          StorageManager.getData().notes = area.value;
+          dirty = true;
           updateStats(area.value);
           markSaved(false);
+          NotesManager.set(area.value);
           return;
         }
 
@@ -90,6 +256,7 @@ const NotesRenderer = (() => {
           if (historyIndex < hist.length - 1) historyIndex++;
           area.value = hist[historyIndex];
           area.selectionStart = area.selectionEnd = 0;
+          dirty = true;
           updateStats(area.value);
           markSaved(false);
         } else if (e.key === "ArrowDown" && historyIndex !== -1) {
@@ -100,6 +267,7 @@ const NotesRenderer = (() => {
               ? (draftBeforeHistory ?? "")
               : NotesManager.getHistory()[historyIndex];
           area.selectionStart = area.selectionEnd = area.value.length;
+          dirty = true;
           updateStats(area.value);
           markSaved(false);
         }
@@ -112,6 +280,10 @@ const NotesRenderer = (() => {
         ToastSystem.success("Notes saved");
       });
 
+      // A note that was typed here stays authoritative for the life of the
+      // page, so `dirty` is deliberately never reset — clearing it would
+      // reopen the window where a remote sync overwrites local edits.
+
       $("notesExportBtn")?.addEventListener("click", () => {
         NotesManager.set(area.value);
         NotesManager.exportTxt();
@@ -119,7 +291,7 @@ const NotesRenderer = (() => {
       });
     }
   }
-  return { render, flushPending };
+  return { render, flushPending, hasLiveEdits, switchTo };
 })();
 
 const ClipboardRenderer = (() => {

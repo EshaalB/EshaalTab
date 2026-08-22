@@ -33,7 +33,9 @@
     "unlimitedStorage",
     "activeTab",
     "contextMenus",
-    "search"
+    "search",
+    "alarms",
+    "notifications"
   ],
   "optional_permissions": ["bookmarks", "tabs", "history"],
   "commands": {

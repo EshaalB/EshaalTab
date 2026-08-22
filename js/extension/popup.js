@@ -159,7 +159,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const raw = await EXT.storage.local.get(["data", "settings", "tabStashes"]);
     localData = raw.data;
     localSettings = raw.settings;
-    localStashes = raw.tabStashes;
+    // `data.sessions` is canonical; `tabStashes` is the pre-sessions key and
+    // is merged in until the new tab page migrates it away.
+    localStashes = Array.isArray(raw.data?.sessions)
+      ? raw.data.sessions
+      : raw.tabStashes;
   } else {
     try {
       localData = JSON.parse(localStorage.getItem("markmez_data"));
@@ -178,18 +182,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     localStashes = Array.isArray(localData.tabStashes)
       ? localData.tabStashes
       : [];
-    if (HAS_EXT && EXT.storage) {
-      try {
-        await EXT.storage.local.set({ tabStashes: localStashes });
-      } catch {}
-    } else {
-      try {
-        localStorage.setItem(
-          "markmez_tab_stashes",
-          JSON.stringify(localStashes),
-        );
-      } catch {}
-    }
   }
 
   const boards = collectBoards(localData);
@@ -260,7 +252,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           return `
         <div class="qs-stash-item" data-id="${escapeHtml(s.id)}">
           <div class="qs-stash-info">
-            <div class="qs-stash-time">${escapeHtml(fmtStamp(s.ts))} · ${s.tabs.length} tab${s.tabs.length === 1 ? "" : "s"}</div>
+            <div class="qs-stash-time">${escapeHtml(s.name || fmtStamp(s.ts))} · ${s.tabs.length} tab${s.tabs.length === 1 ? "" : "s"}</div>
             <div class="qs-stash-tabs" title="${escapeHtml(preview)}">${escapeHtml(preview)}</div>
           </div>
           <div class="qs-stash-actions">
@@ -278,10 +270,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function saveStashes() {
+    localData.sessions = localStashes;
     if (HAS_EXT && EXT.storage) {
-      await EXT.storage.local.set({ tabStashes: localStashes });
+      // Stamped as a popup write so open new tab pages treat it as a remote
+      // change and reload rather than echoing it back.
+      await EXT.storage.local.set({
+        data: localData,
+        writer: "popup-session-" + Date.now(),
+      });
     } else {
-      localStorage.setItem("markmez_tab_stashes", JSON.stringify(localStashes));
+      localStorage.setItem("markmez_data", JSON.stringify(localData));
     }
   }
 
@@ -348,6 +346,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const entry = {
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        name: "",
         ts: Date.now(),
         tabs: tabs.map((t) => ({ title: t.title || t.url, url: t.url })),
       };

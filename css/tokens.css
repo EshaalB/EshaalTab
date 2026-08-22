@@ -116,7 +116,6 @@ body.font-handwriting {
 }
 
 body.font-handwriting .st-label,
-body.font-handwriting .et-set-label,
 body.font-handwriting .field-label,
 body.font-handwriting label,
 body.font-handwriting button,
@@ -124,8 +123,7 @@ body.font-handwriting input,
 body.font-handwriting textarea,
 body.font-handwriting .et-search-input,
 body.font-handwriting .sr-title,
-body.font-handwriting .sr-sub,
-body.font-handwriting .dock-pin-title {
+body.font-handwriting .sr-sub {
   font-weight: 600;
   letter-spacing: 0.02em;
   font-style: normal;
@@ -188,8 +186,14 @@ textarea::placeholder {
   --wp-shadow-rgb: 0, 0, 0;
 
   --accent-color: #ffffff;
+  --accent-2: #ffffff;
   --accent-contrast: #14151a;
+  --accent-2-contrast: #14151a;
+  --accent-gradient: linear-gradient(135deg, var(--accent-color), var(--accent-2, var(--accent-color)));
+  --accent-gradient-h: linear-gradient(90deg, var(--accent-color), var(--accent-2, var(--accent-color)));
 
+  /* Flat by default. applyAccent2() overwrites this with the gradient for
+     themes that opted in. */
   --accent-fill: var(--accent-color);
 
   --board-rgb: 255, 255, 255;
@@ -230,25 +234,25 @@ textarea::placeholder {
   --op-muted: 0.52;
   --op-faint: 0.32;
 
-  --surface-base: #080e1a;
+  --surface-base: #090a0f;
   --surface-chip: rgba(255, 255, 255, 0.1);
   /* Neutral (non-accent-tinted) surfaces for UI panels like settings cards */
-  --surface-panel: rgba(255, 255, 255, 0.045);
+  --surface-panel: rgba(255, 255, 255, 0.04);
   --surface-panel-2: rgba(255, 255, 255, 0.065);
   --border-tactile: 1px solid var(--border-soft);
   --border-tactile-accent: 1px solid var(--accent-color);
 
-  /* Slate-toned dark base — subtle cool blue-grey undertone */
-  --panel: #0f1623;
+  /* Deep slate obsidian base — premium dark tone */
+  --panel: #111318;
   --panel-border: rgba(255, 255, 255, 0.1);
   --panel-hover: rgba(255, 255, 255, 0.06);
 
-  --glass-fill: rgba(10, 14, 26, 0.58);
+  --glass-fill: rgba(14, 16, 22, 0.65);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-blur: none;
-  --scrim: rgba(0, 0, 0, 0.55);
+  --scrim: rgba(0, 0, 0, 0.65);
 
-  --page-bg: #0b1020;
+  --page-bg: #090a0f;
 
   --paper: rgba(255, 255, 255, 0.035);
   --danger: #ef4444;

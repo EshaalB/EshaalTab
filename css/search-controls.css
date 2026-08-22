@@ -33,6 +33,9 @@ body.radius-sharp .et-search-submit {
 .et-search-pill:hover,
 .et-search-pill:focus-within {
   border-color: var(--accent-color);
+  box-shadow:
+    0 0 14px -3px color-mix(in srgb, var(--accent-color) 25%, transparent),
+    0 0 22px -5px color-mix(in srgb, var(--accent-2, var(--accent-color)) 20%, transparent);
 }
 
 .et-search-input {

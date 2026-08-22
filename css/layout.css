@@ -248,10 +248,11 @@ body.theme-light .et-topbar-btn {
 }
 
 .et-main-tab.active {
-  background: var(--accent-color, #6366f1) !important;
+  background: var(--accent-fill, var(--accent-color, #6366f1)) !important;
   color: var(--accent-contrast, #ffffff) !important;
   font-weight: 600;
   opacity: 1 !important;
+  box-shadow: 0 2px 10px -2px color-mix(in srgb, var(--accent-color) 35%, transparent);
 }
 
 body.radius-round .et-main-tabs,
@@ -496,30 +497,49 @@ body.solid-mode.theme-light .et-weather-inline {
   text-shadow: none !important;
 }
 
-body.clock-pos-corner .et-home-clock {
+/* Clock placement.
+   `clock-pos-fixed` carries everything common to the four corners; each corner
+   then only sets its own inset and alignment. Vertical clearance for the topbar
+   is reserved via --clock-top so the two top corners cannot collide with the
+   topbar buttons. */
+body.clock-pos-center .et-home-clock {
+  position: relative;
+  inset: auto;
+  align-items: center;
+  text-align: center;
+  margin: 0 auto;
+}
+
+body.clock-pos-center .et-home-greeting,
+body.clock-pos-center .et-home-time,
+body.clock-pos-center .et-home-date-row {
+  text-align: center;
+  justify-content: center;
+}
+
+body.clock-pos-fixed .et-home-clock {
   position: fixed;
-  bottom: var(--sp-8);
-  left: var(--sp-8);
-  align-items: flex-start;
-  text-align: left;
+  inset: auto;
   z-index: 10;
+  max-width: min(46vw, 520px);
   padding: 0;
+  margin: 0;
   background: transparent;
   border: none;
   box-shadow: none;
 }
 
-body.clock-pos-corner .et-home-time {
+body.clock-pos-fixed .et-home-time {
   font-size: clamp(54px, 7vw, calc(96px * var(--ui-scale)));
 }
 
-body.clock-pos-corner .clock-digits,
-body.clock-pos-corner .clock-colon,
-body.clock-pos-corner .clock-ampm {
+body.clock-pos-fixed .clock-digits,
+body.clock-pos-fixed .clock-colon,
+body.clock-pos-fixed .clock-ampm {
   color: var(--clock-color, var(--text));
 }
 
-body.clock-pos-corner .et-home-greeting {
+body.clock-pos-fixed .et-home-greeting {
   font-size: clamp(22px, 2.2vw, 30px);
   font-weight: 600;
   color: var(--text);
@@ -527,45 +547,125 @@ body.clock-pos-corner .et-home-greeting {
   margin-bottom: var(--sp-1);
 }
 
-body.clock-pos-corner .et-home-date-row {
-  justify-content: flex-start;
+body.clock-pos-fixed .et-home-date-row {
   color: var(--text-dim);
 }
 
-body.clock-pos-center .et-home-clock {
-  position: relative !important;
-  bottom: auto !important;
-  left: auto !important;
-  right: auto !important;
-  top: auto !important;
-  align-items: center !important;
-  text-align: center !important;
-  margin: 0 auto !important;
+/* Left-hand corners */
+body.clock-pos-top-left .et-home-clock,
+body.clock-pos-bottom-left .et-home-clock {
+  left: var(--sp-8);
+  align-items: flex-start;
+  text-align: left;
 }
 
-body.clock-pos-center .et-home-greeting,
-body.clock-pos-center .et-home-time,
-body.clock-pos-center .et-home-date-row {
-  text-align: center !important;
-  justify-content: center !important;
+body.clock-pos-top-left .et-home-greeting,
+body.clock-pos-top-left .et-home-time,
+body.clock-pos-top-left .et-home-date-row,
+body.clock-pos-bottom-left .et-home-greeting,
+body.clock-pos-bottom-left .et-home-time,
+body.clock-pos-bottom-left .et-home-date-row {
+  text-align: left;
+  justify-content: flex-start;
 }
 
-body.clock-pos-corner .et-home-clock {
-  position: fixed !important;
-  bottom: var(--sp-8) !important;
-  left: var(--sp-8) !important;
-  right: auto !important;
-  top: auto !important;
-  align-items: flex-start !important;
-  text-align: left !important;
-  z-index: 10 !important;
+/* Right-hand corners */
+body.clock-pos-top-right .et-home-clock,
+body.clock-pos-bottom-right .et-home-clock {
+  right: var(--sp-8);
+  align-items: flex-end;
+  text-align: right;
 }
 
-body.clock-pos-corner .et-home-greeting,
-body.clock-pos-corner .et-home-time,
-body.clock-pos-corner .et-home-date-row {
-  text-align: left !important;
-  justify-content: flex-start !important;
+body.clock-pos-top-right .et-home-greeting,
+body.clock-pos-top-right .et-home-time,
+body.clock-pos-top-right .et-home-date-row,
+body.clock-pos-bottom-right .et-home-greeting,
+body.clock-pos-bottom-right .et-home-time,
+body.clock-pos-bottom-right .et-home-date-row {
+  text-align: right;
+  justify-content: flex-end;
+}
+
+/* When clock/text is placed in top corners, move corresponding top icon clusters to the bottom for a cleaner look */
+body.clock-pos-top-left .et-top-left {
+  position: fixed;
+  bottom: var(--sp-6);
+  left: var(--sp-8);
+  z-index: 500;
+  padding: 0;
+  margin: 0;
+}
+
+body.clock-pos-top-left .et-home-clock {
+  top: var(--sp-6);
+  left: var(--sp-8);
+}
+
+body.clock-pos-top-right .et-top-right {
+  position: fixed;
+  bottom: var(--sp-6);
+  right: var(--sp-8);
+  z-index: 500;
+  padding: 0;
+  margin: 0;
+}
+
+body.clock-pos-top-right .et-home-clock {
+  top: var(--sp-6);
+  right: var(--sp-8);
+}
+
+body.clock-pos-bottom-left .et-home-clock,
+body.clock-pos-bottom-right .et-home-clock {
+  bottom: var(--sp-8);
+}
+
+/* Keep the centre column clear of a top-corner clock on short viewports. */
+body.clock-pos-top-left .et-view-home.active,
+body.clock-pos-top-right .et-view-home.active {
+  padding-top: var(--clock-clearance, 0px);
+}
+
+/* A bottom-right clock and the toast stack want the same space; move toasts up. */
+body.clock-pos-bottom-right .et-toast-container {
+  bottom: calc(var(--sp-6) + var(--clock-toast-offset, 132px));
+}
+
+/* Narrow viewports have no room for a corner clock beside the centre column,
+   so it returns to the normal flow rather than overlapping the search bar. */
+@media (max-width: 900px) {
+  body.clock-pos-fixed .et-home-clock {
+    position: relative;
+    inset: auto;
+    max-width: none;
+    align-items: center;
+    text-align: center;
+    margin: 0 auto;
+  }
+
+  body.clock-pos-fixed .et-home-greeting,
+  body.clock-pos-fixed .et-home-time,
+  body.clock-pos-fixed .et-home-date-row {
+    text-align: center;
+    justify-content: center;
+  }
+
+  body.clock-pos-top-left .et-top-left,
+  body.clock-pos-top-right .et-top-right {
+    position: static;
+    padding: 0;
+    margin: 0;
+  }
+
+  body.clock-pos-top-left .et-view-home.active,
+  body.clock-pos-top-right .et-view-home.active {
+    padding-top: 0;
+  }
+
+  body.clock-pos-bottom-right .et-toast-container {
+    bottom: var(--sp-6);
+  }
 }
 
 body.wallpaper-mode #navSearchBar {
@@ -716,17 +816,14 @@ body.radius-sharp .dock-pin-wrap {
 
 body.tiles-circle .dock-pin-icon,
 body.tiles-circle .et-topbar-btn,
-body.tiles-circle .et-search-engine-btn,
 body.tiles-circle .et-pomo-toggle-btn,
 body.tiles-circle .qs-stash-icon-btn,
 body.tiles-circle .et-board-card-header button,
-body.tiles-circle .dock-pin-remove,
 body.tiles-circle .dock-pin-menu-btn {
   border-radius: 50% !important;
 }
 
 body.radius-sharp .dock-pin-icon,
-body.radius-sharp .dock-pin-remove,
 body.radius-sharp .dock-pin-menu-btn {
   border-radius: 0 !important;
 }
@@ -798,7 +895,6 @@ body.solid-mode .dock-pin-label {
   text-shadow: none !important;
 }
 
-.dock-pin-remove,
 .dock-pin-menu-btn {
   position: absolute;
   top: calc(6px * var(--ui-scale));
@@ -824,35 +920,28 @@ body.solid-mode .dock-pin-label {
   z-index: 2;
 }
 
-.dock-pin-wrap:hover .dock-pin-remove,
 .dock-pin-wrap:hover .dock-pin-menu-btn,
-.dock-pin-wrap:focus-within .dock-pin-remove,
 .dock-pin-wrap:focus-within .dock-pin-menu-btn,
-.dock-pin-remove:focus-visible,
 .dock-pin-menu-btn:focus-visible {
   opacity: 1;
 }
 
-.dock-pin-remove:hover,
 .dock-pin-menu-btn:hover {
   background: transparent;
   color: #ffffff;
 }
 
-body.theme-light:not(.wallpaper-mode) .dock-pin-remove:hover,
 body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
   background: transparent;
   color: var(--text);
 }
 
-.dock-pin-remove:focus-visible,
 .dock-pin-menu-btn:focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: 1px;
 }
 
 @media (hover: none) {
-  .dock-pin-remove,
   .dock-pin-menu-btn {
     opacity: 1;
   }
@@ -942,10 +1031,6 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
 .toast-msg.is-exiting {
   transform: translateY(6px) !important;
   opacity: 0 !important;
-}
-
-.toast-msg.toast-pulse {
-  animation: none;
 }
 
 .toast-msg.default,
@@ -1039,8 +1124,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
     padding: var(--sp-2) var(--sp-4);
   }
   .et-pop-workspace,
-  .et-pop-todo,
-  .et-pop-pinned {
+  .et-pop-todo {
     max-width: calc(100vw - 32px);
   }
 }

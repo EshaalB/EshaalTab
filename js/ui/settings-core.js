@@ -88,52 +88,78 @@ const SettingsRenderer = (() => {
     },
 
     {
-      id: "neon",
-      name: "Neon",
-      group: "Gamer",
+      id: "neon-original",
+      name: "Original GX",
+      group: "Neon",
       mode: "dark",
-      accent: "#22d3ee",
-      accent2: "#ff4655",
+      accent: "#fa1e4e",
+      accent2: "#ff5c7a",
+      seed: "#0f0f13",
       radius: "0px",
-      mono: true,
-      cls: "preset-neon",
     },
     {
-      id: "synthwave",
-      name: "Synthwave",
-      group: "Gamer",
+      id: "neon-ultraviolet",
+      name: "Ultraviolet",
+      group: "Neon",
       mode: "dark",
-      accent: "#f062ff",
-      accent2: "#31d0ff",
+      accent: "#9d4edd",
+      accent2: "#00f0ff",
+      seed: "#100e17",
       radius: "0px",
-      mono: true,
-      cls: "preset-neon",
     },
     {
-      id: "matrix",
-      name: "Matrix",
-      group: "Gamer",
+      id: "neon-subzero",
+      name: "Subzero",
+      group: "Neon",
       mode: "dark",
-      accent: "#3ddc84",
-      accent2: "#7bffb0",
+      accent: "#00e5ff",
+      accent2: "#4361ee",
+      seed: "#0b1017",
       radius: "0px",
-      mono: true,
-      cls: "preset-neon",
     },
     {
-      id: "amber",
-      name: "Amber CRT",
-      group: "Gamer",
+      id: "neon-rose-quartz",
+      name: "Rose Quartz",
+      group: "Neon",
       mode: "dark",
-      accent: "#ffb300",
-      accent2: "#ff6f3c",
+      accent: "#ff5376",
+      accent2: "#c77dff",
+      seed: "#140e14",
       radius: "0px",
-      mono: true,
-      cls: "preset-neon",
+    },
+    {
+      id: "neon-frutti",
+      name: "Frutti di Mare",
+      group: "Neon",
+      mode: "dark",
+      accent: "#ff2a85",
+      accent2: "#00f5d4",
+      seed: "#120e16",
+      radius: "0px",
+    },
+    {
+      id: "neon-hackerman",
+      name: "Hackerman",
+      group: "Neon",
+      mode: "dark",
+      accent: "#00ff66",
+      accent2: "#00e5ff",
+      seed: "#090e0c",
+      radius: "0px",
     },
   ];
 
-  const PRESET_GROUPS = ["Pastel", "Gamer"];
+  const PRESET_GROUPS = ["Pastel", "Neon"];
+
+  // Presets retired when the Gamer group was replaced. Anyone still on one
+  // keeps the exact colours they had -- the theme simply becomes "Custom" --
+  // so the swap cannot silently restyle someone's page.
+  const RETIRED_PRESETS = {
+    neon: "0px",
+    synthwave: "0px",
+    matrix: "0px",
+    amber: "0px",
+  };
 
   const presetById = (id) => PRESETS.find((p) => p.id === id) || null;
 
@@ -151,10 +177,6 @@ const SettingsRenderer = (() => {
     if (HEX6.test(s.accentOverride || "")) return s.accentOverride;
     if (HEX6.test(s.accentColor || "")) return s.accentColor;
     return liveVar("--accent-color", "#6366f1");
-  }
-
-  async function ensureHostAccess(url) {
-    return true;
   }
 
   const darkMedia = window.matchMedia("(prefers-color-scheme: dark)");
@@ -342,7 +364,10 @@ const SettingsRenderer = (() => {
 
     if (overlay) {
       overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) closeSideSheet();
+        // Ignores a text selection that was dragged out of the panel onto the
+        // backdrop; that reports the backdrop as the click target.
+        if (e.target === overlay && !gestureStartedIn($("sidesheetPanel")))
+          closeSideSheet();
       });
       overlay.addEventListener("keydown", (e) => {
         if (e.key === "Tab" && overlay.classList.contains("open"))
@@ -1044,11 +1069,173 @@ const SettingsRenderer = (() => {
     WidgetsRenderer.applyClockAppearance(settings);
   }
 
-  function applyAccent2(el, accent1) {
-    el.setProperty("--accent-2", accent1);
-    el.setProperty("--accent-2-contrast", contrastText(accent1));
-    const rgb = hexToRgb(accent1);
+  /**
+   * One angle for every gradient in the UI.
+   *
+   * Mixed angles are the single loudest tell of a slapped-together gradient:
+   * a 135deg button next to a 90deg pill reads as two unrelated surfaces. The
+   * horizontal variant exists only for elements that are far wider than they
+   * are tall, where a diagonal compresses into a visible corner-to-corner
+   * band.
+   */
+  const GRADIENT_ANGLE = 135;
+
+  /**
+   * Constrains an accent pair into a gradient that reads as one colour with
+   * depth rather than two colours fighting.
+   *
+   * Three things make an interface gradient look cheap, and this fixes all
+   * three:
+   *
+   * 1. *Too much hue travel.* A sweep across more than a quarter of the wheel
+   *    stops being a shade and becomes a rainbow. The secondary hue is pulled
+   *    to sit within MAX_HUE_TRAVEL of the primary, taking the short way
+   *    round the wheel.
+   * 2. *Too much lightness travel.* A stop much lighter than the other forces
+   *    the label to fight for contrast at one end. Lightness delta is capped,
+   *    and the darker stop is placed last so the diagonal falls off into
+   *    shadow the way a lit surface does.
+   * 3. *A dead midpoint.* sRGB interpolation routes between saturated hues
+   *    through a desaturated middle, which is where the grey smear in the
+   *    centre of a bad gradient comes from. Interpolating in oklab keeps
+   *    chroma up across the whole ramp.
+   *
+   * @param {string} [bg] Background the pair is read against, so the tuned
+   *   stop goes through the same contrast pass as the accent itself — nudging
+   *   a hue can push a stop under AA, and a label has to stay readable at
+   *   both ends of the ramp, not just the one it was checked against.
+   * @returns {{from:string,to:string}} Ordered stops, lighter first.
+   */
+  function harmoniseGradient(primary, secondary, bg) {
+    const a = hexToHsl(primary);
+    const b = hexToHsl(secondary);
+
+    const MAX_HUE_TRAVEL = 45;
+    const MAX_LIGHT_TRAVEL = 0.16;
+
+    // Signed shortest distance around the wheel, so a red->magenta pair does
+    // not travel the long way through green.
+    let dh = ((b.h - a.h + 540) % 360) - 180;
+    dh = Math.max(-MAX_HUE_TRAVEL, Math.min(MAX_HUE_TRAVEL, dh));
+
+    const dl = Math.max(
+      -MAX_LIGHT_TRAVEL,
+      Math.min(MAX_LIGHT_TRAVEL, b.l - a.l),
+    );
+
+    // Keep the second stop's saturation near the first. A vivid stop next to a
+    // washed-out one looks like a rendering error rather than a choice.
+    const sat = Math.max(a.s * 0.75, Math.min(a.s * 1.25, b.s));
+
+    let tuned = hslToHex(a.h + dh, sat, a.l + dl);
+    if (bg) tuned = accentTokens(tuned, bg).ui;
+
+    // The label colour is picked once, from the primary, but it has to stay
+    // legible everywhere along the ramp — the far stop is a background too.
+    // So the tuned stop is mixed back toward the primary until the ink clears
+    // AA against it.
+    //
+    // The mix runs in RGB rather than HSL: HSL lightness is not luminance, and
+    // a blue and a cyan at the same nominal lightness sit almost three stops
+    // apart in contrast, so nudging lightness could iterate to no effect.
+    // Mixing toward the primary always converges, because the primary is by
+    // definition the colour the ink was chosen for.
+    const ink = contrastText(primary);
+    const base = hexToRgb(primary);
+    const far = hexToRgb(tuned);
+    const STEPS = 12;
+    for (let i = 1; i <= STEPS && contrastRatio(tuned, ink) < INK_MIN_CONTRAST; i++) {
+      const t = i / STEPS;
+      const mix = (c1, c2) => Math.round(c2 + (c1 - c2) * t);
+      tuned = `#${[
+        mix(base.r, far.r),
+        mix(base.g, far.g),
+        mix(base.b, far.b),
+      ]
+        .map((v) => v.toString(16).padStart(2, "0"))
+        .join("")}`;
+    }
+
+    // Lighter stop first: light reads as coming from the top-left, so a
+    // 135deg ramp that darkens matches how every other surface is lit.
+    return dl >= 0 ? { from: tuned, to: primary } : { from: primary, to: tuned };
+  }
+
+  /**
+   * True when the browser understands perceptual gradient interpolation.
+   *
+   * Custom properties accept almost any token sequence, so an unsupported
+   * `in oklab` would sail into `--accent-fill` and only fail later, at the
+   * `background: var(--accent-fill)` that uses it — painting nothing at all.
+   * The support question is settled once, here.
+   */
+  const SUPPORTS_OKLAB_GRADIENT = (() => {
+    try {
+      return CSS.supports(
+        "background-image",
+        "linear-gradient(in oklab, red, blue)",
+      );
+    } catch {
+      return false;
+    }
+  })();
+
+  /**
+   * Builds the gradient, interpolated perceptually where the browser allows.
+   *
+   * The sRGB fallback adds a midpoint stop: without perceptual interpolation
+   * the centre of the ramp desaturates, and an explicit middle colour is what
+   * keeps it from going grey there.
+   */
+  function gradientCss(angle, { from, to }) {
+    if (SUPPORTS_OKLAB_GRADIENT)
+      return `linear-gradient(${angle}deg in oklab, ${from} 0%, ${to} 100%)`;
+
+    const a = hexToHsl(from);
+    const b = hexToHsl(to);
+    let dh = ((b.h - a.h + 540) % 360) - 180;
+    const mid = hslToHex(
+      a.h + dh / 2,
+      Math.max(a.s, b.s),
+      (a.l + b.l) / 2,
+    );
+    return `linear-gradient(${angle}deg, ${from} 0%, ${mid} 50%, ${to} 100%)`;
+  }
+
+  /**
+   * Publishes the secondary accent.
+   *
+   * Historically this was handed the primary accent, so `--accent-2` was only
+   * ever a duplicate of `--accent-1` and the stored `accent2` did nothing. It
+   * now prefers the real secondary, run through the same contrast pass as the
+   * primary so a theme cannot ship an unreadable second colour, and falls back
+   * to the primary whenever no secondary is set.
+   *
+   * @param {string} primary Already contrast-corrected primary accent.
+   * @param {string} [secondary] Raw secondary from settings, may be empty.
+   * @param {string} [bg] Background the pair is read against.
+   * @param {boolean} [gradient] Whether `--accent-fill` sweeps the two colours.
+   */
+  function applyAccent2(el, primary, secondary, bg, gradient) {
+    const raw = HEX6.test(secondary || "") ? secondary : primary;
+    const value = bg ? accentTokens(raw, bg).ui : raw;
+    el.setProperty("--accent-2", value);
+    el.setProperty("--accent-2-contrast", contrastText(value));
+    const rgb = hexToRgb(value);
     el.setProperty("--accent-2-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+    // The gradient tokens always describe the accent pair, so anything that
+    // specifically wants a sweep can reach for `--accent-gradient` directly.
+    // `--accent-fill` is what every button, pill and active tab paints with,
+    // and it stays flat unless the user asked for two-tone.
+    const stops = harmoniseGradient(primary, value, bg);
+    el.setProperty("--accent-gradient", gradientCss(GRADIENT_ANGLE, stops));
+    el.setProperty("--accent-gradient-h", gradientCss(90, stops));
+    el.setProperty(
+      "--accent-fill",
+      gradient && value !== primary
+        ? gradientCss(GRADIENT_ANGLE, stops)
+        : primary,
+    );
   }
 
   function applyWallpaperStyle() {
@@ -1180,7 +1367,7 @@ const SettingsRenderer = (() => {
       el.setProperty("--accent-color", ui);
       el.setProperty("--accent-ink", ink);
       el.setProperty("--accent-contrast", contrastText(ui));
-      applyAccent2(el, ui);
+      applyAccent2(el, ui, settings.accent2, p.bg, !!settings.accentGradient);
       el.setProperty("--accent-rgb", `${accRgb.r}, ${accRgb.g}, ${accRgb.b}`);
 
       const sRgb = hexToRgb(p.surface);
@@ -1199,12 +1386,18 @@ const SettingsRenderer = (() => {
       const accent =
         settings.accentOverride || settings.accentColor || "#6366f1";
 
-      const { ui, ink } = accentTokens(accent, isLight ? "#ffffff" : "#0d1117");
+      const { ui, ink } = accentTokens(accent, isLight ? "#ffffff" : "#090a0f");
       const accRgb = hexToRgb(ui);
       el.setProperty("--accent-color", ui);
       el.setProperty("--accent-ink", ink);
       el.setProperty("--accent-contrast", contrastText(ui));
-      applyAccent2(el, ui);
+      applyAccent2(
+        el,
+        ui,
+        settings.accent2,
+        isLight ? "#ffffff" : "#090a0f",
+        !!settings.accentGradient,
+      );
       el.setProperty("--accent-rgb", `${accRgb.r}, ${accRgb.g}, ${accRgb.b}`);
 
       const a = hexToRgb(accent);
@@ -1215,27 +1408,24 @@ const SettingsRenderer = (() => {
             b: Math.round(a.b * 0.35 + 240 * 0.65),
           }
         : {
-            // Dark mode: blend only 18% of the accent into a neutral dark base (20,20,28)
-            // so surfaces stay a subtle grey, not a saturated accent hue
-            r: Math.round(a.r * 0.18 + 20 * 0.82),
-            g: Math.round(a.g * 0.18 + 20 * 0.82),
-            b: Math.round(a.b * 0.18 + 28 * 0.82),
+            // Dark mode: slate black base (18, 19, 24) without cold blue cast
+            r: Math.round(a.r * 0.12 + 18 * 0.88),
+            g: Math.round(a.g * 0.12 + 19 * 0.88),
+            b: Math.round(a.b * 0.12 + 24 * 0.88),
           };
       el.setProperty("--board-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
 
-      // In dark mode, also tint the base background and panel with a very faint
-      // accent hue (~4-6% mix) so the whole UI shifts subtly with the accent color.
-      // This keeps it near #141414 but gives it personality.
+      // In dark mode, tint the obsidian slate background and panel with a clean, subtle hue
       if (!isLight) {
         const pageBg = {
-          r: Math.round(a.r * 0.04 + 11 * 0.96),
-          g: Math.round(a.g * 0.04 + 11 * 0.96),
-          b: Math.round(a.b * 0.06 + 16 * 0.94),
+          r: Math.round(a.r * 0.03 + 9 * 0.97),
+          g: Math.round(a.g * 0.03 + 10 * 0.97),
+          b: Math.round(a.b * 0.03 + 15 * 0.97),
         };
         const panel = {
-          r: Math.round(a.r * 0.06 + 15 * 0.94),
-          g: Math.round(a.g * 0.06 + 15 * 0.94),
-          b: Math.round(a.b * 0.08 + 22 * 0.92),
+          r: Math.round(a.r * 0.04 + 17 * 0.96),
+          g: Math.round(a.g * 0.04 + 18 * 0.96),
+          b: Math.round(a.b * 0.04 + 23 * 0.96),
         };
         const toHex = (c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, "0");
         el.setProperty("--page-bg", `#${toHex(pageBg.r)}${toHex(pageBg.g)}${toHex(pageBg.b)}`);
@@ -1384,7 +1574,7 @@ const SettingsRenderer = (() => {
     ) {
       (async () => {
         try {
-          if (await ensureHostAccess(value)) {
+          {
             const local = await localiseImage(value);
             if (local) {
               const stored = await StorageManager.putMedia(uuid(), local);
@@ -1525,7 +1715,23 @@ const SettingsRenderer = (() => {
     return againstInk >= againstWhite ? "#14151a" : "#ffffff";
   }
 
+  /** Coalesces repeated repaints per key into one animation frame. */
+  function createFrameScheduler() {
+    const pending = new Map();
+    return function paintNextFrame(key, fn) {
+      if (pending.has(key)) return;
+      pending.set(
+        key,
+        requestAnimationFrame(() => {
+          pending.delete(key);
+          fn();
+        }),
+      );
+    };
+  }
+
   window.SettingsShared = {
+    createFrameScheduler,
     PRESETS,
     PRESET_GROUPS,
     presetById,
@@ -1536,7 +1742,6 @@ const SettingsRenderer = (() => {
     MAX_REMOTE_BYTES,
     liveVar,
     effectiveAccent,
-    ensureHostAccess,
     darkMedia,
     systemDark,
     rememberWallpaper,

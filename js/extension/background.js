@@ -9,6 +9,11 @@ const API =
 
 const CONTEXT_MENU_ID = "eshaaltab-save";
 
+// Break nudges and task reminders. Split out to keep this file about the
+// toolbar/context-menu surface; it uses `API` and `flashBadge` from here, so
+// it has to load after both exist (function declarations hoist, `API` does
+// not — hence the import at the bottom of this file).
+
 function uuid() {
   return self.crypto && crypto.randomUUID
     ? crypto.randomUUID()
@@ -147,3 +152,18 @@ API?.contextMenus?.onClicked.addListener((info, tab) => {
 API?.commands?.onCommand.addListener((command) => {
   if (command === "save-current-tab") saveActiveTab();
 });
+
+// New tab pages ask the worker to flash the toolbar icon when a reminder or
+// break nudge fires, so it is noticeable even from another tab. Uses the
+// existing `action` API — no extra permission required.
+API?.runtime?.onMessage?.addListener((msg) => {
+  if (msg && msg.type === "et-reminder-badge") {
+    flashBadge(String(msg.text || "!").slice(0, 4), "#6366f1");
+  }
+});
+
+try {
+  importScripts("js/extension/reminders-sw.js");
+} catch (e) {
+  // A worker without alarms/notifications still runs everything above.
+}

@@ -4,6 +4,14 @@ const WidgetsRenderer = (() => {
   let clockInterval = null;
   let lastClockKey = "";
 
+  const CLOCK_POSITIONS = [
+    "center",
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right",
+  ];
+
   const WEATHER_TTL = 30 * 60 * 1000;
   const weatherCache = {
     read() {
@@ -269,8 +277,8 @@ const WidgetsRenderer = (() => {
         }
       };
 
-      logoBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
+      logoBtn.dataset.popoverTrigger = "search-engine";
+      logoBtn.addEventListener("click", () => {
         if (menu.classList.contains("open")) closeMenu(true);
         else openMenu();
       });
@@ -281,11 +289,12 @@ const WidgetsRenderer = (() => {
       logoBtn.addEventListener("mouseleave", () => closeMenu(false));
       menu.addEventListener("mouseleave", () => closeMenu(false));
 
-      document.addEventListener("click", (e) => {
-        if (!logoBtn.contains(e.target) && !menu.contains(e.target)) {
-          closeMenu(true);
-        }
-      });
+      // Hover-opened, so it registers for outside-click/close-others handling
+      // but never calls closeAll itself — brushing past the logo should not
+      // dismiss a popover the user deliberately opened.
+      PopoverRegistry.register("search-engine", () => menu, () =>
+        closeMenu(true),
+      );
 
       menu.querySelectorAll(".et-search-opt").forEach((opt) => {
         opt.addEventListener("click", (e) => {
@@ -497,9 +506,13 @@ const WidgetsRenderer = (() => {
     if (pinned) pinned.style.display = s.hidePinnedOnHome ? "none" : "flex";
     document.body.classList.toggle("hide-pinned-home", !!s.hidePinnedOnHome);
 
-    const pos = s.clockPosition === "corner" ? "corner" : "center";
-    document.body.classList.toggle("clock-pos-corner", pos === "corner");
-    document.body.classList.toggle("clock-pos-center", pos === "center");
+     const raw = s.clockPosition === "corner" ? "bottom-left" : s.clockPosition;
+    const pos = CLOCK_POSITIONS.includes(raw) ? raw : "center";
+    CLOCK_POSITIONS.forEach((p) =>
+      document.body.classList.toggle(`clock-pos-${p}`, p === pos),
+    );
+
+    document.body.classList.toggle("clock-pos-fixed", pos !== "center");
 
     applyClockAppearance(s);
   }

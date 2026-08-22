@@ -341,6 +341,12 @@ const PomodoroMode = (() => {
         closeWheelPicker();
     });
 
+    // A drag-select that ends outside the panel must not dismiss it.
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay && gestureStartedIn(overlay.firstElementChild))
+        e.stopPropagation();
+    });
+
     document.addEventListener("keydown", (e) => {
       if (!overlay.classList.contains("open")) return;
       if (!e.key) return;

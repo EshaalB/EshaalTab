@@ -262,15 +262,15 @@ const WorkspaceWidget = (() => {
     renderGrid();
   }
 
+  let bound = false;
+
   function init() {
     const btn = $("workspaceBtn");
     const pop = $("workspacePopover");
-    if (!btn || !pop) return;
+    if (!btn || !pop || bound) return;
+    bound = true;
 
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      toggle();
-    });
+    btn.addEventListener("click", () => toggle());
 
     const searchInput = $("workspaceSearchInput");
     if (searchInput) {
@@ -318,15 +318,7 @@ const WorkspaceWidget = (() => {
       });
     }
 
-    document.addEventListener("click", (e) => {
-      if (
-        pop.classList.contains("open") &&
-        !pop.contains(e.target) &&
-        !e.target.closest("#workspaceBtn")
-      ) {
-        close();
-      }
-    });
+    PopoverRegistry.register("workspace", () => $("workspacePopover"), close);
   }
 
   function toggle() {
@@ -339,11 +331,10 @@ const WorkspaceWidget = (() => {
     const pop = $("workspacePopover");
     const btn = $("workspaceBtn");
     if (!pop || !btn) return;
+    PopoverRegistry.closeAll("workspace");
     build();
     renderGrid();
-    const r = btn.getBoundingClientRect();
-    pop.style.right = `${Math.max(16, window.innerWidth - r.right)}px`;
-    pop.style.top = `${r.bottom + 8}px`;
+    PopoverRegistry.position(pop, btn, { align: "right" });
     pop.classList.add("open");
     btn.classList.add("is-active");
     setTimeout(() => $("workspaceSearchInput")?.focus(), 50);
@@ -358,100 +349,63 @@ const WorkspaceWidget = (() => {
 })();
 
 const TodoWidget = (() => {
-  let reminderInterval = null;
+  /**
+   * Resolves a todo's reminder to a concrete hour and minute.
+   *
+   * Newer todos carry `remindH`/`remindM`, resolved against the wall clock at
+   * the moment they were typed (so "2:20" typed at 1pm means 14:20). Todos
+   * created before that existed fall back to a daytime assumption.
+   */
+  function taskReminder(t) {
+    const parsed = ReminderKit.parseTime(t.text);
+    if (!parsed) return null;
 
-  // Persist fired reminders in sessionStorage keyed by today, so deleted todos
-  // don't re-fire when a new tab opens within the same session/day.
-  const SESSION_KEY = "et_fired_reminders";
-  function loadFiredReminders() {
-    try {
-      const raw = sessionStorage.getItem(SESSION_KEY);
-      if (!raw) return {};
-      return JSON.parse(raw);
-    } catch { return {}; }
+    if (Number.isInteger(t.remindH) && Number.isInteger(t.remindM))
+      return { h: t.remindH, min: t.remindM };
+
+    const h = ReminderKit.assumeDaytimeHour(parsed);
+    return h === null ? null : { h, min: parsed.min };
   }
-  function saveFiredReminders(map) {
-    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(map)); } catch {}
-  }
-  function hasFired(key) {
-    const map = loadFiredReminders();
-    return !!map[key];
-  }
-  function markFired(key) {
-    const map = loadFiredReminders();
-    // Prune any keys not from today to keep storage lean
+
+  // Everything currently awaiting a chime, with absolute due timestamps so the
+  // scheduler can fire on "past due" instead of "exactly now".
+  function collectReminders() {
     const today = todayKey();
-    const pruned = {};
-    for (const k of Object.keys(map)) {
-      if (k.includes(`_${today}_`)) pruned[k] = true;
-    }
-    pruned[key] = true;
-    saveFiredReminders(pruned);
-  }
-
-  function parseTaskTime(text) {
-    const m = text.match(/\b(\d{1,2}):(\d{2})\s*(am|pm)?\b/i);
-    if (!m) return null;
-    let h = parseInt(m[1], 10);
-    const min = parseInt(m[2], 10);
-    const ampm = (m[3] || "").toLowerCase();
-    if (ampm === "pm" && h < 12) h += 12;
-    if (ampm === "am" && h === 12) h = 0;
-    if (h > 23 || min > 59) return null;
-    return { h, min };
-  }
-
-  function playReminderChime() {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const now = ctx.currentTime;
-
-      [800, 600].forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = freq;
-        osc.type = "sine";
-        const t = now + i * 0.25;
-        gain.gain.setValueAtTime(0.35, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-        osc.start(t);
-        osc.stop(t + 0.6);
-      });
-    } catch {}
-  }
-
-  function checkReminders() {
-    const todos = TodoManager.getAll();
-    const now = new Date();
-    const nowH = now.getHours();
-    const nowM = now.getMinutes();
-    const todayStr = todayKey();
-
-    for (const t of todos) {
+    // Reminders older than this were settled elsewhere (e.g. a backup restore
+    // brought them in already overdue) and must not chime now.
+    const muted = StorageManager.getData().remindersMutedBefore || 0;
+    const out = [];
+    for (const t of TodoManager.getAll()) {
       if (t.done) continue;
-      const parsed = parseTaskTime(t.text);
-      if (!parsed) continue;
-      const key = `${t.id}_${todayStr}_${parsed.h}:${parsed.min}`;
-      if (hasFired(key)) continue;
-      if (parsed.h === nowH && parsed.min === nowM) {
-        markFired(key);
-        playReminderChime();
-        ToastSystem.show(`⏰ Reminder: ${t.text}`, "info", 8000);
-      }
+      const r = taskReminder(t);
+      if (!r) continue;
+      const due = ReminderKit.timeOn(Date.now(), r.h, r.min);
+      if (due < muted) continue;
+      out.push({
+        key: `todo_${t.id}_${today}_${r.h}:${r.min}`,
+        due,
+        fire: () => {
+          ReminderKit.flashBadge("⏰");
+          // Long-lived rather than the old 8s: a reminder you were not at the
+          // keyboard for is exactly the one worth still being there.
+          ToastSystem.show(`⏰ Reminder: ${t.text}`, "info", 30000);
+          ReminderKit.chime();
+        },
+      });
     }
+    return out;
   }
+
+  let bound = false;
 
   function init() {
+    if (bound) return;
+    bound = true;
     const btn = $("todoWidgetBtn");
     const pop = $("todoPopover");
     const input = $("todoPopInput");
     const clearBtn = $("todoClearDone");
-    btn?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      toggle();
-    });
+    btn?.addEventListener("click", () => toggle());
     input?.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && input.value.trim()) {
         TodoManager.add(input.value.trim());
@@ -465,21 +419,10 @@ const TodoWidget = (() => {
       TodoManager.clearDone();
       render();
     });
-    document.addEventListener("click", (e) => {
-      if (
-        pop &&
-        pop.classList.contains("open") &&
-        !pop.contains(e.target) &&
-        !e.target.closest("#todoWidgetBtn")
-      )
-        close();
-    });
+    PopoverRegistry.register("todo", () => $("todoPopover"), close);
     render();
 
-    if (!reminderInterval) {
-      reminderInterval = setInterval(checkReminders, 30000);
-      checkReminders();
-    }
+    ReminderKit.register(collectReminders);
   }
   function toggle() {
     const pop = $("todoPopover");
@@ -490,10 +433,9 @@ const TodoWidget = (() => {
     const pop = $("todoPopover");
     const btn = $("todoWidgetBtn");
     if (!pop || !btn) return;
+    PopoverRegistry.closeAll("todo");
     render();
-    const r = btn.getBoundingClientRect();
-    pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - 320))}px`;
-    pop.style.top = `${r.bottom + 8}px`;
+    PopoverRegistry.position(pop, btn, { width: 340 });
     pop.classList.add("open");
     btn.classList.add("is-active");
     $("todoPopInput")?.focus();
@@ -522,9 +464,9 @@ const TodoWidget = (() => {
         : '<div class="todo-pop-empty"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4; margin-bottom:8px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><br/>Add your first task below</div>',
     );
     todos.forEach((t, idx) => {
-      const timeMatch = parseTaskTime(t.text);
-      const timeHint = timeMatch
-        ? ` <span style="opacity:0.5; font-size:11px;">⏰ ${String(timeMatch.h).padStart(2, "0")}:${String(timeMatch.min).padStart(2, "0")}</span>`
+      const r = taskReminder(t);
+      const timeHint = r
+        ? ` <span style="opacity:0.5; font-size:11px;">⏰ ${escapeHtml(ReminderKit.formatTime(r.h, r.min))}</span>`
         : "";
       const row = document.createElement("div");
       row.className = `todo-pop-row ${t.done ? "done" : ""} ${t.pinned ? "pinned" : ""}`;

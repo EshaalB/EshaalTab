@@ -19,7 +19,6 @@ body.theme-light .et-topbar-btn.is-active svg {
   stroke: var(--accent-ink, var(--accent-color, #000));
 }
 
-.et-add-board-fab,
 .et-notes-export-btn,
 .et-clip-add-btn {
   background: var(--accent-fill);
@@ -37,8 +36,7 @@ body.theme-light .et-topbar-btn.is-active svg {
 button,
 .et-main-tab,
 .et-topbar-btn,
-.et-set-tab,
-.et-add-board-fab {
+.et-set-tab {
   transition:
     transform var(--dur-2) cubic-bezier(0.2, 0.8, 0.2, 1),
     background var(--dur-1) var(--ease-out),
@@ -49,8 +47,7 @@ button,
 button:active,
 .et-main-tab:active,
 .et-topbar-btn:active,
-.et-set-tab:active,
-.et-add-board-fab:active {
+.et-set-tab:active {
   transform: scale(0.95);
 }
 

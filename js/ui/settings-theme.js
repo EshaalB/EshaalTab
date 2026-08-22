@@ -11,7 +11,6 @@
     MAX_VIDEO_BYTES,
     liveVar,
     effectiveAccent,
-    ensureHostAccess,
     systemDark,
     rememberWallpaper,
     readAsDataUrl,
@@ -31,35 +30,52 @@
     setMode,
   } = S;
   const renderSideSheetContent = (...a) => S.renderSideSheetContent(...a);
-  const pendingFrames = new Map();
-  function paintNextFrame(key, fn) {
-    if (pendingFrames.has(key)) return;
-    pendingFrames.set(
-      key,
-      requestAnimationFrame(() => {
-        pendingFrames.delete(key);
-        fn();
-      }),
-    );
-  }
+  const paintNextFrame = S.createFrameScheduler();
 
   function applyPreset(id) {
     const s = StorageManager.getSettings();
     const p = presetById(id);
     s.preset = p ? id : "";
+    let wallpaperDropped = false;
 
     delete s.accentOverride;
     if (p) {
       s.mode = p.mode;
       s.modeLocked = true;
-      s.solidSeed = p.accent;
+      // `seed` lets a preset set its background base independently of the
+      // accent. Without it the base is derived from the accent, which cannot
+      // express a bright colour on a near-black ground.
+      s.solidSeed = p.seed || p.accent;
       s.accentColor = p.accent;
+      // The swatch has always shown two dots; this is what finally makes the
+      // second one mean something once the preset is applied.
+      // Feeds the swatch dots and, if the user has switched the two-tone fill
+      // on, the gradient. A preset never turns the gradient on by itself: flat
+      // is the default everywhere and the sweep stays an explicit opt-in.
+      s.accent2 = p.accent2 || "";
       s.cornerRadius = "default";
+      // applyTheme() only derives a palette from `solidSeed` when the
+      // background is solid, so with a wallpaper up a preset used to change
+      // nothing but the accent and read as "the colours didn't switch". A
+      // preset is a whole look, so it takes the background back.
+      if (s.backgroundType && s.backgroundType !== "solid") {
+        s.backgroundType = "solid";
+        s.backgroundValue = p.seed || p.accent;
+        // applyTheme() paints over the photo layer but leaves a playing video
+        // running behind the new solid ground.
+        const videoBg = $("video-bg");
+        if (videoBg) {
+          videoBg.pause();
+          videoBg.classList.remove("active");
+        }
+        wallpaperDropped = true;
+      }
     }
 
     StorageManager.save();
     applyPresetShell();
     applyTheme();
+    return wallpaperDropped;
   }
 
   function applyPresetData(p) {
@@ -402,10 +418,12 @@
 
     $$(".preset-swatch[data-preset]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        applyPreset(btn.dataset.preset);
+        const wallpaperDropped = applyPreset(btn.dataset.preset);
         renderSideSheetContent();
         const p = presetById(btn.dataset.preset);
-        ToastSystem.success(p ? `${p.name} applied` : "Preset cleared");
+        if (wallpaperDropped)
+          ToastSystem.success(`${p.name} applied — wallpaper turned off`);
+        else ToastSystem.success(p ? `${p.name} applied` : "Preset cleared");
       });
     });
 
@@ -424,8 +442,6 @@
       settings.preset = "custom";
       StorageManager.saveSettings();
       applyTheme();
-      if ($("boardsView")?.classList.contains("active"))
-        BoardRenderer.renderBoards();
     });
     $("myntColorPicker")?.addEventListener("change", () => {
       renderSideSheetContent();
@@ -433,25 +449,47 @@
     });
 
     $("stAccent1Picker")?.addEventListener("input", (e) => {
+      // Only the override. `accentColor` stays the seed-derived value so that
+      // clearing the override falls back to it — writing both left two
+      // sources of truth that drifted apart across preset/custom cycles.
       settings.accentOverride = e.target.value;
-      settings.accentColor = e.target.value;
       settings.preset = "custom";
       StorageManager.saveSettings();
       applyTheme();
-      if ($("boardsView")?.classList.contains("active"))
-        BoardRenderer.renderBoards();
+    });
+
+    $("stAccentGradientToggle")?.addEventListener("change", (e) => {
+      settings.accentGradient = e.target.checked;
+      // Turning it on with no secondary picked yet would sweep a colour into
+      // itself and show nothing, so seed it from the preset's pair.
+      if (settings.accentGradient && !HEX6.test(settings.accent2 || "")) {
+        const p = presetById(settings.preset);
+        settings.accent2 = p?.accent2 || effectiveAccent();
+      }
+      StorageManager.saveSettings();
+      applyTheme();
+      $("stAccent2Row")?.toggleAttribute("hidden", !settings.accentGradient);
+      const picker = $("stAccent2Picker");
+      if (picker && HEX6.test(settings.accent2 || ""))
+        picker.value = settings.accent2;
+    });
+
+    $("stAccent2Picker")?.addEventListener("input", (e) => {
+      settings.accent2 = e.target.value;
+      settings.preset = "custom";
+      StorageManager.saveSettings();
+      applyTheme();
     });
 
     $("stAccentResetBtn")?.addEventListener("click", () => {
       delete settings.accentOverride;
       settings.accent2 = "";
+      settings.accentGradient = false;
       settings.accentColor =
         settings.solidSeed ||
         (settings.mode === "light" ? "#6366f1" : "#818cf8");
       StorageManager.saveSettings();
       applyTheme();
-      if ($("boardsView")?.classList.contains("active"))
-        BoardRenderer.renderBoards();
       renderSideSheetContent();
       ToastSystem.info("Accent follows the base colour again");
     });
@@ -673,7 +711,7 @@
           let stored = val;
           let name = "Custom URL";
 
-          if (!isVideo && (await ensureHostAccess(val))) {
+          if (!isVideo) {
             const local = await localiseImage(val);
             if (local) {
               stored = await StorageManager.putMedia(uuid(), local);
@@ -866,14 +904,22 @@
               <button class="mynt-seg-btn ${settings.mode === "system" ? "active" : ""}" data-mode="system" aria-pressed="${settings.mode === "system"}">System</button>
             </div>
             <div class="st-row">
-              <label class="st-label" for="stAccent1Picker">Accent color</label>
+              <label class="st-label" for="stAccent1Picker">Primary accent</label>
               <input type="color" id="stAccent1Picker" class="st-color" value="${effectiveAccent()}" />
             </div>
-            <button id="stAccentResetBtn" class="st-action-btn st-icon-reset" style="margin-top:2px;">Reset accent color</button>
+            <div class="st-row">
+              <label class="st-label" for="stAccentGradientToggle">Two-tone accent</label>
+              <input type="checkbox" id="stAccentGradientToggle" ${settings.accentGradient ? "checked" : ""} />
+            </div>
+            <div class="st-row"${settings.accentGradient ? "" : ' hidden'} id="stAccent2Row">
+              <label class="st-label" for="stAccent2Picker">Secondary accent</label>
+              <input type="color" id="stAccent2Picker" class="st-color" value="${HEX6.test(settings.accent2 || "") ? settings.accent2 : effectiveAccent()}" />
+            </div>
+            <button id="stAccentResetBtn" class="st-action-btn st-icon-reset" style="margin-top:2px;">Reset accent colors</button>
             <div class="st-row">
               <label class="st-label" for="myntColorPicker">Base background</label>
               <input type="color" id="myntColorPicker" class="st-color"
-                     value="${/^#[0-9a-f]{6}$/i.test(settings.solidSeed || "") ? settings.solidSeed : settings.mode === "light" ? "#c7d2fe" : "#0d1117"}" />
+                     value="${/^#[0-9a-f]{6}$/i.test(settings.solidSeed || "") ? settings.solidSeed : settings.mode === "light" ? "#c7d2fe" : "#090a0f"}" />
             </div>
             <div class="st-hint">Note: Base background colour applies when wallpaper is off.</div>
 

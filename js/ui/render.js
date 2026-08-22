@@ -256,7 +256,11 @@ const DragDropEngine = (() => {
 })();
 
 const BoardRenderer = (() => {
-  const boardsArea = $("boardsArea");
+  // Resolved on every use rather than cached once at script eval. A cached
+  // node goes stale the moment anything replaces #boardsArea, and every
+  // guard below then bails silently — boards simply stop opening, with no
+  // error to point at.
+  const boardsArea = () => $("boardsArea");
 
   function addBoardAtRight(name) {
     const board = BoardManager.addBoard(name);
@@ -300,7 +304,7 @@ const BoardRenderer = (() => {
         ),
       ) || 1;
     const areaWidth =
-      boardsArea?.clientWidth || Math.max(240, window.innerWidth - 32) || 1200;
+      boardsArea()?.clientWidth || Math.max(240, window.innerWidth - 32) || 1200;
     const preferredWidth = Math.round(
       (StorageManager.getSettings().boardWidth || 270) * uiScale,
     );
@@ -323,11 +327,16 @@ const BoardRenderer = (() => {
       }, 150);
     });
 
-    if (!boardsArea) return;
+    const area = boardsArea();
+    if (!area) return;
 
-    DragDropEngine.install(boardsArea);
+    DragDropEngine.install(area);
 
-    boardsArea.addEventListener("click", (e) => {
+    // Delegated from #boardsView, which is static markup, so the handlers
+    // survive #boardsArea being re-created.
+    const view = $("boardsView") || area;
+
+    view.addEventListener("click", (e) => {
       const boardMenu = e.target.closest(".et-board-menu-btn");
       if (boardMenu) {
         e.stopPropagation();
@@ -400,7 +409,7 @@ const BoardRenderer = (() => {
       }
     });
 
-    boardsArea.addEventListener("auxclick", (e) => {
+    view.addEventListener("auxclick", (e) => {
       if (e.button !== 1) return;
       const tile = e.target.closest(".et-board-tile");
       const acc = tile?.closest(".et-board-card");
@@ -412,7 +421,7 @@ const BoardRenderer = (() => {
       }
     });
 
-    boardsArea.addEventListener("keydown", (e) => {
+    view.addEventListener("keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;
       const tile = e.target.closest(".et-board-tile");
       if (tile) {
@@ -430,7 +439,7 @@ const BoardRenderer = (() => {
       }
     });
 
-    boardsArea.addEventListener("dblclick", (e) => {
+    view.addEventListener("dblclick", (e) => {
       if (!e.target.closest(".et-board-card-title")) return;
       const acc = e.target.closest(".et-board-card");
       const board = BoardManager.find(acc?.dataset.id);
@@ -444,7 +453,7 @@ const BoardRenderer = (() => {
         });
     });
 
-    boardsArea.addEventListener("contextmenu", (e) => {
+    view.addEventListener("contextmenu", (e) => {
       const tile = e.target.closest(".et-board-tile");
       const acc = e.target.closest(".et-board-card");
       if (tile && acc) {
@@ -459,7 +468,19 @@ const BoardRenderer = (() => {
   let renderBoardsRAF = null;
   function renderBoards() {
     if (renderBoardsRAF) cancelAnimationFrame(renderBoardsRAF);
-    renderBoardsRAF = requestAnimationFrame(() => {
+    // A background tab never services its rAF queue, so coalescing there
+    // would leave the boards stale until the tab is looked at again.
+    if (document.hidden) {
+      renderBoardsRAF = null;
+      paintBoards();
+      return;
+    }
+    renderBoardsRAF = requestAnimationFrame(paintBoards);
+  }
+
+  function paintBoards() {
+    {
+      const boardsArea = $("boardsArea");
       if (!boardsArea) return;
       const boards = BoardManager.getAll();
 
@@ -527,7 +548,7 @@ const BoardRenderer = (() => {
 
       wireFavicons(gridContainer);
       boardsArea.replaceChildren(gridContainer);
-    });
+    }
   }
 
   function createBoardAccordionElement(board, isExpanded) {
@@ -714,7 +735,10 @@ const ViewController = (() => {
         show(tab);
       }
     });
-    show("home");
+    // Not "home": main.js already restores the persisted tab right after
+    // this, and forcing Home first made every remote-sync repaint flash the
+    // Home view before snapping back.
+    show(TabManager.get());
   }
 
   function show(tab) {
@@ -786,7 +810,8 @@ function showCustomModal(
     overlay.setAttribute("aria-labelledby", "modalTitle");
     document.body.appendChild(overlay);
     overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) close();
+      if (e.target === overlay && !gestureStartedIn(overlay.firstElementChild))
+        close();
     });
     overlay.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.target.tagName === "INPUT") {

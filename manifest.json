@@ -34,7 +34,9 @@
     "activeTab",
     "contextMenus",
     "favicon",
-    "search"
+    "search",
+    "alarms",
+    "notifications"
   ],
   "optional_permissions": ["bookmarks", "tabs", "history"],
   "commands": {

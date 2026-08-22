@@ -282,18 +282,114 @@ const BookmarkManager = (() => {
 
 const NotesManager = (() => {
   const MAX_HISTORY = 25;
+  const MAX_TABS = StorageManager.MAX_NOTE_TABS;
+  const MAX_CHARS = StorageManager.MAX_NOTE_CHARS;
 
-  function get() {
-    return StorageManager.getData().notes || "";
+  // Guarantees at least one tab exists before any read/write, so callers never
+  // have to null-check. Storage normalises on load; this covers live edits.
+  function tabs() {
+    const d = StorageManager.getData();
+    if (!Array.isArray(d.noteTabs) || !d.noteTabs.length)
+      StorageManager.normalizeNoteTabs(d);
+    return d.noteTabs;
   }
+
+  function activeTab() {
+    const d = StorageManager.getData();
+    const list = tabs();
+    return list.find((t) => t.id === d.activeNoteId) || list[0];
+  }
+
+  // `get`/`set` operate on the active tab, so every existing caller (the
+  // editor, export, the search index) keeps working without changes.
+  function get() {
+    return activeTab().text || "";
+  }
+
+  // Set when a write had to drop characters, so the UI can say so once rather
+  // than the note quietly coming up short.
+  let truncated = false;
+
+  function write(text) {
+    const t = activeTab();
+    const full = String(text ?? "");
+    truncated = full.length > MAX_CHARS;
+    t.text = truncated ? full.slice(0, MAX_CHARS) : full;
+    t.updatedAt = Date.now();
+    StorageManager.getData().notes = t.text; // legacy mirror
+    return t;
+  }
+
+  /** Whether the last write was cut short, and by how much. */
+  function lastWriteTruncated() {
+    return truncated;
+  }
+
   function set(text) {
-    StorageManager.getData().notes = text;
+    write(text);
     StorageManager.save();
   }
 
   function setImmediate(text) {
-    StorageManager.getData().notes = text;
+    write(text);
     StorageManager.saveImmediate();
+  }
+
+  function list() {
+    return tabs();
+  }
+  function getActiveId() {
+    return activeTab().id;
+  }
+  function setActive(id) {
+    if (!tabs().some((t) => t.id === id)) return false;
+    const d = StorageManager.getData();
+    d.activeNoteId = id;
+    d.notes = activeTab().text;
+    StorageManager.saveImmediate();
+    return true;
+  }
+
+  function add(title) {
+    const list = tabs();
+    if (list.length >= MAX_TABS) return null;
+    const note = {
+      id: uuid(),
+      title: String(title || `Note ${list.length + 1}`)
+        .trim()
+        .slice(0, 40),
+      text: "",
+      updatedAt: Date.now(),
+    };
+    list.push(note);
+    StorageManager.getData().activeNoteId = note.id;
+    StorageManager.getData().notes = "";
+    StorageManager.saveImmediate();
+    return note;
+  }
+
+  function remove(id) {
+    const list = tabs();
+    if (list.length <= 1) return false; // always keep one note
+    const i = list.findIndex((t) => t.id === id);
+    if (i === -1) return false;
+    const [removed] = list.splice(i, 1);
+    const d = StorageManager.getData();
+    if (d.activeNoteId === id)
+      d.activeNoteId = list[Math.min(i, list.length - 1)].id;
+    d.notes = activeTab().text;
+    StorageManager.saveImmediate();
+    return removed;
+  }
+
+  function rename(id, title) {
+    const t = tabs().find((x) => x.id === id);
+    if (!t) return false;
+    const clean = String(title || "").trim();
+    if (!clean) return false;
+    t.title = clean.slice(0, 40);
+    StorageManager.saveImmediate();
+    return true;
   }
 
   function getHistory() {
@@ -314,14 +410,36 @@ const NotesManager = (() => {
   }
 
   function exportTxt() {
-    const blob = new Blob([get()], { type: "text/plain;charset=utf-8" });
+    const t = activeTab();
+    const blob = new Blob([t.text || ""], {
+      type: "text/plain;charset=utf-8",
+    });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `eshaaltab-notes-${new Date().toLocaleDateString("sv")}.txt`;
+    const slug =
+      (t.title || "notes").replace(/[^a-z0-9]+/gi, "-").toLowerCase() ||
+      "notes";
+    a.download = `eshaaltab-${slug}-${new Date().toLocaleDateString("sv")}.txt`;
     a.click();
     URL.revokeObjectURL(a.href);
   }
-  return { get, set, setImmediate, getHistory, pushHistory, exportTxt };
+  return {
+    get,
+    set,
+    setImmediate,
+    getHistory,
+    pushHistory,
+    exportTxt,
+    list,
+    getActiveId,
+    setActive,
+    add,
+    remove,
+    rename,
+    lastWriteTruncated,
+    MAX_TABS,
+    MAX_CHARS,
+  };
 })();
 
 const ClipboardManager = (() => {
@@ -399,6 +517,24 @@ const TodoManager = (() => {
     StorageManager.save();
     return true;
   }
+  /**
+   * Pins down what a bare time in the task text means, using the clock at the
+   * moment it was typed. "2:20" entered at 1pm is 14:20, not 02:20 tomorrow.
+   * Stored on the todo so later reads don't re-guess and drift.
+   */
+  function stampReminder(t) {
+    if (typeof ReminderKit === "undefined") return t;
+    const parsed = ReminderKit.parseTime(t.text);
+    if (!parsed) {
+      delete t.remindH;
+      delete t.remindM;
+      return t;
+    }
+    t.remindH = ReminderKit.resolveHour(parsed);
+    t.remindM = parsed.min;
+    return t;
+  }
+
   function add(text) {
     const t = {
       id: uuid(),
@@ -407,6 +543,7 @@ const TodoManager = (() => {
       pinned: false,
     };
     if (!t.text) return null;
+    stampReminder(t);
     list().push(t);
     StorageManager.save();
     return t;
@@ -434,6 +571,7 @@ const TodoManager = (() => {
     const t = list().find((x) => x.id === id);
     if (t) {
       t.text = clean;
+      stampReminder(t);
       StorageManager.save();
     }
   }

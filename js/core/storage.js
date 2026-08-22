@@ -80,15 +80,39 @@ const StorageManager = (() => {
     ];
   }
 
+  // Preset ids retired when the Gamer group became Neon. Kept here because
+  // the settings module that owns PRESETS is loaded lazily, long after this
+  // migration has to run.
+  const RETIRED_PRESET_IDS = ["neon", "synthwave", "matrix", "amber"];
+
+  const MAX_SESSIONS = 30;
+  const MAX_SESSION_TABS = 200;
+
+  const MAX_NOTE_TABS = 5;
+  const MAX_NOTE_CHARS = 100000;
+
   const DEFAULT_DATA = {
     boards: seedBoards(),
+    // `notes` is kept as a mirror of the active note tab so older backups and
+    // the search index keep working. `noteTabs` is the source of truth.
     notes: "",
+    noteTabs: [],
+    activeNoteId: "",
     notesHistory: [],
+    // Saved windows of tabs. Canonical home is here inside `data`, so sessions
+    // ride along with backups; `tabStashes` is the pre-sessions key and is
+    // folded in on load.
+    sessions: [],
     tabStashes: [],
     todos: [],
     tags: ["video", "media", "mail"],
     wallpapers: [],
     focus: {},
+    breakState: { nextAt: 0 },
+    // Reminders due before this instant are treated as already handled. Set
+    // when data arrives from outside the normal flow (a backup restore, a
+    // reset), so restored todos never chime for times that already passed.
+    remindersMutedBefore: 0,
     pinsMigrated: true,
   };
 
@@ -122,10 +146,16 @@ const StorageManager = (() => {
     lastSettingsTab: "theme",
     collapsedSettingsAccordions: {
       theme: ["position and crop", "share your theme"],
-      widgets: ["general appearance", "clock and text", "search", "weather"],
+      widgets: [
+        "general appearance",
+        "clock and text",
+        "search",
+        "weather",
+        "breaks",
+      ],
       data: ["privacy", "data management"],
     },
-    settingsLayoutVersion: 5,
+    settingsLayoutVersion: 7,
     settingsScrollPositions: {},
     lastSavedBoardId: "",
     boardWidth: 260,
@@ -143,6 +173,7 @@ const StorageManager = (() => {
     displayName: "",
     preset: "",
     accent2: "",
+    accentGradient: false,
     cursorUrl: "",
     cornerRadius: "default",
     fontFamily: "default",
@@ -161,6 +192,14 @@ const StorageManager = (() => {
     remoteFavicons: false,
     onboardingSeen: false,
     aiAutoSend: false,
+    // Break nudges. Deliberately four fields: anything more belongs in a
+    // dedicated focus app, not a new tab page.
+    breaks: {
+      enabled: false,
+      everyMin: 45,
+      message: "Time for a break — look away and stretch.",
+      sound: true,
+    },
     workspaceFavorites: [
       "Search",
       "Gmail",
@@ -382,6 +421,149 @@ const StorageManager = (() => {
     return capPinnedBookmarks(d);
   }
 
+  const BREAK_INTERVALS = [15, 20, 25, 30, 45, 60, 90, 120];
+
+  function sanitizeBreaks(raw) {
+    const d = DEFAULT_SETTINGS.breaks;
+    const b = raw && typeof raw === "object" ? raw : {};
+    const every = parseInt(b.everyMin, 10);
+    const msg = typeof b.message === "string" ? b.message.trim() : "";
+    return {
+      enabled: typeof b.enabled === "boolean" ? b.enabled : d.enabled,
+      everyMin: BREAK_INTERVALS.includes(every) ? every : d.everyMin,
+      message: msg ? msg.slice(0, 120) : d.message,
+      sound: typeof b.sound === "boolean" ? b.sound : d.sound,
+    };
+  }
+
+  const CLOCK_POSITIONS = [
+    "center",
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right",
+  ];
+
+  /**
+   * Maps any stored clock position onto the current set, including the two
+   * legacy values: "corner" was always bottom-left, "auto" meant centred.
+   * Returns undefined for unrecognised input so the caller keeps its default.
+   */
+  function normalizeClockPosition(value) {
+    if (value === "auto") return "center";
+    if (value === "corner") return "bottom-left";
+    return CLOCK_POSITIONS.includes(value) ? value : undefined;
+  }
+
+  // Brings any historical shape up to the tabbed-notes model: a legacy single
+  // `notes` string becomes the first tab, and the mirror is re-synced.
+  function normalizeNoteTabs(d) {
+    if (!d || typeof d !== "object") return d;
+
+    let tabs = Array.isArray(d.noteTabs) ? d.noteTabs : [];
+    tabs = tabs
+      .filter((t) => t && typeof t === "object")
+      .slice(0, MAX_NOTE_TABS)
+      .map((t, i) => ({
+        id: typeof t.id === "string" && t.id ? t.id : uuid(),
+        title:
+          typeof t.title === "string" && t.title.trim()
+            ? t.title.trim().slice(0, 40)
+            : `Note ${i + 1}`,
+        text:
+          typeof t.text === "string" ? t.text.slice(0, MAX_NOTE_CHARS) : "",
+        updatedAt: typeof t.updatedAt === "number" ? t.updatedAt : Date.now(),
+      }));
+
+    if (!tabs.length) {
+      const legacy = typeof d.notes === "string" ? d.notes : "";
+      tabs = [
+        {
+          id: uuid(),
+          title: "Note 1",
+          text: legacy.slice(0, MAX_NOTE_CHARS),
+          updatedAt: Date.now(),
+        },
+      ];
+    }
+
+    d.noteTabs = tabs;
+    if (!tabs.some((t) => t.id === d.activeNoteId)) d.activeNoteId = tabs[0].id;
+    d.notes = tabs.find((t) => t.id === d.activeNoteId).text;
+    return d;
+  }
+
+  /**
+   * Rebuilds `data.sessions` from anything that survives validation, folding in
+   * the two pre-sessions shapes: a top-level `tabStashes` storage key written
+   * by the toolbar popup, and an older `data.tabStashes` array.
+   *
+   * @param {Array} [extraStashes] Contents of the top-level key, if present.
+   */
+  function normalizeSessions(d, extraStashes) {
+    if (!d || typeof d !== "object") return d;
+
+    const cleanTabs = (list) =>
+      (Array.isArray(list) ? list : [])
+        .filter((t) => t && typeof t === "object" && typeof t.url === "string")
+        .filter((t) => /^https?:\/\//i.test(t.url))
+        .slice(0, MAX_SESSION_TABS)
+        .map((t) => ({
+          title: String(t.title || t.url).slice(0, 300),
+          url: t.url.slice(0, 2000),
+        }));
+
+    const clean = (s, i) => {
+      if (!s || typeof s !== "object") return null;
+      const tabs = cleanTabs(s.tabs);
+      if (!tabs.length) return null;
+      return {
+        id: typeof s.id === "string" && s.id ? s.id : uuid(),
+        // Untitled sessions keep showing their timestamp in the UI; an empty
+        // name is the signal for that, not a placeholder string.
+        name: typeof s.name === "string" ? s.name.trim().slice(0, 60) : "",
+        ts: typeof s.ts === "number" ? s.ts : Date.now() - i,
+        tabs,
+      };
+    };
+
+    const merged = [
+      ...(Array.isArray(d.sessions) ? d.sessions : []),
+      ...(Array.isArray(extraStashes) ? extraStashes : []),
+      ...(Array.isArray(d.tabStashes) ? d.tabStashes : []),
+    ];
+
+    const seen = new Set();
+    const out = [];
+    for (let i = 0; i < merged.length; i++) {
+      const s = clean(merged[i], i);
+      if (!s || seen.has(s.id)) continue;
+      seen.add(s.id);
+      out.push(s);
+    }
+
+    out.sort((a, b) => b.ts - a.ts);
+    d.sessions = out.slice(0, MAX_SESSIONS);
+    d.tabStashes = []; // superseded; kept as a key so old readers see nothing
+    return d;
+  }
+
+  // Older saves predate this key entirely, and a hand-edited import could
+  // carry anything, so it is rebuilt from whatever survives validation.
+  function normalizeFeatureState(d) {
+    if (!d || typeof d !== "object") return d;
+
+    const b = d.breakState && typeof d.breakState === "object"
+      ? d.breakState
+      : {};
+    d.breakState = {
+      nextAt: typeof b.nextAt === "number" ? b.nextAt : 0,
+    };
+    d.remindersMutedBefore =
+      typeof d.remindersMutedBefore === "number" ? d.remindersMutedBefore : 0;
+    return d;
+  }
+
   function migrate(oldData) {
     if (Array.isArray(oldData.boards) && !Array.isArray(oldData.pages)) {
       return capPinnedBookmarks(
@@ -450,12 +632,18 @@ const StorageManager = (() => {
   }
 
   async function load() {
+    let legacyStashes = null;
     try {
       let rawSettings, rawData;
       if (isExtValid()) {
-        const localBag = await EXT.storage.local.get(["data", "settings"]);
+        const localBag = await EXT.storage.local.get([
+          "data",
+          "settings",
+          "tabStashes",
+        ]);
         rawData = localBag.data;
         rawSettings = localBag.settings;
+        legacyStashes = localBag.tabStashes;
         if (!rawSettings) {
           try {
             rawSettings = (await EXT.storage.sync.get("settings")).settings;
@@ -532,16 +720,43 @@ const StorageManager = (() => {
         collapsedSettingsAccordions.widgets = [...widgetCollapsed];
         collapsedSettingsAccordions.data = [...dataCollapsed];
       }
+      if ((loadedSettings.settingsLayoutVersion || 0) < 6) {
+        // Break reminders are opt-in, so the section arrives folded away
+        // rather than lengthening the page for everyone.
+        collapsedSettingsAccordions.widgets = [
+          ...new Set([
+            ...(collapsedSettingsAccordions.widgets || []),
+            "breaks",
+          ]),
+        ];
+      }
+      // The Gamer presets were replaced by the Neon group. A retired id is
+      // cleared rather than remapped: the accent, seed and corner style the
+      // user is already on are kept verbatim, so their page looks identical
+      // and simply reports as "Custom".
+      if (RETIRED_PRESET_IDS.includes(loadedSettings.preset)) {
+        loadedSettings.preset = "";
+        if (
+          !loadedSettings.cornerRadius ||
+          loadedSettings.cornerRadius === "default"
+        )
+          loadedSettings.cornerRadius = "0px";
+      }
+
       settings = refill(settings, {
         ...DEFAULT_SETTINGS,
         ...loadedSettings,
         interfaceOpacity: Math.max(0, Math.min(100, migratedInterfaceOpacity)),
-        settingsLayoutVersion: 5,
+        settingsLayoutVersion: 7,
+        clockPosition:
+          normalizeClockPosition(loadedSettings.clockPosition) ??
+          DEFAULT_SETTINGS.clockPosition,
         collapsedSettingsAccordions,
         widgets: {
           ...DEFAULT_SETTINGS.widgets,
           ...(loadedSettings.widgets || {}),
         },
+        breaks: sanitizeBreaks(loadedSettings.breaks),
       });
       if (rawSettings && rawSettings.theme && !rawSettings.mode) {
         settings.mode = rawSettings.theme === "light" ? "light" : "dark";
@@ -552,8 +767,26 @@ const StorageManager = (() => {
       settings = refill(settings, deepClone(DEFAULT_SETTINGS));
       data = refill(data, deepClone(DEFAULT_DATA));
     }
-    if (!["home", "boards", "notes"].includes(settings.activeTab))
-      settings.activeTab = "home";
+    normalizeNoteTabs(data);
+    normalizeFeatureState(data);
+    normalizeSessions(data, legacyStashes);
+    // The legacy key is retired once its contents are folded into
+    // `data.sessions`. Leaving it in place made the merge run on every load,
+    // so a session the user deleted came straight back on the next one.
+    //
+    // The delete is chained onto the write rather than fired alongside it:
+    // dropping the only copy of the sessions before the merged copy has
+    // landed would lose them outright if the write failed.
+    if (Array.isArray(legacyStashes) && legacyStashes.length && isExtValid()) {
+      try {
+        await EXT.storage.local.set({ data, writer: nextWriterStamp() });
+        await EXT.storage.local.remove("tabStashes");
+      } catch (e) {
+        handleStorageError("session migration:", e);
+      }
+    }
+    // Every new tab starts on Home, regardless of where the last one was left.
+    settings.activeTab = "home";
     [
       "accentColor",
       "accent2",
@@ -800,6 +1033,10 @@ const StorageManager = (() => {
           : undefined,
     );
     pick(
+      "accentGradient",
+      typeof raw.accentGradient === "boolean" ? raw.accentGradient : undefined,
+    );
+    pick(
       "boardColor",
       HEX.test(raw.boardColor || "") ? raw.boardColor : undefined,
     );
@@ -1005,14 +1242,8 @@ const StorageManager = (() => {
         : undefined,
     );
 
-    pick(
-      "clockPosition",
-      raw.clockPosition === "auto"
-        ? "center"
-        : ["center", "corner"].includes(raw.clockPosition)
-          ? raw.clockPosition
-          : undefined,
-    );
+    pick("clockPosition", normalizeClockPosition(raw.clockPosition));
+    pick("breaks", raw.breaks ? sanitizeBreaks(raw.breaks) : undefined);
     pick(
       "clockFont",
       [
@@ -1128,6 +1359,14 @@ const StorageManager = (() => {
         }
         if (imported.data) data = refill(data, restoredData);
         if (imported.settings) settings = refill(settings, restoredSettings);
+        normalizeNoteTabs(data);
+        normalizeFeatureState(data);
+        normalizeSessions(data);
+        // A restore replays someone's past. Without this, every todo in the
+        // backup whose time already passed today would chime on load, and the
+        // break clock would fire off a timestamp from whenever the backup was
+        // taken.
+        muteRemindersFromNow();
         saveImmediate();
         await pruneMedia();
         await repairMedia();
@@ -1141,9 +1380,25 @@ const StorageManager = (() => {
     reader.readAsText(file);
   }
 
+  /**
+   * Draws a line under every reminder that is currently due or overdue, so a
+   * fresh set of data cannot announce things the user never scheduled in this
+   * session.
+   */
+  function muteRemindersFromNow() {
+    const now = Date.now();
+    data.remindersMutedBefore = now;
+    if (data.breakState && data.breakState.nextAt <= now)
+      data.breakState.nextAt = 0; // re-armed by BreakTimer on next tick
+  }
+
   function resetAll() {
     data = refill(data, deepClone(DEFAULT_DATA));
     settings = refill(settings, deepClone(DEFAULT_SETTINGS));
+    normalizeNoteTabs(data);
+    normalizeFeatureState(data);
+    normalizeSessions(data);
+    muteRemindersFromNow();
     settings.activeTab = "home";
     saveImmediate();
     pruneMedia();
@@ -1194,6 +1449,15 @@ const StorageManager = (() => {
     isMediaRef,
     refId,
     sanitizeSettings,
+    normalizeNoteTabs,
+    normalizeFeatureState,
+    normalizeSessions,
+    MAX_SESSIONS,
+    muteRemindersFromNow,
+    sanitizeBreaks,
+    BREAK_INTERVALS,
+    MAX_NOTE_TABS,
+    MAX_NOTE_CHARS,
     setBootBg,
     setBootPreview,
     getWriterId: () => WRITER_ID,
