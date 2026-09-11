@@ -26,6 +26,7 @@
     applyWallpaper,
     applyWallpaperStyle,
     applyWallpaperOverlay,
+    applyWallpaperBlur,
     applyCursor,
     setMode,
   } = S;
@@ -53,7 +54,7 @@
       // on, the gradient. A preset never turns the gradient on by itself: flat
       // is the default everywhere and the sweep stays an explicit opt-in.
       s.accent2 = p.accent2 || "";
-      s.cornerRadius = "default";
+      s.cornerRadius = CORNER_STYLES[0].value;
       // applyTheme() only derives a palette from `solidSeed` when the
       // background is solid, so with a wallpaper up a preset used to change
       // nothing but the accent and read as "the colours didn't switch". A
@@ -102,8 +103,7 @@
       s.boardOpacity = Math.min(1, Math.max(0, p.boardOpacity));
       s.interfaceOpacity = Math.round(s.boardOpacity * 100);
     }
-    if (["default", "0px", "8px", "16px", "9999px"].includes(p.cornerRadius))
-      s.cornerRadius = p.cornerRadius;
+    if (CORNER_RADII.includes(p.cornerRadius)) s.cornerRadius = p.cornerRadius;
     s.preset = presetById(p.id) ? p.id : "";
     delete s.accentOverride;
 
@@ -129,34 +129,74 @@
           ? s.backgroundValue
           : "",
       boardOpacity: (s.interfaceOpacity ?? 8) / 100,
-      cornerRadius: s.cornerRadius || "default",
+      cornerRadius: cornerStyle(s.cornerRadius).value,
     };
   }
 
-  function exportPresetCode() {
-    const p = generatePresetObject();
-    const str = "ESH-" + btoa(JSON.stringify(p));
-    navigator.clipboard
-      .writeText(str)
-      .then(() => {
-        ToastSystem.success("Theme code copied");
-      })
-      .catch(() => {
-        ToastSystem.info("Preset code created");
-      });
+  /* `btoa` only accepts Latin-1, so a theme carrying any character outside it -
+     a display name, an imported preset title - threw and took the whole export
+     with it. Encoding the UTF-8 bytes first makes the code safe for any text,
+     and the decoder below reverses exactly the same steps. */
+  const toBase64 = (text) =>
+    btoa(String.fromCharCode(...new TextEncoder().encode(text)));
+
+  const fromBase64 = (b64) =>
+    new TextDecoder().decode(
+      Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0)),
+    );
+
+  /**
+   * Copies text, and says truthfully whether it worked.
+   *
+   * The async clipboard API rejects for reasons that have nothing to do with
+   * the user - the document not being focused is enough - and the old handler
+   * answered that with "Preset code created", which is not a failure message
+   * and not a success message either: the code was nowhere the user could get
+   * at it. The execCommand path still works when the promise does not, and if
+   * both fail the code is put on screen to be copied by hand.
+   */
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
   }
 
-  function exportPresetFile() {
-    const p = generatePresetObject();
-    const blob = new Blob([JSON.stringify(p, null, 2)], {
-      type: "application/json",
-    });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `eshaaltab-preset-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    ToastSystem.success("Theme downloaded");
+  async function exportPresetCode() {
+    let str;
+    try {
+      str = "ESH-" + toBase64(JSON.stringify(generatePresetObject()));
+    } catch {
+      ToastSystem.error("Could not build a theme code from these settings.");
+      return;
+    }
+    if (await copyText(str)) {
+      ToastSystem.success("Theme code copied", 3000, "Paste it anywhere to share this look.");
+      return;
+    }
+    showCustomModal(
+      "Your theme code",
+      `<p class="dialog-message">Copying was blocked, so here it is to copy by hand.</p>
+       <div class="dialog-field">
+         <input type="text" id="dlgThemeCode" class="dialog-input" readonly value="${escapeHtml(str)}" />
+       </div>`,
+      () => true,
+      "Done",
+    );
+    $("dlgThemeCode")?.select();
   }
 
   function importPresetString(str) {
@@ -165,8 +205,13 @@
     let jsonStr = str;
     if (str.startsWith("ESH-")) {
       try {
-        jsonStr = atob(str.slice(4));
-      } catch {}
+        jsonStr = fromBase64(str.slice(4));
+      } catch {
+        // Codes made before the UTF-8 change decode as plain Latin-1.
+        try {
+          jsonStr = atob(str.slice(4));
+        } catch {}
+      }
     }
     try {
       const data = JSON.parse(jsonStr);
@@ -181,33 +226,97 @@
     return false;
   }
 
-  function dominantColor(data) {
+  /* Square the wallpaper is scaled into before it is read. 64 is enough for a
+     stable average and a usable colour histogram, and small enough that the
+     decode plus read costs well under a frame. */
+  const SAMPLE = 64;
+
+  /** Edge of the frame, as a fraction of its height, that counts as a band. */
+  const BAND = 0.2;
+
+  /**
+   * Reads a downsampled wallpaper frame for the two things the interface needs
+   * from it: an accent worth borrowing, and how bright the picture actually is
+   * behind the chrome laid over it.
+   *
+   * Brightness comes back per band - the strip under the toolbar, the middle
+   * where the clock sits, the strip under the date and weather - rather than as
+   * one number for the whole picture. A photo that averages mid-grey is very
+   * often bright sky over dark ground, and a single average picks the wrong ink
+   * for both ends of it; that is what made light wallpapers keep white icons.
+   *
+   * `spread` is the standard deviation of pixel luminance and stands in for
+   * busyness. A flat colour needs almost no text shadow to stay readable; a
+   * detailed photo needs a real one. Deriving the shadow from it is what stops
+   * the halo being uniformly heavy on wallpapers that never needed it.
+   */
+  function analyzeWallpaper(data, size) {
     const buckets = new Map();
-    let lr = 0,
-      lg = 0,
-      lb = 0,
-      ln = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i],
-        g = data[i + 1],
-        b = data[i + 2],
-        a = data[i + 3];
-      if (a < 125) continue;
-      lr += r;
-      lg += g;
-      lb += b;
-      ln++;
-      const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
-      let e = buckets.get(key);
-      if (!e) {
-        e = { r: 0, g: 0, b: 0, n: 0 };
-        buckets.set(key, e);
+    const bandRows = Math.max(1, Math.round(size * BAND));
+    // r/g/b sums and pixel count, per band: 0 top, 1 middle, 2 bottom, 3 all.
+    const bands = [0, 1, 2, 3].map(() => ({ r: 0, g: 0, b: 0, n: 0 }));
+    let sumY = 0,
+      sumY2 = 0;
+
+    for (let y = 0; y < size; y++) {
+      const band = y < bandRows ? 0 : y >= size - bandRows ? 2 : 1;
+      for (let x = 0; x < size; x++) {
+        const i = (y * size + x) * 4;
+        if (data[i + 3] < 125) continue;
+        const r = data[i],
+          g = data[i + 1],
+          b = data[i + 2];
+
+        for (const t of [band, 3]) {
+          bands[t].r += r;
+          bands[t].g += g;
+          bands[t].b += b;
+          bands[t].n++;
+        }
+
+        const Y = Contrast.lum(`rgb(${r},${g},${b})`);
+        sumY += Y;
+        sumY2 += Y * Y;
+
+        const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+        let e = buckets.get(key);
+        if (!e) buckets.set(key, (e = { r: 0, g: 0, b: 0, n: 0 }));
+        e.r += r;
+        e.g += g;
+        e.b += b;
+        e.n++;
       }
-      e.r += r;
-      e.g += g;
-      e.b += b;
-      e.n++;
     }
+
+    const n = bands[3].n;
+    const mean = n ? sumY / n : 0.2;
+    const spread = n ? Math.sqrt(Math.max(0, sumY2 / n - mean * mean)) : 0.1;
+
+    const avg = (t) =>
+      t.n
+        ? Contrast.toHex({ r: t.r / t.n, g: t.g / t.n, b: t.b / t.n })
+        : "#4a4a52";
+
+    return {
+      accent: pickAccent(buckets),
+      top: avg(bands[0]),
+      middle: avg(bands[1]),
+      bottom: avg(bands[2]),
+      overall: avg(bands[3]),
+      spread,
+    };
+  }
+
+  /**
+   * The colour in the picture most worth using as an accent.
+   *
+   * Scored on how much of the frame it covers and how chromatic it is, with
+   * near-black and near-white pushed down hard: they dominate most photographs
+   * by area, and neither survives being used as a UI accent. Chroma is measured
+   * against the channel maximum rather than as HSL saturation, so a dark but
+   * genuinely coloured region still competes with a large washed-out one.
+   */
+  function pickAccent(buckets) {
     let best = null,
       bestScore = -1;
     for (const e of buckets.values()) {
@@ -216,40 +325,63 @@
         b = e.b / e.n;
       const mx = Math.max(r, g, b),
         mn = Math.min(r, g, b);
+      const chroma = mx === 0 ? 0 : (mx - mn) / mx;
       const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-      const sat = mx === 0 ? 0 : (mx - mn) / mx;
-      const lumPen = lum < 0.06 || lum > 0.96 ? 0.08 : 1;
-      const score = e.n * (sat * sat * 3 + 0.05) * lumPen;
+      // Peaks around mid-lightness and falls away at both ends.
+      const usable = Math.max(0.04, 1 - Math.pow((lum - 0.5) / 0.5, 4));
+      const score = e.n * (chroma * chroma * 3 + 0.05) * usable;
       if (score > bestScore) {
         bestScore = score;
-        best = { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+        best = Contrast.toHex({ r, g, b });
       }
     }
-    return {
-      color: best || { r: 100, g: 100, b: 110 },
-      avgLum: ln ? (0.2126 * lr + 0.7152 * lg + 0.0722 * lb) / (ln * 255) : 0.5,
-    };
+    return best || "#6366f1";
   }
 
-  function applyExtracted(data) {
-    const { color, avgLum } = dominantColor(data);
-    const toHex = (c) =>
-      "#" + ((1 << 24) + (c.r << 16) + (c.g << 8) + c.b).toString(16).slice(1);
+  /**
+   * @param {boolean} toneOnly Record only the brightness measurements and leave
+   *   the accent alone - used to backfill a wallpaper that predates the tone
+   *   analysis, where re-deriving the accent would silently overwrite one the
+   *   user picked themselves.
+   */
+  function applyExtracted(data, size, toneOnly = false) {
+    const tone = analyzeWallpaper(data, size);
     const settings = StorageManager.getSettings();
-    delete settings.accentOverride;
-    const hex = toHex(color);
-    settings.accentColor = hex;
-    settings.wpExtractedAccent = hex;
-    if (settings.mode !== "system" && !settings.modeLocked) {
-      settings.mode = avgLum > 0.5 ? "light" : "dark";
+    if (!toneOnly) {
+      delete settings.accentOverride;
+      // The most characteristic colour in a photograph is very often unusable
+      // as an accent on its own - a night scene's is near-black, a snow
+      // scene's is near-white - so the hue is kept and its lightness is
+      // brought into the band a UI colour has to live in. Doing it here rather
+      // than at paint time means the swatch in Settings shows the colour that
+      // will actually be used.
+      const accent = Contrast.tint(
+        tone.accent,
+        Contrast.isLight(tone.overall) ? "light" : "dark",
+      );
+      settings.accentColor = accent;
+      settings.wpExtractedAccent = accent;
     }
-    settings.preset = "wallpaper";
+    settings.wpTone = {
+      top: tone.top,
+      middle: tone.middle,
+      bottom: tone.bottom,
+      overall: tone.overall,
+      spread: tone.spread,
+    };
+    if (!toneOnly && settings.mode !== "system" && !settings.modeLocked) {
+      // Which ink the picture as a whole calls for is the same question as
+      // which mode it wants, so it is answered by the same function the rest
+      // of the app uses rather than by a second brightness rule of its own.
+      settings.mode = Contrast.isLight(tone.overall) ? "light" : "dark";
+    }
+    if (!toneOnly) settings.preset = "wallpaper";
     StorageManager.save();
     applyTheme();
     renderSideSheetContent();
   }
 
-  async function autoExtractColor(rawMediaUrl, isVideo = false) {
+  async function autoExtractColor(rawMediaUrl, isVideo = false, toneOnly = false) {
     if (!rawMediaUrl) return;
     let mediaUrl = rawMediaUrl;
     if (typeof mediaUrl === "string" && mediaUrl.startsWith("ref:")) {
@@ -285,12 +417,10 @@
         const processVideoFrame = () => {
           try {
             const canvas = document.createElement("canvas");
-            canvas.width = 60;
-            canvas.height = 60;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(video, 0, 0, 60, 60);
-
-            applyExtracted(ctx.getImageData(0, 0, 60, 60).data);
+            canvas.width = canvas.height = SAMPLE;
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
+            ctx.drawImage(video, 0, 0, SAMPLE, SAMPLE);
+            applyExtracted(ctx.getImageData(0, 0, SAMPLE, SAMPLE).data, SAMPLE, toneOnly);
           } catch (err) {}
         };
 
@@ -327,12 +457,10 @@
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-          canvas.width = 60;
-          canvas.height = 60;
-          ctx.drawImage(img, 0, 0, 60, 60);
-
-          applyExtracted(ctx.getImageData(0, 0, 60, 60).data);
+          canvas.width = canvas.height = SAMPLE;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          ctx.drawImage(img, 0, 0, SAMPLE, SAMPLE);
+          applyExtracted(ctx.getImageData(0, 0, SAMPLE, SAMPLE).data, SAMPLE, toneOnly);
           if (isObjectUrl) URL.revokeObjectURL(blobUrl);
         } catch (e) {}
       };
@@ -386,14 +514,44 @@
       });
     };
     bindHomeToggle("wClockToggle", "clock");
+    bindHomeToggle("wGreetingToggle", "greeting");
     bindHomeToggle("wSearchToggle", "navSearch");
-    bindHomeToggle("wTodoToggle", "todo");
     bindHomeToggle("wWorkspaceToggle", "workspace");
+    bindHomeToggle("wDateToggle", "date");
     bindHomeToggle("wWeatherToggle", "weather");
     $("wPinnedLinksToggle")?.addEventListener("change", (e) => {
       settings.hidePinnedOnHome = !e.target.checked;
       StorageManager.saveSettings();
       WidgetsRenderer.applyWidgetVisibility();
+      HomeRenderer.render();
+    });
+
+    // Not `bindHomeToggle`: the task list is not painted by
+    // `applyWidgetVisibility` the way the other widgets are - it is rebuilt
+    // from the notes each time - so it needs the Home repaint as well.
+    $("wNotesTodosToggle")?.addEventListener("change", (e) => {
+      settings.widgets.notesTodos = e.target.checked;
+      StorageManager.saveSettings();
+      HomeRenderer.render();
+    });
+
+    $("wPinsPosition")?.addEventListener("change", (e) => {
+      const v = e.target.dataset?.value ?? e.target.value;
+      settings.pinsPosition = ["left", "right", "bottom"].includes(v) ? v : "center";
+      StorageManager.saveSettings();
+      WidgetsRenderer.applyWidgetVisibility();
+    });
+
+    $("wPinnedBoardsToggle")?.addEventListener("change", (e) => {
+      settings.widgets.pinnedBoards = e.target.checked;
+      StorageManager.saveSettings();
+      HomeRenderer.render();
+    });
+
+    $("wTaskCount")?.addEventListener("change", (e) => {
+      const v = Number(e.target.dataset?.value ?? e.target.value);
+      settings.homeTaskCount = v === 5 ? 5 : 3;
+      StorageManager.saveSettings();
       HomeRenderer.render();
     });
 
@@ -501,6 +659,49 @@
       $("stInterfaceOpacityVal").textContent = `${e.target.value}%`;
       StorageManager.saveSettings();
       paintNextFrame("theme", applyTheme);
+      // The surfaces still on Auto move with this slider, so their readouts
+      // have to follow rather than sit on stale numbers.
+      paintSurfaceLabels();
+    });
+
+    // Per-surface strength. Moving a slider pins that one surface; Auto drops
+    // the override so it follows the overall slider again.
+    const paintSurfaceLabels = () => {
+      const resolved = S.surfaceStrengths(settings);
+      const live = settings.surfaceOpacity || {};
+      document.querySelectorAll("[data-surface-val]").forEach((el) => {
+        const key = el.getAttribute("data-surface-val");
+        const val = Math.round(resolved[key] ?? 0);
+        el.textContent =
+          typeof live[key] === "number" ? `${val}%` : `Auto · ${val}%`;
+        const slider = document.querySelector(`[data-surface-slider="${key}"]`);
+        if (slider && document.activeElement !== slider)
+          slider.value = String(val);
+        const auto = document.querySelector(`[data-surface-auto="${key}"]`);
+        if (auto) auto.disabled = typeof live[key] !== "number";
+      });
+    };
+
+    document.querySelectorAll("[data-surface-slider]").forEach((slider) => {
+      slider.addEventListener("input", (e) => {
+        const key = e.target.getAttribute("data-surface-slider");
+        if (!settings.surfaceOpacity || typeof settings.surfaceOpacity !== "object")
+          settings.surfaceOpacity = {};
+        settings.surfaceOpacity[key] = parseInt(e.target.value, 10);
+        StorageManager.saveSettings();
+        paintNextFrame("theme", applyTheme);
+        paintSurfaceLabels();
+      });
+    });
+
+    document.querySelectorAll("[data-surface-auto]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const key = e.currentTarget.getAttribute("data-surface-auto");
+        if (settings.surfaceOpacity) delete settings.surfaceOpacity[key];
+        StorageManager.saveSettings();
+        applyTheme();
+        paintSurfaceLabels();
+      });
     });
 
     $("stSolidAmbient")?.addEventListener("change", (e) => {
@@ -519,110 +720,9 @@
     });
 
     $("btnExportPresetCode")?.addEventListener("click", exportPresetCode);
-    $("btnExportPresetFile")?.addEventListener("click", exportPresetFile);
 
-    $("stWpFit")?.addEventListener("change", (e) => {
-      settings.wallpaperFit = e.target.value;
-      StorageManager.saveSettings();
-      paintNextFrame("wallpaper", applyWallpaperStyle);
-    });
-
-    $("stWpZoom")?.addEventListener("input", (e) => {
-      settings.wallpaperZoom = parseInt(e.target.value);
-      const valEl = $("stWpZoomVal");
-      if (valEl) valEl.textContent = `${e.target.value}%`;
-      StorageManager.saveSettings();
-      paintNextFrame("wallpaper", applyWallpaperStyle);
-    });
-
-    $("stWpPosX")?.addEventListener("input", (e) => {
-      settings.wallpaperPosX = parseInt(e.target.value);
-      const valEl = $("stWpPosXVal");
-      if (valEl) valEl.textContent = `${e.target.value}%`;
-      StorageManager.saveSettings();
-      paintNextFrame("wallpaper", applyWallpaperStyle);
-    });
-
-    $("stWpPosY")?.addEventListener("input", (e) => {
-      settings.wallpaperPosY = parseInt(e.target.value);
-      const valEl = $("stWpPosYVal");
-      if (valEl) valEl.textContent = `${e.target.value}%`;
-      StorageManager.saveSettings();
-      paintNextFrame("wallpaper", applyWallpaperStyle);
-    });
-
-    $("stWpOverlayToggle")?.addEventListener("change", (e) => {
-      settings.wallpaperOverlay = e.target.checked;
-      const row = $("stWpOverlayOpacityRow");
-      if (row) row.style.display = e.target.checked ? "flex" : "none";
-      StorageManager.saveSettings();
-      paintNextFrame("overlay", applyWallpaperOverlay);
-    });
-
-    $("stWpOverlayOpacity")?.addEventListener("input", (e) => {
-      settings.wallpaperOverlayOpacity = parseInt(e.target.value);
-      const valEl = $("stWpOverlayOpacityVal");
-      if (valEl) valEl.textContent = `${e.target.value}%`;
-      StorageManager.saveSettings();
-      paintNextFrame("overlay", applyWallpaperOverlay);
-    });
-
-    $("stWpMuteToggle")?.addEventListener("change", (e) => {
-      settings.wallpaperMuted = e.target.checked;
-      StorageManager.saveSettings();
-      paintNextFrame("wallpaper", applyWallpaperStyle);
-    });
-
-    $("stWpVolume")?.addEventListener("input", (e) => {
-      settings.wallpaperVolume = parseFloat(e.target.value) / 100;
-      const valEl = $("stWpVolumeVal");
-      if (valEl) valEl.textContent = `${e.target.value}%`;
-      StorageManager.saveSettings();
-      paintNextFrame("wallpaper", applyWallpaperStyle);
-    });
-
-    $$(".wp-gallery-item").forEach((item) => {
-      item.addEventListener("click", (e) => {
-        if (e.target.closest(".wp-gallery-del")) return;
-        const val = item.dataset.wpVal;
-        const type = item.dataset.wpType;
-        applyWallpaper(type, val);
-        renderSideSheetContent();
-        ToastSystem.success("Wallpaper switched");
-      });
-    });
-
-    $$(".wp-gallery-del").forEach((btn) => {
-      btn.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        const val = btn.getAttribute("data-wp-del") || btn.dataset.wpDel;
-        if (!val) return;
-        data.wallpapers = (data.wallpapers || []).filter(
-          (w) => w.value !== val,
-        );
-        StorageManager.save();
-        if (StorageManager.isMediaRef(val)) {
-          await StorageManager.delMedia(StorageManager.refId(val));
-        }
-        if (settings.backgroundValue === val) {
-          const remaining =
-            data.wallpapers && data.wallpapers.length
-              ? data.wallpapers[data.wallpapers.length - 1]
-              : null;
-          if (remaining) {
-            applyWallpaper(remaining.type, remaining.value);
-          } else {
-            applyWallpaper(
-              "solid",
-              settings.solidSeed ||
-                (settings.mode === "light" ? "#f8fafc" : "#0d1117"),
-            );
-          }
-        }
-        renderSideSheetContent();
-        ToastSystem.info("Wallpaper removed");
-      });
-    });
+    // The wallpaper crop, dim, blur and gallery controls render in the
+    // Customize tab now, and are bound there - one copy of each.
 
     $("themeWpToggle")?.addEventListener("change", (e) => {
       const controls = $("themeWpControls");
@@ -775,7 +875,33 @@
     }
   }
 
+  /* Only surfaces that actually have a fill to strengthen.
+
+     "Tab bar" and "Top bar buttons" used to be listed here. Both bars lost
+     their backgrounds - the nav and the toolbar icons sit straight on the page
+     now - and nothing in the stylesheets reads `--topbar-opacity` or
+     `--widget-bg-alpha` any more. Two sliders that visibly did nothing were
+     worse than no sliders: they read as broken. Any value already stored for
+     those keys is left in place and simply ignored. */
+  const SURFACES = [
+    { key: "search", label: "Search bar" },
+    { key: "boards", label: "Boards and cards" },
+    { key: "notes", label: "Notepad" },
+    { key: "panels", label: "Panels and dialogs" },
+  ];
+
   function render(settings, data) {
+    const overallStrength = Math.round(S.overallStrength(settings));
+    const resolvedStrengths = S.surfaceStrengths(settings);
+    const overrides = settings.surfaceOpacity || {};
+    const hasOverride = (key) => typeof overrides[key] === "number";
+    const surfaceValue = (key) => Math.round(resolvedStrengths[key]);
+    // "Auto" rather than a bare number when a surface is still following the
+    // overall slider, so the two states are told apart at a glance.
+    const surfaceLabel = (key) =>
+      hasOverride(key) ? `${surfaceValue(key)}%` : `Auto · ${surfaceValue(key)}%`;
+    const surfaceOverrideCount = SURFACES.filter((sf) => hasOverride(sf.key)).length;
+
     const isSolidMode =
       settings.backgroundType === "solid" || !settings.backgroundType;
 
@@ -830,7 +956,7 @@
         : "";
 
     const homeVisibilityHtml = `
-      <div class="st-accordion is-expanded" data-accordion-key="home visibility">
+      <div class="st-accordion is-expanded" data-page="home" data-accordion-key="home visibility">
         <button class="st-accordion-header" type="button">
           <span class="st-group-title">Home visibility</span>
           <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -839,11 +965,18 @@
           <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
             <div class="st-row"><label class="st-label" for="stDisplayName">Your name</label><input type="text" id="stDisplayName" class="st-input" maxlength="24" placeholder="Optional" value="${escapeHtml(settings.displayName || "")}" /></div>
             <div class="st-row"><label class="st-label">Clock</label><input type="checkbox" id="wClockToggle" ${settings.widgets?.clock !== false ? "checked" : ""} /></div>
+            <div class="st-row"><label class="st-label" for="wGreetingToggle">Greeting</label><input type="checkbox" id="wGreetingToggle" ${settings.widgets?.greeting !== false ? "checked" : ""} /></div>
             <div class="st-row"><label class="st-label">Search bar</label><input type="checkbox" id="wSearchToggle" ${settings.widgets?.navSearch !== false ? "checked" : ""} /></div>
-            <div class="st-row"><label class="st-label">Task list</label><input type="checkbox" id="wTodoToggle" ${settings.widgets?.todo !== false ? "checked" : ""} /></div>
             <div class="st-row"><label class="st-label">App launcher</label><input type="checkbox" id="wWorkspaceToggle" ${settings.widgets?.workspace !== false ? "checked" : ""} /></div>
+            <div class="st-row"><label class="st-label">Date</label><input type="checkbox" id="wDateToggle" ${settings.widgets?.date ? "checked" : ""} /></div>
             <div class="st-row"><label class="st-label">Weather</label><input type="checkbox" id="wWeatherToggle" ${settings.widgets?.weather ? "checked" : ""} /></div>
             <div class="st-row"><label class="st-label">Pinned links</label><input type="checkbox" id="wPinnedLinksToggle" ${!settings.hidePinnedOnHome ? "checked" : ""} /></div>
+            <div class="st-row"><label class="st-label" for="wPinsPosition">Pinned links position</label>${CustomSelect.render({ id: "wPinsPosition", value: ["left", "right", "bottom"].includes(settings.pinsPosition) ? settings.pinsPosition : "center", options: [{ value: "center", label: "Under search" }, { value: "left", label: "Left side" }, { value: "right", label: "Right side" }, { value: "bottom", label: "Bottom" }], style: "width:160px;" })}</div>
+            <div class="st-row"><label class="st-label" for="wPinnedBoardsToggle">Pinned boards</label><input type="checkbox" id="wPinnedBoardsToggle" ${settings.widgets?.pinnedBoards !== false ? "checked" : ""} /></div>
+            <div class="st-hint">Open boards from the board button in your pinned links. To choose which boards show, pin them from a board's menu.</div>
+            <div class="st-row"><label class="st-label">Tasks from notes</label><input type="checkbox" id="wNotesTodosToggle" ${settings.widgets?.notesTodos !== false ? "checked" : ""} /></div>
+            <div class="st-row"><label class="st-label" for="wTaskCount">Tasks shown</label>${CustomSelect.render({ id: "wTaskCount", value: settings.homeTaskCount === 5 ? "5" : "3", options: [{ value: "3", label: "3 tasks" }, { value: "5", label: "5 tasks" }], style: "width:130px;" })}</div>
+            <div class="st-hint">Shows unchecked to-dos from your notes. Tick one to delete it - you can undo.</div>
           </div>
         </div>
       </div>`;
@@ -851,7 +984,7 @@
     let html = `
         <div class="st-container">
           ${homeVisibilityHtml}
-          <div class="st-accordion is-expanded" data-accordion-key="themes">
+          <div class="st-accordion is-expanded" data-page="presets" data-accordion-key="themes">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Presets <span class="st-group-note">${escapeHtml(activeName)}</span></span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -891,7 +1024,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded" data-accordion-key="theme and colours">
+          <div class="st-accordion is-expanded" data-page="themes" data-accordion-key="theme and colours">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Colours and background</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -921,9 +1054,22 @@
               <input type="color" id="myntColorPicker" class="st-color"
                      value="${/^#[0-9a-f]{6}$/i.test(settings.solidSeed || "") ? settings.solidSeed : settings.mode === "light" ? "#c7d2fe" : "#090a0f"}" />
             </div>
-            <div class="st-hint">Note: Base background colour applies when wallpaper is off.</div>
+            <div class="st-hint">Used when no wallpaper is set.</div>
+              </div>
+            </div>
+          </div>
 
-            <div style="border-top:1px solid var(--border-soft); padding-top:12px; margin-top:4px;">
+          <!-- The picker is authored here, beside the colours it replaces, but
+               it belongs to the Wallpaper page with the crop and blur controls
+               that act on whatever it loads. -->
+          <div class="st-accordion is-expanded" data-page="wallpaper" data-accordion-key="wallpaper source">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Wallpaper source</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
+            <div>
               <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px; padding:0;">
                 <input type="checkbox" id="themeWpToggle" ${!isSolidMode ? "checked" : ""} />
                 <span class="st-label" style="font-weight:600;">Use a wallpaper</span>
@@ -941,96 +1087,23 @@
                   </div>
                 </div>
 
-                <div class="st-accordion st-quick-wallpaper-advanced is-expanded">
-                  <button class="st-accordion-header" type="button">
-                    <span class="st-group-title">Position and crop</span>
-                    <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                  </button>
-                  <div class="st-accordion-body">
-                    <div class="st-card" style="display:flex; flex-direction:column; gap:8px;">
-                  <div class="st-row" style="padding:0; margin-bottom:8px;">
-                    <span class="st-label">Fit</span>
-                    ${CustomSelect.render({
-                      id: "stWpFit",
-                      value: settings.wallpaperFit || "cover",
-                      options: [
-                        { value: "cover", label: "Cover (Fill Screen)" },
-                        { value: "contain", label: "Contain (Fit Screen)" },
-                      ],
-                    })}
-                  </div>
-                  <div class="se-label" style="display:flex; justify-content:space-between;">
-                    <span>Zoom</span> <span id="stWpZoomVal">${settings.wallpaperZoom || 100}%</span>
-                  </div>
-                  <input type="range" class="se-slider" id="stWpZoom" min="10" max="500" step="5" value="${settings.wallpaperZoom || 100}" style="width:100%;" />
-
-                  <div class="se-label" style="display:flex; justify-content:space-between; margin-top:4px;">
-                    <span>Horizontal position</span> <span id="stWpPosXVal">${settings.wallpaperPosX ?? 50}%</span>
-                  </div>
-                  <input type="range" class="se-slider" id="stWpPosX" min="-300" max="300" step="1" value="${settings.wallpaperPosX ?? 50}" style="width:100%;" />
-
-                  <div class="se-label" style="display:flex; justify-content:space-between; margin-top:4px;">
-                    <span>Vertical position</span> <span id="stWpPosYVal">${settings.wallpaperPosY ?? 50}%</span>
-                  </div>
-                  <input type="range" class="se-slider" id="stWpPosY" min="-300" max="300" step="1" value="${settings.wallpaperPosY ?? 50}" style="width:100%;" />
-                    </div>
-                  </div>
-                </div>
-
-                <div class="st-quick-wallpaper-advanced" style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:10px;">
-                  <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px; padding:0;">
-                    <input type="checkbox" id="stWpOverlayToggle" ${settings.wallpaperOverlay ? "checked" : ""} />
-                    <span>Dim bright wallpapers</span>
-                  </label>
-                  <div class="st-hint">Bright wallpapers can wash out top icons. Turn this on to lay a dark overlay underneath.</div>
-                  <div id="stWpOverlayOpacityRow" style="display:${settings.wallpaperOverlay ? "flex" : "none"}; flex-direction:column; gap:4px;">
-                    <div class="se-label" style="display:flex; justify-content:space-between;">
-                      <span>Dim amount</span> <span id="stWpOverlayOpacityVal">${settings.wallpaperOverlayOpacity ?? 35}%</span>
-                    </div>
-                    <input type="range" class="se-slider" id="stWpOverlayOpacity" min="0" max="90" step="5" value="${settings.wallpaperOverlayOpacity ?? 35}" style="width:100%;" />
-                  </div>
-                </div>
-
-                ${
-                  settings.backgroundType === "video"
-                    ? `
-                <div class="st-quick-wallpaper-advanced" style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:10px;">
-                  <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px; padding:0;">
-                    <input type="checkbox" id="stWpMuteToggle" ${settings.wallpaperMuted !== false ? "checked" : ""} />
-                    <span>Mute video</span>
-                  </label>
-                  <div class="se-label" style="display:flex; justify-content:space-between;">
-                    <span>Volume</span> <span id="stWpVolumeVal">${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}%</span>
-                  </div>
-                  <input type="range" class="se-slider" id="stWpVolume" min="0" max="100" step="5" value="${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}" style="width:100%;" />
-                </div>`
-                    : ""
-                }
-
-                ${
-                  data.wallpapers && data.wallpapers.length
-                    ? `
-                <div class="st-quick-wallpaper-advanced" style="border-top:1px solid var(--border-soft); padding-top:10px;">
-                  <div class="st-label" style="margin-bottom:6px;">Saved wallpapers</div>
-                  <div class="wp-gallery-grid">
-                    ${data.wallpapers
-                      .map(
-                        (w) => `
-                      <div class="wp-gallery-item ${w.value === settings.backgroundValue ? "active" : ""}" data-wp-val="${escapeHtml(w.value)}" data-wp-type="${w.type}">
-                        <div class="wp-gallery-thumb" data-wp-thumb="${escapeHtml(w.value)}" data-wp-thumb-type="${w.type}"></div>
-                        <button class="wp-gallery-del" data-wp-del="${escapeHtml(w.value)}" title="Delete wallpaper">&times;</button>
-                      </div>
-                    `,
-                      )
-                      .join("")}
-                  </div>
-                </div>
-              `
-                    : ""
-                }
                 </div>
               </div>
+              </div>
+            </div>
+          </div>
 
+          <!-- Surface strength, the ambient wash and performance mode all
+               describe how the interface itself is painted, so they sit with
+               shape and type on the Appearance page rather than with the
+               colours that happen to feed them. -->
+          <div class="st-accordion is-expanded" data-page="appearance" data-accordion-key="interface background">
+            <button class="st-accordion-header" type="button">
+              <span class="st-group-title">Interface background</span>
+              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="st-accordion-body">
+              <div class="st-card" style="display:flex; flex-direction:column; gap:14px;">
             ${
               isSolidMode
                 ? `
@@ -1040,7 +1113,7 @@
                 <input type="checkbox" id="stSolidAmbient" ${settings.solidAmbient !== false ? "checked" : ""} />
                 <span class="st-label">Ambient colour wash</span>
               </label>
-              <div class="st-hint">Adds soft pools of your accent colour so a plain fill has some depth instead of looking flat.</div>
+              <div class="st-hint">Adds a soft glow of your accent colour to a plain background.</div>
             </div>`
                 : ""
             }
@@ -1048,10 +1121,41 @@
             <div class="st-subgroup">
               <div class="st-subhead">Interface background</div>
               <div class="st-slider-row">
-                <div class="se-label"><span>Background strength</span> <span id="stInterfaceOpacityVal">${settings.interfaceOpacity ?? Math.round((settings.boardOpacity ?? 0.08) * 100)}%</span></div>
-                <input type="range" class="se-slider" id="stInterfaceOpacity" min="0" max="100" step="1" value="${settings.interfaceOpacity ?? Math.round((settings.boardOpacity ?? 0.08) * 100)}" />
+                <div class="se-label"><span>Overall strength</span> <span id="stInterfaceOpacityVal" data-slider-val="stInterfaceOpacity" data-slider-suffix="%">${overallStrength}%</span></div>
+                <input type="range" class="se-slider" id="stInterfaceOpacity" min="0" max="100" step="1" value="${overallStrength}" />
               </div>
-              <div class="st-hint">Adjusts all filled interface surfaces while automatically preserving extra contrast for notes and small controls.</div>
+              <div class="st-hint">How solid boards, the search bar and panels are. 100% is fully solid.</div>
+
+              <div class="st-accordion" data-accordion-key="per-surface strength">
+                <button class="st-accordion-header" type="button">
+                  <span class="st-group-title">Per-surface strength${
+                    surfaceOverrideCount
+                      ? ` <span class="st-group-note">${surfaceOverrideCount} custom</span>`
+                      : ""
+                  }</span>
+                  <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="st-accordion-body">
+                  <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="st-hint">Each one follows the slider above until you change it. Press <b>Auto</b> to reset it.</div>
+                    ${SURFACES.map(
+                      (sf) => `
+                      <div class="st-slider-row" data-surface-row="${sf.key}">
+                        <div class="se-label">
+                          <span>${sf.label}</span>
+                          <span class="st-surface-val" data-surface-val="${sf.key}" data-slider-val-key="${sf.key}" data-slider-suffix="%">${surfaceLabel(sf.key)}</span>
+                        </div>
+                        <div class="st-surface-controls">
+                          <input type="range" class="se-slider" data-surface-slider="${sf.key}" min="0" max="100" step="1" value="${surfaceValue(sf.key)}" />
+                          <button type="button" class="st-surface-auto" data-surface-auto="${sf.key}"${
+                            hasOverride(sf.key) ? "" : " disabled"
+                          }>Auto</button>
+                        </div>
+                      </div>`,
+                    ).join("")}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="st-subgroup">
@@ -1060,14 +1164,14 @@
                 <input type="checkbox" id="stPerformanceMode" ${settings.performanceMode ? "checked" : ""} />
                 <span class="st-label">Performance mode</span>
               </label>
-              <div class="st-hint">Reduces motion, shadows and decorative layers. Video wallpapers pause on their current frame.</div>
+              <div class="st-hint">Less animation and fewer effects. Video wallpapers pause.</div>
             </div>
 
-
+              </div>
             </div>
           </div>
 
-          <div class="st-accordion is-expanded">
+          <div class="st-accordion is-expanded" data-page="presets">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Share your theme</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>

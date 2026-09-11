@@ -298,6 +298,7 @@
               ),
             );
         },
+        { tone: "info", confirmLabel: "Import" },
       );
     });
 
@@ -336,6 +337,9 @@
 
     $("stRemoteFavicons")?.addEventListener("change", (e) => {
       settings.remoteFavicons = e.target.checked;
+      // Marks this as a deliberate choice, so a future change to the default
+      // never quietly reverses it.
+      settings.remoteFaviconsChoice = e.target.checked;
       StorageManager.saveSettings();
       BoardRenderer.renderBoards();
       HomeRenderer.renderPinned();
@@ -363,7 +367,7 @@
       if (!file) return;
       showConfirm(
         "Restore backup",
-        `This replaces all current boards, notes, todos and settings with the contents of "${file.name}". Your current data will be exported first as a safety copy. Continue?`,
+        `This replaces all current boards, notes and settings with the contents of "${file.name}". Your current data will be exported first as a safety copy. Continue?`,
         () => {
           StorageManager.exportJSON()
             .then(() =>
@@ -381,6 +385,7 @@
               ),
             );
         },
+        { tone: "warning", confirmLabel: "Restore" },
       );
     });
 
@@ -404,6 +409,7 @@
             ToastSystem.info("Boards restored");
           });
         },
+        { confirmLabel: "Clear boards" },
       );
     });
 
@@ -442,6 +448,7 @@
           StorageManager.resetAll();
           window.location.reload();
         },
+        { confirmLabel: "Reset everything" },
       );
     });
   }
@@ -449,7 +456,7 @@
   function render(settings, data) {
     return `
         <div class="st-container">
-          <div class="st-accordion is-expanded" data-accordion-key="data management">
+          <div class="st-accordion is-expanded" data-page="backup" data-accordion-key="data management">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Backup and import</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -474,7 +481,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded">
+          <div class="st-accordion is-expanded" data-page="maintenance">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Maintenance</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -487,7 +494,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded">
+          <div class="st-accordion is-expanded" data-page="reset">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Danger zone</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -500,7 +507,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded">
+          <div class="st-accordion is-expanded" data-page="privacy">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Privacy</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -512,7 +519,7 @@
                     <label class="st-label" for="stRemoteFavicons">Load icons from the web</label>
                     <input type="checkbox" id="stRemoteFavicons" ${settings.remoteFavicons ? "checked" : ""} />
                   </div>
-                  <div class="st-hint">Off by default. When on, sites you bookmark are sent to DuckDuckGo and Google to fetch nicer icons. Your browser's own cached icons are always used first.</div>
+                  <div class="st-hint">Shows real website icons. Only the site's name (like github.com) is sent to DuckDuckGo or Google. Turn off to keep everything on your device.</div>
                 </div>
               </div>
             </div>

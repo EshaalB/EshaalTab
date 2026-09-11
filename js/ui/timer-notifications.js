@@ -5,14 +5,56 @@ const todayKey = () => new Date().toLocaleDateString("sv");
 const ToastSystem = (() => {
   const MAX_TOASTS = 3;
 
-  function show(message, type = "info", duration = 3000) {
+  /* One glyph per outcome, drawn rather than typed: a tick, an "i" and a cross
+     read at 16px where the equivalent characters in the UI font do not, and
+     they stay the same shape whatever typeface the user has chosen. */
+  const GLYPHS = {
+    success: '<polyline points="20 6 9 17 4 12"/>',
+    error: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+    warning: '<path d="M12 8v5"/><path d="M12 17h.01"/>',
+    info: '<path d="M12 16v-5"/><path d="M12 8h.01"/>',
+    loading: '<path d="M21 12a9 9 0 1 1-6.2-8.5"/>',
+  };
+
+  const glyphFor = (type) => GLYPHS[type] || GLYPHS.info;
+
+  function markup(type, title, detail, actionLabel) {
+    return `
+      <span class="toast-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+             stroke-linecap="round" stroke-linejoin="round">${glyphFor(type)}</svg>
+      </span>
+      <span class="toast-body">
+        <span class="toast-text">${escapeHtml(title)}</span>
+        ${detail ? `<span class="toast-detail">${escapeHtml(detail)}</span>` : ""}
+        ${
+          actionLabel
+            ? `<span class="toast-actions">
+                 <button class="toast-action-btn" type="button">${escapeHtml(actionLabel)}</button>
+                 <button class="toast-dismiss-btn" type="button">Dismiss</button>
+               </span>`
+            : ""
+        }
+      </span>
+      <button class="toast-close" type="button" aria-label="Dismiss">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>`;
+  }
+
+  /**
+   * @param {string} message Headline. Says what happened, in a few words.
+   * @param {string} type    success | error | warning | info | loading.
+   * @param {number} duration 0 keeps it up until it is dismissed.
+   * @param {string} [detail] Optional second line: why, or what to do next.
+   */
+  function show(message, type = "info", duration = 3000, detail = "") {
     const container = $("toastContainer");
     if (!container) return;
 
     const existing = [...container.querySelectorAll(".toast-msg")].find(
       (t) => t.dataset.msg === message && !t.classList.contains("is-exiting"),
     );
-
     if (existing) {
       if (existing.__timer) clearTimeout(existing.__timer);
       if (duration > 0)
@@ -25,50 +67,55 @@ const ToastSystem = (() => {
     const toast = document.createElement("div");
     toast.className = `toast-msg ${type}`;
     toast.dataset.msg = message;
-
-    setSafeHTML(
-      toast,
-      `<span class="toast-text">${escapeHtml(message)}</span>`,
-    );
-
+    toast.setAttribute("role", type === "error" ? "alert" : "status");
+    setSafeHTML(toast, markup(type, message, detail));
+    wire(toast, duration, 1500);
     container.appendChild(toast);
 
-    if (duration > 0) {
-      toast.__timer = setTimeout(() => dismiss(toast), duration);
-      toast.addEventListener("mouseenter", () => {
-        if (toast.__timer) clearTimeout(toast.__timer);
-      });
-      toast.addEventListener("mouseleave", () => {
-        toast.__timer = setTimeout(() => dismiss(toast), 1500);
-      });
-    }
-
     return createController(toast);
+  }
+
+  /** Shared hover-pause, close-button and auto-dismiss wiring. */
+  function wire(toast, duration, resumeDelay) {
+    toast
+      .querySelector(".toast-close")
+      ?.addEventListener("click", () => dismiss(toast));
+
+    if (duration <= 0) return;
+    toast.__timer = setTimeout(() => dismiss(toast), duration);
+    toast.addEventListener("mouseenter", () => {
+      if (toast.__timer) clearTimeout(toast.__timer);
+    });
+    toast.addEventListener("mouseleave", () => {
+      toast.__timer = setTimeout(() => dismiss(toast), resumeDelay);
+    });
   }
 
   function createController(toast) {
     return {
       dismiss: () => dismiss(toast),
-      update: (newMsg, newType = "success", newDuration = 3000) => {
+      update: (newMsg, newType = "success", newDuration = 3000, detail = "") => {
         if (!toast || !toast.parentNode) return;
         toast.className = `toast-msg ${newType}`;
         toast.dataset.msg = newMsg;
-        const textEl = toast.querySelector(".toast-text");
-        if (textEl) textEl.textContent = newMsg;
-        if (toast.__timer) clearTimeout(toast.__timer);
-        if (newDuration > 0) {
-          toast.__timer = setTimeout(() => dismiss(toast), newDuration);
-        }
+        setSafeHTML(toast, markup(newType, newMsg, detail));
+        wire(toast, newDuration, 1500);
       },
     };
   }
 
+  /**
+   * A toast the user can act on - undoing a delete, retrying a failed save.
+   * The action sits under the message rather than beside it, so a long label
+   * and a long message stop competing for the same line.
+   */
   function action(
     message,
     actionLabel,
     onAction,
     type = "info",
     duration = 6000,
+    detail = "",
   ) {
     const container = $("toastContainer");
     if (!container) return;
@@ -78,36 +125,18 @@ const ToastSystem = (() => {
     const toast = document.createElement("div");
     toast.className = `toast-msg ${type} has-action`;
     toast.dataset.msg = message;
+    toast.setAttribute("role", "status");
+    setSafeHTML(toast, markup(type, message, detail, actionLabel));
 
-    setSafeHTML(
-      toast,
-      `
-      <span class="toast-text">${escapeHtml(message)}</span>
-      <button class="toast-action-btn">${escapeHtml(actionLabel)}</button>
-    `,
-    );
-
+    toast.querySelector(".toast-action-btn")?.addEventListener("click", () => {
+      onAction();
+      dismiss(toast);
+    });
+    toast
+      .querySelector(".toast-dismiss-btn")
+      ?.addEventListener("click", () => dismiss(toast));
+    wire(toast, duration, 2000);
     container.appendChild(toast);
-
-    if (duration > 0) {
-      toast.__timer = setTimeout(() => dismiss(toast), duration);
-    }
-
-    const btn = toast.querySelector(".toast-action-btn");
-    if (btn) {
-      btn.addEventListener("click", () => {
-        onAction();
-        dismiss(toast);
-      });
-    }
-
-    toast.addEventListener("mouseenter", () => {
-      if (toast.__timer) clearTimeout(toast.__timer);
-    });
-
-    toast.addEventListener("mouseleave", () => {
-      toast.__timer = setTimeout(() => dismiss(toast), 2000);
-    });
 
     return createController(toast);
   }
@@ -118,7 +147,7 @@ const ToastSystem = (() => {
     if (toast.__timer) clearTimeout(toast.__timer);
     setTimeout(() => {
       if (toast.parentNode) toast.remove();
-    }, 100);
+    }, 160);
   }
 
   function enforceLimit(container) {
@@ -134,13 +163,13 @@ const ToastSystem = (() => {
     show,
     action,
     dismiss,
-    default: (msg, dur) => show(msg, "default", dur),
-    success: (msg, dur) => show(msg, "success", dur),
-    error: (msg, dur) => show(msg, "error", dur),
-    warning: (msg, dur) => show(msg, "warning", dur),
-    warn: (msg, dur) => show(msg, "warning", dur),
-    info: (msg, dur) => show(msg, "info", dur),
-    loading: (msg) => show(msg, "loading", 0),
+    default: (msg, dur, detail) => show(msg, "info", dur, detail),
+    success: (msg, dur, detail) => show(msg, "success", dur, detail),
+    error: (msg, dur, detail) => show(msg, "error", dur, detail),
+    warning: (msg, dur, detail) => show(msg, "warning", dur, detail),
+    warn: (msg, dur, detail) => show(msg, "warning", dur, detail),
+    info: (msg, dur, detail) => show(msg, "info", dur, detail),
+    loading: (msg, detail) => show(msg, "loading", 0, detail),
   };
 })();
 
@@ -160,6 +189,8 @@ const PomodoroMode = (() => {
   let timeLeft = workDuration;
   let running = false;
   let intervalId = null;
+  let endTimeoutId = null;
+  let deadline = null;
   let displayMode = "ms";
   const WHEEL_ROW = 36;
   const wheelScrollBehavior = () =>
@@ -168,6 +199,8 @@ const PomodoroMode = (() => {
       : "smooth";
   let wheelHours = 0;
   let wheelMinutes = 25;
+  // Where focus was before the overlay opened, so closing it puts the user back.
+  let lastFocus = null;
 
   function closeWheelPicker(restoreFocus = false) {
     const picker = $("pomoWheelPicker");
@@ -292,7 +325,7 @@ const PomodoroMode = (() => {
 
   function setDisplayMode(mode, save = true) {
     displayMode = mode === "hm" ? "hm" : "ms";
-    $$("#pomoPresetRow .et-pomo-display-switch button").forEach((button) => {
+    $$(".et-pomo-display-switch button").forEach((button) => {
       const active = button.dataset.mode === displayMode;
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", String(active));
@@ -308,19 +341,34 @@ const PomodoroMode = (() => {
     flipClock?.addEventListener("click", toggle);
     resetBtn?.addEventListener("click", reset);
 
+    // A chip clicked with the pointer keeps DOM focus afterwards, and the
+    // overlay's key handler deliberately ignores keys aimed at a button - so
+    // space did nothing after picking a duration until you clicked the page to
+    // move focus off the chip. Releasing focus on pointer activation puts the
+    // shortcut back immediately.
+    //
+    // `detail > 0` is the pointer/click case. Keyboard activation reports 0,
+    // and there focus must stay put: a keyboard user needs the chip to remain
+    // focused, and space re-pressing a focused button is the correct behaviour.
+    const releaseAfterPointer = (btn, e) => {
+      if (e.detail > 0) btn.blur();
+    };
+
     $$("#pomoPresetRow .et-pomo-preset-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (e) => {
         setDuration(parseInt(btn.dataset.mins, 10) || 25, "preset");
+        releaseAfterPointer(btn, e);
       });
     });
 
     buildWheel($("pomoHoursWheel"), 16);
     buildWheel($("pomoMinutesWheel"), 59);
     $("pomoCustomBtn")?.addEventListener("click", openWheelPicker);
-    $$("#pomoPresetRow .et-pomo-display-switch button").forEach((button) => {
-      button.addEventListener("click", () =>
-        setDisplayMode(button.dataset.mode),
-      );
+    $$(".et-pomo-display-switch button").forEach((button) => {
+      button.addEventListener("click", (e) => {
+        setDisplayMode(button.dataset.mode);
+        releaseAfterPointer(button, e);
+      });
     });
     $("pomoWheelCancel")?.addEventListener("click", () =>
       closeWheelPicker(true),
@@ -356,7 +404,16 @@ const PomodoroMode = (() => {
         closeWheelPicker(true);
         return;
       }
-      if (e.target?.matches?.("input, select, button")) return;
+      // Typing keeps its keys. A button keeps Space only when it was reached by
+      // keyboard - then Space is how you press it. A button that was merely
+      // clicked (a preset, the display switch) should not swallow the start key.
+      if (e.target?.matches?.("input, select, textarea, [contenteditable]")) return;
+      if (
+        e.key === " " &&
+        e.target?.matches?.("button") &&
+        e.target.matches(":focus-visible")
+      )
+        return;
       if (e.target?.closest?.(".et-pomo-wheel-picker")) return;
       if (e.key === " ") {
         e.preventDefault();
@@ -375,7 +432,7 @@ const PomodoroMode = (() => {
     d.pomodoro = running
       ? {
           running: true,
-          endsAt: Date.now() + timeLeft * 1000,
+          endsAt: deadline ?? Date.now() + timeLeft * 1000,
           workDuration,
           displayMode,
         }
@@ -417,17 +474,94 @@ const PomodoroMode = (() => {
     if (overlay) {
       overlay.classList.toggle("is-running", running);
     }
+    // Stopping always brings the room back up; there is nothing to be calm
+    // about once the countdown is not moving.
+    if (!running) wake();
+    else armZen();
+  }
+
+  // ------------------------------------------------------------- zen mode
+  //
+  // A focus timer that keeps a reset button, four preset chips and a close
+  // cross in your eyeline is not a focus timer, it is a dashboard. So once the
+  // countdown is running and the pointer has been still for a moment, every
+  // control fades out and only the clock is left, breathing. Any movement or
+  // keypress brings the controls straight back - nothing is unreachable, it is
+  // just out of the way.
+  //
+  // The idle timer runs only while the overlay is open and counting, and it is
+  // a single timeout rather than a poll, so an idle Zen screen costs nothing.
+
+  const ZEN_IDLE_MS = 3000;
+  let zenTimer = null;
+  let zenWired = false;
+
+  function armZen() {
+    if (!overlay) return;
+    clearTimeout(zenTimer);
+    if (!running || !overlay.classList.contains("open")) return;
+    zenTimer = setTimeout(() => {
+      if (running && overlay.classList.contains("open"))
+        overlay.classList.add("is-zen");
+    }, ZEN_IDLE_MS);
+  }
+
+  function wake() {
+    if (!overlay) return;
+    clearTimeout(zenTimer);
+    overlay.classList.remove("is-zen");
+  }
+
+  function wireZen() {
+    if (zenWired || !overlay) return;
+    zenWired = true;
+    // `pointermove` fires at the pointer's sampling rate - well over a hundred
+    // times a second on a fast mouse - and re-arming a timeout on every one of
+    // those is a hundred timer churns a second to answer a question that only
+    // changes every few seconds. So the idle countdown is re-armed at most
+    // ten times a second; waking is still immediate, because that is the part
+    // a person can feel.
+    let lastRouse = 0;
+    const rouse = () => {
+      if (overlay.classList.contains("is-zen")) {
+        wake();
+        lastRouse = 0;
+      }
+      const now = performance.now();
+      if (now - lastRouse < 100) return;
+      lastRouse = now;
+      armZen();
+    };
+    ["pointermove", "pointerdown", "keydown", "wheel"].forEach((evt) =>
+      overlay.addEventListener(evt, rouse, { passive: true }),
+    );
   }
 
   function enter() {
     if (!overlay) return;
+    /* Focus moves into the timer. It used to stay on the toolbar button that
+       opened it - and the Space handler below deliberately leaves Space alone
+       when a button has focus, so the one key the screen tells you to press
+       did nothing until you clicked somewhere on the page first. */
+    if (!overlay.contains(document.activeElement))
+      lastFocus = document.activeElement;
     overlay.classList.add("open");
+    if (!overlay.hasAttribute("tabindex")) overlay.setAttribute("tabindex", "-1");
+    overlay.focus({ preventScroll: true });
+    wireZen();
     updateSessions();
     updateRunningUI();
   }
   function exit() {
+    // Back to whatever opened the timer, once this call has finished closing it.
+    queueMicrotask(() => {
+      if (lastFocus && lastFocus.isConnected)
+        lastFocus.focus({ preventScroll: true });
+      lastFocus = null;
+    });
     if (!overlay) return;
     closeWheelPicker();
+    wake();
     overlay.classList.remove("open");
     pause();
   }
@@ -439,22 +573,72 @@ const PomodoroMode = (() => {
     running = true;
     updateRunningUI();
     if (statusText) statusText.textContent = "Focusing";
-    if (intervalId) clearInterval(intervalId);
-    intervalId = setInterval(() => {
-      timeLeft--;
-      updateDisplay();
-      if (timeLeft <= 0) complete();
-    }, 1000);
+    disarmTicker();
+    // Anchored to the wall clock rather than counted in interval ticks. A
+    // background tab has its timers throttled to once a minute or worse, so a
+    // `timeLeft--` per tick makes a 25 minute session take far longer than 25
+    // minutes - the countdown visibly crawls the moment the tab loses focus.
+    deadline = Date.now() + timeLeft * 1000;
+    armTicker();
     updateDisplay();
     persistState();
   }
+
+  /**
+   * Runs the countdown at display rate only while the tab is on screen.
+   *
+   * The remaining time is derived from `deadline`, so ticking in a hidden tab
+   * repaints a display nobody can see four times a second. What a hidden tab
+   * still owes the user is the *completion* - so instead of a fast interval it
+   * holds a single timeout aimed at the deadline. Both paths land on `tick()`,
+   * which is idempotent, so the two can never disagree about the time left.
+   */
+  function armTicker() {
+    disarmTicker();
+    if (!running || deadline == null) return;
+
+    if (document.visibilityState === "visible") {
+      intervalId = setInterval(tick, 250);
+    } else {
+      // A hidden tab's timeouts are throttled but still fire, and a late
+      // completion is corrected the moment the tab is looked at again.
+      endTimeoutId = setTimeout(tick, Math.max(0, deadline - Date.now()) + 50);
+    }
+  }
+
+  function disarmTicker() {
+    if (intervalId) clearInterval(intervalId);
+    if (endTimeoutId) clearTimeout(endTimeoutId);
+    intervalId = null;
+    endTimeoutId = null;
+  }
+
+  // Catch the countdown up the instant the tab is on screen again rather than
+  // waiting for the next throttled wake-up, and swap between the two tickers.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") tick();
+    armTicker();
+  });
+
+  function tick() {
+    if (!running || deadline == null) return;
+    const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    if (left === timeLeft) return;
+    timeLeft = left;
+    updateDisplay();
+    if (timeLeft <= 0) complete();
+  }
   function pause() {
     const was = running;
+    if (was && deadline != null) {
+      timeLeft = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      updateDisplay();
+    }
+    deadline = null;
     running = false;
     updateRunningUI();
     if (statusText) statusText.textContent = "Paused";
-    if (intervalId) clearInterval(intervalId);
-    intervalId = null;
+    disarmTicker();
     if (was) persistState();
   }
   function reset() {
@@ -483,7 +667,8 @@ const PomodoroMode = (() => {
     updateDisplay();
     updateRunningUI();
     persistState();
-    ToastSystem.success("Session complete");
+    // No toast: the timer already says "Session complete" and plays the chime,
+    // and a second notice for the same moment was only noise.
   }
   function updateDisplay() {
     const firstValue =
@@ -508,9 +693,10 @@ const PomodoroMode = (() => {
     const today = todayKey();
     const data = StorageManager.getData();
     const count = (data.focus && data.focus[today]) || 0;
-    sessionsCount.textContent = count
-      ? `${count} session${count === 1 ? "" : "s"} today`
-      : "No sessions yet today";
+    // Shown from the second session on. A count of one - or none - says
+    // nothing the timer in front of you does not.
+    sessionsCount.hidden = count < 2;
+    sessionsCount.textContent = count >= 2 ? `${count} sessions today` : "";
   }
   function playChime() {
     try {

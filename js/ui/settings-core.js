@@ -1,7 +1,11 @@
 "use strict";
 
 const SettingsRenderer = (() => {
-  let activeTab = "theme";
+  // Which subject the sheet is showing. The tab modules are an authoring
+  // detail underneath this - a page may need one of them or two.
+  let activePage = "appearance";
+  // Queued scroll target, consumed by the next paint. Used by deep links such
+  // as "open settings at the wallpaper picker".
   let pendingSection = null;
 
   const PRESETS = [
@@ -298,8 +302,10 @@ const SettingsRenderer = (() => {
   const TAB_SCRIPTS = {
     theme: "js/ui/settings-theme.js",
     widgets: "js/ui/settings-widgets.js",
+    search: "js/ui/settings-search.js",
     data: "js/ui/settings-data.js",
     help: "js/ui/settings-help.js",
+    support: "js/ui/settings-support.js",
   };
   const tabModules = Object.create(null);
   const tabPromises = Object.create(null);
@@ -353,11 +359,172 @@ const SettingsRenderer = (() => {
     });
   }
 
+  /**
+   * The settings pages, in sidebar order.
+   *
+   * A page is a subject, not a module. "Wallpaper" means every wallpaper
+   * control there is, wherever it happens to be authored - the picker lives in
+   * the theme module and the crop and blur controls in the widgets module, and
+   * the user should never have to know or care. Each page names the tab modules
+   * whose markup it needs; everything rendered is then filtered down to the
+   * blocks tagged `data-page` with this page's id, so one module can contribute
+   * sections to several pages without any of them being rendered twice.
+   *
+   * `find` carries the words someone might search for that are not in the
+   * title. Adding a setting later is a row here plus a `data-page` attribute.
+   */
+  const PAGES = [
+    {
+      group: "Customize",
+      items: [
+        {
+          id: "appearance",
+          label: "Appearance",
+          tabs: ["widgets", "theme"],
+          find: "corner radius rounded sharp font typeface board width size interface background strength opacity transparency surface performance ambient wash",
+        },
+        {
+          id: "themes",
+          label: "Themes",
+          tabs: ["theme"],
+          find: "light dark system mode accent colour color two-tone secondary base background scheme",
+        },
+        {
+          id: "presets",
+          label: "Presets",
+          tabs: ["theme"],
+          find: "preset share copy code export import theme pastel neon",
+        },
+        {
+          id: "wallpaper",
+          label: "Wallpaper",
+          tabs: ["theme", "widgets"],
+          find: "photo video upload url blur soften dim crop zoom position fit gallery saved mute volume",
+        },
+        {
+          id: "home",
+          label: "Home page",
+          tabs: ["theme", "widgets"],
+          find: "widgets clock greeting name date weather search bar pinned links launcher time format 12 24 hour shadow",
+        },
+        {
+          id: "search",
+          label: "Search engines",
+          tabs: ["search"],
+          find: "engine default browser google duckduckgo yandex yahoo bing chatgpt claude gemini perplexity brave youtube reddit pinterest quora ai",
+        },
+      ],
+    },
+    {
+      group: "Your data",
+      items: [
+        { id: "backup", label: "Backup & import", tabs: ["data"], find: "export json bookmarks raindrop restore" },
+        { id: "maintenance", label: "Maintenance", tabs: ["data"], find: "duplicates repair wallpaper cache" },
+        { id: "privacy", label: "Privacy", tabs: ["data"], find: "favicons remote tracking permissions" },
+        { id: "reset", label: "Reset", tabs: ["data"], find: "clear boards wipe delete everything factory danger" },
+      ],
+    },
+    {
+      group: "About",
+      items: [
+        { id: "help", label: "Help", tabs: ["help"], find: "guide how to shortcuts keyboard" },
+        { id: "support", label: "Support", tabs: ["support"], find: "discord instagram contact feedback bug" },
+      ],
+    },
+  ];
+
+  /* Deep links from elsewhere in the app still name the old tabs. */
+  const TAB_TO_PAGE = {
+    theme: "themes",
+    widgets: "appearance",
+    search: "search",
+    data: "backup",
+    help: "help",
+    support: "support",
+  };
+
+  const allPages = () => PAGES.flatMap((g) => g.items);
+  const pageById = (id) => allPages().find((p) => p.id === id);
+
+  function renderSettingsNav(filter = "") {
+    const nav = $("settingsNav");
+    if (!nav) return;
+    const q = filter.trim().toLowerCase();
+    // The group name comes from the group, not the item - matching a section by
+    // the heading it sits under is half of what makes searching for "data" or
+    // "customize" work.
+    const match = (it, group) =>
+      !q ||
+      it.label.toLowerCase().includes(q) ||
+      group.toLowerCase().includes(q) ||
+      (it.find || "").includes(q);
+
+    const groups = PAGES.map((g) => ({
+      ...g,
+      items: g.items.filter((it) => match(it, g.group)),
+    })).filter((g) => g.items.length);
+
+    if (!groups.length) {
+      setSafeHTML(
+        nav,
+        `<p class="et-set-nav-empty">Nothing matches &ldquo;${escapeHtml(filter.trim())}&rdquo;.</p>`,
+      );
+      return;
+    }
+
+    setSafeHTML(
+      nav,
+      groups
+        .map(
+          (g) => `
+        <div class="et-set-nav-group">
+          <div class="et-set-nav-group-title">${escapeHtml(g.group)}</div>
+          ${g.items
+            .map(
+              (it) => `<button type="button" class="et-set-nav-item" data-page="${it.id}">${escapeHtml(it.label)}</button>`,
+            )
+            .join("")}
+        </div>`,
+        )
+        .join(""),
+    );
+    markActiveNavItem();
+  }
+
+  /** Opens a page from a sidebar row, a search hit or a deep link. */
+  function goToPage(id) {
+    const page = pageById(id);
+    if (!page) return;
+    rememberSettingsScroll(activePage);
+    activePage = id;
+    const settings = StorageManager.getSettings();
+    settings.lastSettingsPage = id;
+    StorageManager.saveSettings();
+    markActiveNavItem();
+    renderSideSheetContent(false);
+  }
+
+  /**
+   * Marks the one sidebar row that is on screen.
+   *
+   * A tab can render several sections, so "same tab" is not enough to identify
+   * a row - matching on that alone lit up four rows at once. When no section
+   * has been chosen (the sheet was opened cold on its last tab) the first row
+   * belonging to that tab stands in, because that is what the page opens at.
+   */
+  function markActiveNavItem() {
+    $$("#settingsNav .et-set-nav-item").forEach((el) => {
+      const on = el.dataset.page === activePage;
+      el.classList.toggle("is-active", on);
+      if (on) el.setAttribute("aria-current", "true");
+      else el.removeAttribute("aria-current");
+    });
+  }
+
   function initSideSheet() {
     const overlay = $("sidesheetOverlay");
     const closeBtn = $("sidesheetCloseBtn");
     const topBtn = $("topSettingsBtn");
-    const tabBtns = $$(".et-set-tab");
 
     if (topBtn) topBtn.addEventListener("click", () => openSideSheet(null));
     if (closeBtn) closeBtn.addEventListener("click", closeSideSheet);
@@ -382,7 +549,16 @@ const SettingsRenderer = (() => {
         if (header) {
           const acc = header.closest(".st-accordion");
           const isExp = acc.classList.contains("is-expanded");
+          const ownBody = header.nextElementSibling;
+          const isBody = ownBody?.classList.contains("st-accordion-body");
+          // Measured before the class flip below changes which CSS rule is
+          // active, so the slide has a real starting height to animate from
+          // - measuring after would read the height it is becoming.
+          const fromHeight = isBody
+            ? ownBody.getBoundingClientRect().height
+            : null;
           acc.classList.toggle("is-expanded", !isExp);
+          if (isBody) slideHeight(ownBody, !isExp, "is-animating", fromHeight);
           const settings = StorageManager.getSettings();
           if (
             !settings.collapsedSettingsAccordions ||
@@ -392,28 +568,58 @@ const SettingsRenderer = (() => {
           }
           const key = accordionKey(header);
           const collapsed = new Set(
-            settings.collapsedSettingsAccordions[activeTab] || [],
+            settings.collapsedSettingsAccordions[activePage] || [],
           );
-          if (isExp) collapsed.add(key);
-          else collapsed.delete(key);
-          settings.collapsedSettingsAccordions[activeTab] = [...collapsed];
+          const expanded = new Set(
+            settings.expandedSettingsAccordions?.[activePage] || [],
+          );
+          // Recorded in both directions. Only tracking what was collapsed made
+          // "never touched" and "deliberately expanded" the same state, so a
+          // section that ships collapsed was force-opened on every load.
+          if (isExp) {
+            collapsed.add(key);
+            expanded.delete(key);
+          } else {
+            collapsed.delete(key);
+            expanded.add(key);
+          }
+          settings.collapsedSettingsAccordions[activePage] = [...collapsed];
+          if (
+            !settings.expandedSettingsAccordions ||
+            typeof settings.expandedSettingsAccordions !== "object"
+          ) {
+            settings.expandedSettingsAccordions = {};
+          }
+          settings.expandedSettingsAccordions[activePage] = [...expanded];
           StorageManager.saveSettings();
         }
       });
     }
 
-    tabBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        rememberSettingsScroll(activeTab);
-        tabBtns.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        activeTab = btn.dataset.tab;
-        const settings = StorageManager.getSettings();
-        settings.lastSettingsTab = activeTab;
-        StorageManager.saveSettings();
-        renderSideSheetContent(false);
-      });
+    const nav = $("settingsNav");
+    nav?.addEventListener("click", (e) => {
+      const item = e.target.closest(".et-set-nav-item");
+      if (item) goToPage(item.dataset.page);
     });
+
+    const search = $("settingsSearch");
+    search?.addEventListener("input", (e) => renderSettingsNav(e.target.value));
+    search?.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        e.target.value = "";
+        renderSettingsNav("");
+        return;
+      }
+      // Enter goes to the first thing left in the list, so a search that has
+      // narrowed to one answer does not also need a click to accept it.
+      if (e.key === "Enter") {
+        const first = nav?.querySelector(".et-set-nav-item");
+        if (first) goToPage(first.dataset.page);
+      }
+    });
+
+    renderSettingsNav("");
   }
 
   let sheetReturnFocus = null;
@@ -425,18 +631,19 @@ const SettingsRenderer = (() => {
 
     sheetReturnFocus = document.activeElement;
     const settings = StorageManager.getSettings();
-    activeTab =
-      tab && ["theme", "widgets", "data", "help"].includes(tab)
-        ? tab
-        : settings.lastSettingsTab || "theme";
+    // Callers still name a tab ("theme") or a page ("wallpaper"); both resolve
+    // to a page, so old deep links keep working.
+    const asked = TAB_TO_PAGE[tab] || tab;
+    activePage = pageById(asked)
+      ? asked
+      : pageById(settings.lastSettingsPage || "")
+        ? settings.lastSettingsPage
+        : "appearance";
     pendingSection = section;
-    settings.lastSettingsTab = activeTab;
+    settings.lastSettingsPage = activePage;
     StorageManager.saveSettings();
 
-    $$(".et-set-tab").forEach((b) => {
-      b.classList.toggle("active", b.dataset.tab === activeTab);
-    });
-
+    renderSettingsNav($("settingsSearch")?.value || "");
     renderSideSheetContent(false);
     overlay.classList.remove("closing");
     overlay.classList.add("open");
@@ -452,7 +659,7 @@ const SettingsRenderer = (() => {
     if (sheetReturnFocus && document.contains(sheetReturnFocus))
       sheetReturnFocus.focus();
     sheetReturnFocus = null;
-    rememberSettingsScroll(activeTab);
+    rememberSettingsScroll(activePage);
 
     if (overlay) {
       overlay.classList.add("closing");
@@ -497,63 +704,128 @@ const SettingsRenderer = (() => {
     StorageManager.saveSettings();
   }
 
-  function paintTab(mod, tab, token, savedScrollTop) {
+  /**
+   * Paints one page.
+   *
+   * A page may be authored across two tab modules, so each one it needs is
+   * rendered in turn and appended, then bound. Every section carries a
+   * `data-page`; anything not tagged for this page is dropped, so a module that
+   * contributes to three pages still only ever renders once per paint and the
+   * user sees exactly the subject they asked for.
+   */
+  function paintPage(mods, page, token, savedScrollTop) {
     const body = $("sidesheetBody");
-    if (!body || token !== renderToken || activeTab !== tab) return;
+    if (!body || token !== renderToken || activePage !== page) return;
     const settings = StorageManager.getSettings();
     const data = StorageManager.getData();
-    setSafeHTML(body, mod.render(settings, data));
-    const collapsed = new Set(
-      (settings.collapsedSettingsAccordions?.[tab] || []).map((v) =>
-        String(v).toLowerCase(),
-      ),
-    );
-    body.querySelectorAll(".st-accordion").forEach((acc) => {
-      const header = acc.querySelector(".st-accordion-header");
-      acc.classList.toggle("is-expanded", !collapsed.has(accordionKey(header)));
+
+    body.replaceChildren();
+    for (const mod of mods) {
+      const holder = document.createElement("div");
+      setSafeHTML(holder, mod.render(settings, data));
+      body.append(...holder.childNodes);
+    }
+
+    // Sections belonging to another page are removed rather than hidden: a
+    // hidden duplicate still answers `getElementById`, so a binding meant for
+    // the visible copy could silently attach to an off-page one.
+    body.querySelectorAll("[data-page]").forEach((el) => {
+      if (el.dataset.page !== page) el.remove();
     });
-    mod.bind(settings, data);
+    // A container left holding nothing is a stack of padding with no content.
+    body.querySelectorAll(".st-container").forEach((el) => {
+      if (!el.children.length) el.remove();
+    });
+
+    const lower = (list) =>
+      new Set((list || []).map((v) => String(v).toLowerCase()));
+    const collapsed = lower(settings.collapsedSettingsAccordions?.[page]);
+    const expanded = lower(settings.expandedSettingsAccordions?.[page]);
+    body.querySelectorAll(".st-accordion").forEach((acc) => {
+      // `querySelector` would reach into a nested accordion when the outer one
+      // has no header of its own, which would key the two together.
+      const header = acc.querySelector(":scope > .st-accordion-header");
+      const key = accordionKey(header);
+      // An accordion nobody has touched keeps whatever the markup asked for.
+      if (collapsed.has(key)) acc.classList.remove("is-expanded");
+      else if (expanded.has(key)) acc.classList.add("is-expanded");
+    });
+
+    mods.forEach((mod) => mod.bind(settings, data));
     CustomSelect.initAll(body);
+    SliderValueEditor.wire(body);
     hydrateGalleryThumbs(body);
     body.scrollTop = Math.max(0, savedScrollTop || 0);
-    if (pendingSection === "wallpaper" && tab === "theme") {
+    revealSection(body, page);
+    markActiveNavItem();
+  }
+
+  /**
+   * Opens and scrolls to whichever section was asked for, then forgets it.
+   *
+   * Was a single hardcoded case for the wallpaper card. Every sidebar row and
+   * every search hit needs the same behaviour, so it looks the section up by
+   * the key the accordion already carries rather than by knowing what is in it.
+   */
+  function revealSection(body, page) {
+    if (!pendingSection) return;
+
+    if (pendingSection === "wallpaper") {
       const target = $("themeWpToggle")?.closest(".st-card");
-      const accordion = target?.closest(".st-accordion");
-      if (accordion) accordion.classList.add("is-expanded");
+      target?.closest(".st-accordion")?.classList.add("is-expanded");
       target?.scrollIntoView({ block: "center" });
       pendingSection = null;
+      return;
     }
+
+    const acc = [...body.querySelectorAll(".st-accordion")].find(
+      (el) => accordionKey(el.querySelector(".st-accordion-header")) === pendingSection,
+    );
+    if (acc) {
+      acc.classList.add("is-expanded");
+      const inner = acc.querySelector(".st-accordion-body");
+      if (inner) inner.style.height = "auto";
+      acc.scrollIntoView({ block: "start" });
+      body.scrollTop = Math.max(0, body.scrollTop - 12);
+    }
+    pendingSection = null;
   }
 
   function renderSideSheetContent(preserveScroll = true) {
     const body = $("sidesheetBody");
     if (!body) return;
 
-    const tab = activeTab;
+    const page = activePage;
+    const spec = pageById(page);
+    if (!spec) return;
     const settings = StorageManager.getSettings();
     const savedScrollTop = preserveScroll
       ? body.scrollTop
-      : settings.settingsScrollPositions?.[tab] || 0;
+      : settings.settingsScrollPositions?.[page] || 0;
     const token = ++renderToken;
 
-    const cached = tabModules[tab];
-    if (cached) {
-      paintTab(cached, tab, token, savedScrollTop);
+    // Everything this page needs already in memory: paint without a frame of
+    // "Loading", which is the common case once a module has been fetched.
+    if (spec.tabs.every((t) => tabModules[t])) {
+      paintPage(
+        spec.tabs.map((t) => tabModules[t]),
+        page,
+        token,
+        savedScrollTop,
+      );
       return;
     }
 
     setSafeHTML(
       body,
       '<div class="st-tab-status" role="status" aria-live="polite">' +
-        '<span class="st-tab-spinner" aria-hidden="true"></span><span>Loading\u2026</span></div>',
+        '<span class="st-tab-spinner" aria-hidden="true"></span><span>Loading…</span></div>',
     );
 
-    loadTab(tab)
-      .then((mod) => {
-        paintTab(mod, tab, token, savedScrollTop);
-      })
+    Promise.all(spec.tabs.map(loadTab))
+      .then((mods) => paintPage(mods, page, token, savedScrollTop))
       .catch(() => {
-        if (token !== renderToken || activeTab !== tab) return;
+        if (token !== renderToken || activePage !== page) return;
         setSafeHTML(
           body,
           '<div class="st-tab-status st-tab-error" role="alert">' +
@@ -580,6 +852,64 @@ const SettingsRenderer = (() => {
         }
       } catch {}
     }
+  }
+
+  /** The overall interface strength, 0-100, with the legacy key folded in. */
+  function overallStrength(settings) {
+    const legacy =
+      typeof settings.boardOpacity === "number" ? settings.boardOpacity * 100 : 8;
+    const raw =
+      typeof settings.interfaceOpacity === "number"
+        ? settings.interfaceOpacity
+        : legacy;
+    return Math.max(0, Math.min(100, raw));
+  }
+
+  /**
+   * Resolves each interface surface to a concrete strength, 0-100.
+   *
+   * The overall slider is a promise: 0% is fully transparent and 100% fully
+   * opaque. Surfaces that carry small text (notes, widgets, the topbar) want a
+   * little more body than a board card at the same setting, but that boost has
+   * to fade out towards both ends - otherwise 0% is not really transparent and
+   * 100% is reached early.
+   *
+   * There is one slider now. The per-surface overrides that used to sit under
+   * it were six more ways to end up with unreadable text, for a distinction
+   * most people never wanted to draw; the relationships between the surfaces
+   * are what this curve is for.
+   */
+  function surfaceStrengths(settings) {
+    const t = overallStrength(settings) / 100;
+    // Peaks mid-slider and vanishes at both ends.
+    const lift = (amount) => (t + amount * t * (1 - t) * 4) * 100;
+    const auto = {
+      boards: t * 100,
+      topbar: lift(0.04),
+      search: lift(0.04),
+      notes: lift(0.06),
+      widgets: lift(0.08),
+      // Panels, popovers and dialogs sit *over* the page rather than being part
+      // of it, and they carry the densest text in the app. They stay solid
+      // unless the user asks otherwise, so dragging the overall slider down for
+      // a glassier home page does not also make the settings sheet unreadable.
+      panels: 100,
+    };
+    // A surface listed in `surfaceOpacity` opts out of the curve: the override
+    // is an absolute strength, taken literally, because someone who reached for
+    // one surface wants that number and not that number plus a boost.
+    const overrides = settings.surfaceOpacity || {};
+    const out = {};
+    for (const key of Object.keys(auto)) {
+      out[key] = Math.max(
+        0,
+        Math.min(
+          100,
+          typeof overrides[key] === "number" ? overrides[key] : auto[key],
+        ),
+      );
+    }
+    return out;
   }
 
   function resolveMode() {
@@ -985,86 +1315,19 @@ const SettingsRenderer = (() => {
     const settings = StorageManager.getSettings();
     const p = presetById(settings.preset);
     const el = document.documentElement.style;
+
     PRESETS.forEach((x) => x.cls && document.body.classList.remove(x.cls));
 
-    const RADIUS_VARS = ["--r-xs", "--r-sm", "--r-md", "--r-lg", "--r-xl", "--r-pill"];
-    let override =
-      settings.cornerRadius && settings.cornerRadius !== "default"
-        ? settings.cornerRadius
-        : p && p.radius
-          ? p.radius
-          : null;
-
-    if (override === "circle" || override === "9999px") {
-      override = "16px";
-    }
-
-    if (override === "0px") {
-      RADIUS_VARS.forEach((v) => el.setProperty(v, "0px"));
-      el.setProperty("--radius", "0px");
-      document.body.classList.add("radius-sharp");
-      document.body.classList.remove("tiles-circle", "radius-round");
-    } else if (override === "8px") {
-      document.body.classList.remove("radius-sharp", "tiles-circle", "radius-round");
-      el.setProperty("--r-xs", "4px");
-      el.setProperty("--r-sm", "6px");
-      el.setProperty("--r-md", "8px");
-      el.setProperty("--r-lg", "10px");
-      el.setProperty("--r-xl", "12px");
-      el.setProperty("--r-pill", "12px");
-      el.setProperty("--radius", "8px");
-    } else if (override === "16px" || override === "round") {
-      document.body.classList.remove("radius-sharp");
-      document.body.classList.add("tiles-circle", "radius-round");
-      el.setProperty("--r-xs", "6px");
-      el.setProperty("--r-sm", "10px");
-      el.setProperty("--r-md", "14px");
-      el.setProperty("--r-lg", "16px");
-      el.setProperty("--r-xl", "20px");
-      el.setProperty("--r-pill", "9999px");
-      el.setProperty("--radius", "16px");
-    } else if (override) {
-      document.body.classList.remove("radius-sharp", "tiles-circle", "radius-round");
-      RADIUS_VARS.forEach((v) => el.setProperty(v, override));
-      el.setProperty("--radius", override);
-    } else {
-      document.body.classList.remove("radius-sharp", "tiles-circle", "radius-round");
-      RADIUS_VARS.forEach((v) => el.removeProperty(v));
-      el.removeProperty("--radius");
-    }
+    const shape = cornerStyle(settings.cornerRadius || (p && p.radius));
+    CORNER_STYLES.forEach((c) => c.cls.forEach((k) => document.body.classList.remove(k)));
+    shape.cls.forEach((k) => document.body.classList.add(k));
+    Object.entries(shape.vars).forEach(([k, v]) => el.setProperty(k, v));
+    el.setProperty("--radius", shape.value);
     if (p && p.cls) document.body.classList.add(p.cls);
 
-    if (settings.fontFamily === "geometric") {
-      document.body.classList.remove("font-handwriting");
-      el.setProperty("--font-app", "'Outfit', system-ui, sans-serif");
-    } else if (settings.fontFamily === "rounded") {
-      document.body.classList.remove("font-handwriting");
-      el.setProperty("--font-app", "'Lexend', system-ui, sans-serif");
-    } else if (settings.fontFamily === "monospace") {
-      document.body.classList.remove("font-handwriting");
-      el.setProperty("--font-app", "'JetBrains Mono', monospace");
-    } else if (settings.fontFamily === "serif") {
-      document.body.classList.remove("font-handwriting");
-      el.setProperty("--font-app", "'Lora', Georgia, serif");
-    } else if (settings.fontFamily === "slab") {
-      document.body.classList.remove("font-handwriting");
-      el.setProperty("--font-app", "'Roboto Slab', Georgia, serif");
-    } else if (settings.fontFamily === "sans-serif") {
-      document.body.classList.remove("font-handwriting");
-      el.setProperty(
-        "--font-app",
-        "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      );
-    } else if (settings.fontFamily === "handwriting") {
-      el.setProperty("--font-app", "'Patrick Hand', 'Comic Neue', cursive");
-      document.body.classList.add("font-handwriting");
-    } else {
-      document.body.classList.remove("font-handwriting");
-      el.setProperty(
-        "--font-app",
-        "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      );
-    }
+    const face = appFont(settings.fontFamily);
+    document.body.classList.toggle("font-handwriting", face.cls === "font-handwriting");
+    el.setProperty("--font-app", face.stack);
 
     WidgetsRenderer.applyClockAppearance(settings);
   }
@@ -1101,7 +1364,7 @@ const SettingsRenderer = (() => {
    *    chroma up across the whole ramp.
    *
    * @param {string} [bg] Background the pair is read against, so the tuned
-   *   stop goes through the same contrast pass as the accent itself — nudging
+   *   stop goes through the same contrast pass as the accent itself - nudging
    *   a hue can push a stop under AA, and a label has to stay readable at
    *   both ends of the ramp, not just the one it was checked against.
    * @returns {{from:string,to:string}} Ordered stops, lighter first.
@@ -1110,8 +1373,15 @@ const SettingsRenderer = (() => {
     const a = hexToHsl(primary);
     const b = hexToHsl(secondary);
 
-    const MAX_HUE_TRAVEL = 45;
-    const MAX_LIGHT_TRAVEL = 0.16;
+    /* How far the second stop may sit from the first. These were 45deg and
+       0.16, tuned back when the ramp interpolated through sRGB and anything
+       wider went grey in the middle. The ramp runs in OKLab now, which stays
+       chromatic across the transit, so the clamp no longer has to protect the
+       midpoint - only the composition. Widening it is what lets a deliberately
+       chosen second colour actually show up instead of being pulled back onto
+       the first and rendering as one flat colour twice. */
+    const MAX_HUE_TRAVEL = 110;
+    const MAX_LIGHT_TRAVEL = 0.26;
 
     // Signed shortest distance around the wheel, so a red->magenta pair does
     // not travel the long way through green.
@@ -1123,15 +1393,20 @@ const SettingsRenderer = (() => {
       Math.min(MAX_LIGHT_TRAVEL, b.l - a.l),
     );
 
-    // Keep the second stop's saturation near the first. A vivid stop next to a
-    // washed-out one looks like a rendering error rather than a choice.
-    const sat = Math.max(a.s * 0.75, Math.min(a.s * 1.25, b.s));
+    /* Keep the second stop in the same register as the first - a vivid stop
+       next to a washed-out one looks like a rendering error rather than a
+       choice - but band it around the *pair* rather than pinning it to the
+       primary. The old rule multiplied the primary's saturation, so a near-grey
+       primary forced the secondary grey too and every pairing involving a
+       muted colour came out muddy whatever the user picked. A floor keeps the
+       ramp from collapsing when both are desaturated. */
+    const sat = Math.max(0.25, Math.min(Math.max(a.s, b.s), (a.s + b.s) / 2 + 0.18));
 
     let tuned = hslToHex(a.h + dh, sat, a.l + dl);
     if (bg) tuned = accentTokens(tuned, bg).ui;
 
     // The label colour is picked once, from the primary, but it has to stay
-    // legible everywhere along the ramp — the far stop is a background too.
+    // legible everywhere along the ramp - the far stop is a background too.
     // So the tuned stop is mixed back toward the primary until the ink clears
     // AA against it.
     //
@@ -1144,7 +1419,11 @@ const SettingsRenderer = (() => {
     const base = hexToRgb(primary);
     const far = hexToRgb(tuned);
     const STEPS = 12;
-    for (let i = 1; i <= STEPS && contrastRatio(tuned, ink) < INK_MIN_CONTRAST; i++) {
+    for (
+      let i = 1;
+      i <= STEPS && Math.abs(Contrast.lc(ink, tuned)) < INK_MIN_LC;
+      i++
+    ) {
       const t = i / STEPS;
       const mix = (c1, c2) => Math.round(c2 + (c1 - c2) * t);
       tuned = `#${[
@@ -1166,7 +1445,7 @@ const SettingsRenderer = (() => {
    *
    * Custom properties accept almost any token sequence, so an unsupported
    * `in oklab` would sail into `--accent-fill` and only fail later, at the
-   * `background: var(--accent-fill)` that uses it — painting nothing at all.
+   * `background: var(--accent-fill)` that uses it - painting nothing at all.
    * The support question is settled once, here.
    */
   const SUPPORTS_OKLAB_GRADIENT = (() => {
@@ -1238,6 +1517,21 @@ const SettingsRenderer = (() => {
     );
   }
 
+  /**
+   * The ground a surface that carries its *own* colour is built on.
+   *
+   * `--board-rgb` is deliberately tinted with the theme accent, which is right
+   * for anything that should follow the theme - but wrong for a board the user
+   * has given a colour of its own. Mixing a red board into a blue-tinted ground
+   * produces a muddy purple that is neither colour, which is exactly the "my
+   * board colour got blended with the accent" complaint. Boards with a colour
+   * mix into this neutral instead, so the only hue in the result is the one
+   * that was picked.
+   */
+  function setNeutralGround(el, isLight) {
+    el.setProperty("--board-neutral-rgb", isLight ? "247, 248, 250" : "18, 19, 24");
+  }
+
   function applyWallpaperStyle() {
     const settings = StorageManager.getSettings();
     const photoBg = $("photo-bg");
@@ -1267,6 +1561,28 @@ const SettingsRenderer = (() => {
     }
   }
 
+  /**
+   * Darkens the edges of the wallpaper and leaves the middle alone.
+   *
+   * A photo is usually brightest where the clock sits, and the ink measurement
+   * then has to work hardest exactly where the largest text is. A vignette buys
+   * that contrast back without dimming the picture as a whole the way the
+   * overlay does - the subject stays lit and only the corners give way. It is
+   * one radial gradient on a layer that already exists, so it costs nothing to
+   * have switched on.
+   */
+  function applyWallpaperVignette() {
+    const settings = StorageManager.getSettings();
+    const on =
+      !!settings.wallpaperVignette &&
+      ["image", "video"].includes(settings.backgroundType);
+    document.body.classList.toggle("wp-vignette-on", on);
+    document.documentElement.style.setProperty(
+      "--wp-vignette-opacity",
+      String(Math.max(0, Math.min(100, settings.wallpaperVignetteAmount ?? 45)) / 100),
+    );
+  }
+
   function applyWallpaperOverlay() {
     const settings = StorageManager.getSettings();
     document.body.classList.toggle(
@@ -1277,6 +1593,169 @@ const SettingsRenderer = (() => {
       "--wp-overlay-opacity",
       (settings.wallpaperOverlayOpacity ?? 35) / 100,
     );
+  }
+
+  /**
+   * Blurs the wallpaper itself rather than laying anything over it, so a busy
+   * photo stops competing with the text without being darkened as well. The
+   * filter goes on the two background layers only - putting it on a wrapper
+   * would blur the interface along with the picture.
+   */
+  /* Radius, in pixels, that 100% blur means. Past roughly this the picture has
+     stopped being a picture and the extra cost buys nothing but a slower
+     paint, so the slider spends its whole range where the change is visible. */
+  const BLUR_MAX_PX = 26;
+
+  /**
+   * Blur strength as a percentage of "as blurred as this is worth going",
+   * rather than as a raw pixel radius.
+   *
+   * Two things were harsh about the old control. It was labelled in pixels,
+   * which is a number about the implementation rather than about the picture -
+   * nobody knows what 12px of blur looks like until they try it. And it was
+   * linear, so the first third of the slider went from sharp to unrecognisable
+   * and the rest was mush; the useful range - a photo softened just enough to
+   * read text over - lived in about four pixels near the bottom.
+   *
+   * The curve fixes the second problem: raising the fraction to 1.8 spends most
+   * of the travel in the gentle end, where the differences are actually worth
+   * choosing between, while still reaching full blur at 100%. A straight square
+   * pushed too far the other way and left the bottom quarter of the slider
+   * doing nothing visible at all.
+   */
+  const blurRadius = (percent) =>
+    BLUR_MAX_PX * Math.pow(Math.max(0, Math.min(100, percent)) / 100, 1.8);
+
+  function applyWallpaperBlur() {
+    const settings = StorageManager.getSettings();
+    const on = !!settings.wallpaperBlur;
+    const px = on ? blurRadius(settings.wallpaperBlurAmount ?? 40) : 0;
+
+    document.body.classList.toggle("wp-blur-on", on);
+    const el = document.documentElement.style;
+    el.setProperty("--wp-blur-amount", `${px.toFixed(1)}px`);
+    // A blur samples past the edge of its own element, so an un-compensated
+    // one leaves a feathered grey border around the viewport - which is what
+    // "harsh" looked like at the top of the old slider, where a fixed 1.06
+    // scale could not cover a 40px radius. Overscanning by three radii on
+    // every side keeps the edge off screen at any strength, and costs nothing
+    // at zero.
+    const shortest = Math.min(window.innerWidth, window.innerHeight) || 1;
+    el.setProperty(
+      "--wp-blur-scale",
+      String(1 + (px * 6) / shortest),
+    );
+  }
+
+  /**
+   * Turns the measured wallpaper tone into the ink and halo that everything
+   * sitting over the picture is drawn with.
+   *
+   * Three grounds come out of the analysis - the strip under the toolbar, the
+   * middle where the clock and pins are, the strip under the date and weather -
+   * and each one picks its own ink through the same APCA call the rest of the
+   * app uses, so a bright sky gets dark icons while dark ground below it keeps
+   * light ones. The scrim is folded in first: a wallpaper the user has dimmed
+   * by 40% is a genuinely darker ground and choosing ink for the undimmed
+   * picture is choosing it for something nobody can see.
+   *
+   * The halo is the inverse of whatever ink won, and its weight is derived
+   * rather than fixed: busy pictures (high luminance spread) and grounds where
+   * the winning ink only just cleared the bar get a real shadow, flat ones get
+   * almost none. A uniform heavy halo is what made the toolbar look smudged on
+   * wallpapers that never needed one.
+   */
+  function applyWallpaperTone() {
+    const settings = StorageManager.getSettings();
+    const el = document.documentElement.style;
+    const tone = settings.wpTone;
+    const onWallpaper = ["image", "video"].includes(settings.backgroundType);
+    const bandVars = [
+      ["--wp-ink", "--wp-halo", "top"],
+      ["--wp-ink-mid", "--wp-halo-mid", "middle"],
+      ["--wp-ink-low", "--wp-halo-low", "bottom"],
+    ];
+
+    if (!onWallpaper || !tone) {
+      bandVars.forEach(([ink, halo]) => {
+        el.removeProperty(ink);
+        el.removeProperty(halo);
+        el.removeProperty(ink.replace("--wp-ink", "--wp-ink-rgb"));
+      });
+      document.body.classList.remove("wp-light");
+      applyTextHalo(settings, null);
+      return;
+    }
+
+    const scrim = settings.wallpaperOverlay
+      ? (settings.wallpaperOverlayOpacity ?? 35) / 100
+      : 0;
+    const dim = (hex) => {
+      const c = Contrast.toRgb(hex);
+      return Contrast.toHex({
+        r: c.r * (1 - scrim),
+        g: c.g * (1 - scrim),
+        b: c.b * (1 - scrim),
+      });
+    };
+
+    let worstLc = Infinity;
+    bandVars.forEach(([inkVar, haloVar, key]) => {
+      const ground = dim(tone[key] || tone.overall);
+      const ink = Contrast.ink(ground);
+      const light = ink === Contrast.INK_LIGHT;
+      el.setProperty(inkVar, ink);
+      // The same pair as rgb components, for the borders and plates that need
+      // the ink at a partial alpha rather than as a solid colour.
+      el.setProperty(
+        inkVar.replace("--wp-ink", "--wp-ink-rgb"),
+        light ? "255, 255, 255" : "20, 21, 26",
+      );
+      el.setProperty(haloVar, light ? "0, 0, 0" : "255, 255, 255");
+      worstLc = Math.min(worstLc, Math.abs(Contrast.lc(ink, ground)));
+    });
+
+    document.body.classList.toggle(
+      "wp-light",
+      Contrast.isLight(dim(tone.overall)),
+    );
+    applyTextHalo(settings, { spread: tone.spread, worstLc });
+  }
+
+  /* Weakest contrast, in Lc, a band can reach before the halo stops scaling up. */
+  const HALO_FLOOR_LC = 78;
+
+  /**
+   * Writes the halo the wallpaper text shadows are built from - derived from
+   * the picture when the user has not overridden it, and taken verbatim from
+   * their own colour and opacity the moment they have.
+   */
+  function applyTextHalo(settings, measured) {
+    const el = document.documentElement.style;
+    if (settings.wpShadowAuto === false || !measured) {
+      const hex = /^#[0-9a-f]{6}$/i.test(settings.wpShadowColor || "")
+        ? settings.wpShadowColor
+        : "#000000";
+      const { r, g, b } = Contrast.toRgb(hex);
+      el.setProperty("--wp-shadow-rgb", `${r}, ${g}, ${b}`);
+      el.setProperty(
+        "--wp-shadow-opacity",
+        String((settings.wpShadowOpacity ?? 60) / 100),
+      );
+      el.setProperty("--wp-shadow-blur", "20px");
+      return;
+    }
+
+    const marginal = Math.max(0, (HALO_FLOOR_LC - measured.worstLc) / HALO_FLOOR_LC);
+    const strength = Math.max(
+      0.1,
+      Math.min(0.6, 0.08 + measured.spread * 1.9 + marginal * 0.3),
+    );
+    el.setProperty("--wp-shadow-rgb", "var(--wp-halo-mid, 0, 0, 0)");
+    el.setProperty("--wp-shadow-opacity", strength.toFixed(3));
+    // A busier picture needs the halo spread wider as well as darker, or it
+    // reads as an outline rather than as separation.
+    el.setProperty("--wp-shadow-blur", `${Math.round(12 + strength * 16)}px`);
   }
 
   function applyTheme() {
@@ -1301,38 +1780,29 @@ const SettingsRenderer = (() => {
         performanceVideo.play().catch(() => {});
     }
     applyWallpaperOverlay();
+    applyWallpaperVignette();
+    applyWallpaperBlur();
+    applyWallpaperTone();
 
     const activeMode = resolveMode();
     const isLight = activeMode === "light";
     let solidBgColor = null;
 
-    const legacyStrength =
-      typeof settings.boardOpacity === "number"
-        ? settings.boardOpacity * 100
-        : 8;
-    const rawStrength = Math.max(
-      0,
-      Math.min(
-        100,
-        typeof settings.interfaceOpacity === "number"
-          ? settings.interfaceOpacity
-          : legacyStrength,
-      ),
-    );
-    const maxCap = 0.85;
-    const effectiveOpacity = (rawStrength / 100) * maxCap;
+    const strengths = surfaceStrengths(settings);
+    const px = (v) => String(Number(Math.max(0, Math.min(1, v / 100)).toFixed(4)));
 
-    if (rawStrength === 0) {
-      el.setProperty("--board-opacity", "0");
-      el.setProperty("--topbar-opacity", "0");
-      el.setProperty("--notes-opacity", "0");
-      el.setProperty("--widget-bg-alpha", "0");
-    } else {
-      el.setProperty("--board-opacity", String(Number(effectiveOpacity.toFixed(4))));
-      el.setProperty("--topbar-opacity", String(Number(Math.min(maxCap, effectiveOpacity + 0.04).toFixed(4))));
-      el.setProperty("--notes-opacity", String(Number(Math.min(maxCap, effectiveOpacity + 0.06).toFixed(4))));
-      el.setProperty("--widget-bg-alpha", String(Number(Math.min(maxCap, effectiveOpacity + 0.08).toFixed(4))));
-    }
+    el.setProperty("--board-opacity", px(strengths.boards));
+    el.setProperty("--board-opacity-pct", `${strengths.boards}%`);
+    // At full strength a board is painted as a plain solid colour. The mix
+    // toward transparent is exact in most engines, but a browser that cannot
+    // evaluate it drops the whole background and the board turned see-through
+    // at the very setting that asks for it to be solid.
+    document.body.classList.toggle("boards-opaque", strengths.boards >= 100);
+    el.setProperty("--search-opacity", px(strengths.search));
+    el.setProperty("--notes-opacity", px(strengths.notes));
+    // No `--topbar-opacity` / `--widget-bg-alpha`: neither has a consumer since
+    // the tab bar and toolbar buttons stopped having a fill of their own.
+    el.setProperty("--panel-opacity", px(strengths.panels));
 
     document.body.classList.toggle(
       "ambient-on",
@@ -1362,16 +1832,28 @@ const SettingsRenderer = (() => {
       }
       solidBgColor = p.bg;
 
-      const { ui, ink } = accentTokens(accent, p.bg);
+      const { ui, ink, display } = accentTokens(accent, p.bg, presetSwatch(settings));
       const accRgb = hexToRgb(ui);
       el.setProperty("--accent-color", ui);
       el.setProperty("--accent-ink", ink);
+      el.setProperty("--accent-display", display);
+      // The deeper body-text step: the brighter display step washed logos out
+      // on white tiles in pastel themes.
+      applyIconTint(ink);
       el.setProperty("--accent-contrast", contrastText(ui));
       applyAccent2(el, ui, settings.accent2, p.bg, !!settings.accentGradient);
       el.setProperty("--accent-rgb", `${accRgb.r}, ${accRgb.g}, ${accRgb.b}`);
 
       const sRgb = hexToRgb(p.surface);
       el.setProperty("--board-rgb", `${sRgb.r}, ${sRgb.g}, ${sRgb.b}`);
+      setNeutralGround(el, isLight);
+      // The wallpaper branch writes `--page-bg` and only clears it in its own
+      // light case, so switching to a solid background left whatever the last
+      // wallpaper render had put there. Solid mode owns the page colour while
+      // it is on, and derives it from the base colour for both modes - which is
+      // what makes a chosen base survive a light/dark switch instead of
+      // reverting to the stock grey.
+      el.setProperty("--page-bg", p.bg);
 
       const bodyEl = document.body.style;
       bodyEl.setProperty("--board-text", p.onSurface);
@@ -1386,10 +1868,18 @@ const SettingsRenderer = (() => {
       const accent =
         settings.accentOverride || settings.accentColor || "#6366f1";
 
-      const { ui, ink } = accentTokens(accent, isLight ? "#ffffff" : "#090a0f");
+      const { ui, ink, display } = accentTokens(
+        accent,
+        isLight ? "#ffffff" : "#090a0f",
+        presetSwatch(settings),
+      );
       const accRgb = hexToRgb(ui);
       el.setProperty("--accent-color", ui);
       el.setProperty("--accent-ink", ink);
+      el.setProperty("--accent-display", display);
+      // The deeper body-text step: the brighter display step washed logos out
+      // on white tiles in pastel themes.
+      applyIconTint(ink);
       el.setProperty("--accent-contrast", contrastText(ui));
       applyAccent2(
         el,
@@ -1414,6 +1904,7 @@ const SettingsRenderer = (() => {
             b: Math.round(a.b * 0.12 + 24 * 0.88),
           };
       el.setProperty("--board-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+      setNeutralGround(el, isLight);
 
       // In dark mode, tint the obsidian slate background and panel with a clean, subtle hue
       if (!isLight) {
@@ -1429,10 +1920,16 @@ const SettingsRenderer = (() => {
         };
         const toHex = (c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, "0");
         el.setProperty("--page-bg", `#${toHex(pageBg.r)}${toHex(pageBg.g)}${toHex(pageBg.b)}`);
-        el.setProperty("--panel", `#${toHex(panel.r)}${toHex(panel.g)}${toHex(panel.b)}`);
+        // Components, not a hex: `--panel` is composed from these plus the
+        // strength alpha, so overriding the colour here must not also pin the
+        // opacity back to solid.
+        el.setProperty("--panel-rgb", `${panel.r}, ${panel.g}, ${panel.b}`);
       } else {
-        el.removeProperty("--page-bg");
-        el.removeProperty("--panel");
+        // Light mode over a wallpaper: the page colour is barely visible behind
+        // the photo, but it is what the browser paints before the picture
+        // loads, so it is set rather than left to whatever ran last.
+        el.setProperty("--page-bg", "#f4f6f8");
+        el.removeProperty("--panel-rgb");
       }
 
       const bodyEl = document.body.style;
@@ -1479,32 +1976,71 @@ const SettingsRenderer = (() => {
     applyTheme();
   }
 
+  /* How long the boot will wait for a wallpaper before showing the page.
+
+     This is an anti-flash measure, not a correctness one: `boot.js` has
+     already painted a small cached preview of this very wallpaper as the page
+     background, so revealing a few frames before the full-resolution image is
+     ready costs a slight sharpening, not a flash of the wrong colour. Half a
+     second is far longer than a local file needs and short enough that a
+     wallpaper which is not coming back never holds up the page. */
+  const WALLPAPER_PAINT_DEADLINE = 500;
+  const DECODE_DEADLINE = 250;
+
+  /**
+   * Resolves once the wallpaper is ready to be shown - or once waiting for it
+   * has stopped being worth it - with the decoded image when there is one, so
+   * the caller can reuse it instead of decoding the same file again.
+   *
+   * Two deadlines, because the two ways this can hang are different.
+   *
+   * `img.decode()` does not settle at all in a document that is not being
+   * painted, and a new tab page is very often opened in the background:
+   * ctrl-clicked, restored with a session, or in a window that opens behind
+   * another. The previous version awaited it with only a 5000ms backstop, so
+   * every background new tab sat blank for five seconds before revealing
+   * itself - measured at 5651ms against 314ms for the image to actually load.
+   * The decode is now raced rather than awaited.
+   *
+   * And when the document is hidden there is nothing being painted to flash,
+   * so there is nothing to wait for at all.
+   */
   function waitForImagePaint(src) {
     if (!src) return Promise.resolve();
+    if (document.hidden) return Promise.resolve();
+
     return new Promise((resolve) => {
       const img = new Image();
       let done = false;
-      const finish = () => {
+      /** @param {HTMLImageElement|null} loaded The decoded image, when there is one. */
+      const finish = (loaded) => {
         if (!done) {
           done = true;
           clearTimeout(timer);
-          resolve();
+          resolve(loaded || null);
         }
       };
-      const timer = setTimeout(finish, 5000);
-      img.onload = async () => {
-        try {
-          if (img.decode) await img.decode();
-        } catch {}
-        finish();
+      const timer = setTimeout(() => finish(null), WALLPAPER_PAINT_DEADLINE);
+      img.onload = () => {
+        if (!img.decode) return finish(img);
+        Promise.race([
+          img.decode().catch(() => {}),
+          new Promise((r) => setTimeout(r, DECODE_DEADLINE)),
+        ]).then(
+          () => finish(img),
+          () => finish(img),
+        );
       };
-      img.onerror = finish;
+      img.onerror = () => finish(null);
       img.src = src;
     });
   }
 
+  /* Same reasoning as the image path: a hidden document paints nothing, and a
+     video that has not produced a frame must not hold the page back. */
   function waitForVideoPaint(video) {
     if (!video || video.readyState >= 2) return Promise.resolve();
+    if (document.hidden) return Promise.resolve();
     return new Promise((resolve) => {
       let done = false;
       const finish = () => {
@@ -1515,7 +2051,7 @@ const SettingsRenderer = (() => {
         video.removeEventListener("error", finish);
         resolve();
       };
-      const timer = setTimeout(finish, 5000);
+      const timer = setTimeout(finish, WALLPAPER_PAINT_DEADLINE);
       video.addEventListener("loadeddata", finish, { once: true });
       video.addEventListener("error", finish, { once: true });
       video.load();
@@ -1547,12 +2083,99 @@ const SettingsRenderer = (() => {
         } catch {}
       };
       if (type === "video") paint(source);
-      else {
+      else if (source instanceof HTMLImageElement) {
+        // Already decoded by the caller. Decoding a 2560x1440 wallpaper a
+        // second time, purely to shrink it to a 160x90 thumbnail, is a whole
+        // extra full-size bitmap in memory and a second pass of decode work -
+        // on the same image that was decoded a moment ago.
+        paint(source);
+      } else {
         const img = new Image();
         img.onload = () => paint(img);
         img.src = source;
       }
     } catch {}
+  }
+
+  /* The wallpaper that ships inside the package.
+
+     Referenced by its path rather than copied into storage. A packaged file is
+     already on disk, already the right size, and already served from the
+     extension's own origin, so putting a base64 copy of it into
+     `chrome.storage.local` would spend quota and startup time duplicating
+     something the browser can read directly. It also means the picture
+     survives an update without migration - the path is still the path.
+
+     `.webp` because every image the extension stores goes through
+     `downscaleImage`, which encodes WebP; shipping a PNG or JPEG here would
+     make the one wallpaper users start on the only one that is not. */
+  const PACKAGED_WALLPAPER = "wallpaper/default.webp";
+
+  const packagedWallpaperUrl = () => {
+    try {
+      if (HAS_EXT && EXT.runtime && EXT.runtime.getURL)
+        return EXT.runtime.getURL(PACKAGED_WALLPAPER);
+    } catch {}
+    // Outside the extension host the page is served from the project root, so
+    // the relative path resolves on its own.
+    return PACKAGED_WALLPAPER;
+  };
+
+  /**
+   * Applies the packaged wallpaper, once, on a profile that has not chosen a
+   * background of its own.
+   *
+   * Deliberately conditional on three things:
+   *
+   *  - it has not been tried before, so a user who switches back to a solid
+   *    colour is not overruled on the next new tab;
+   *  - the profile is still on a solid background, so an install that arrives
+   *    with a wallpaper already configured (a restored backup, a managed
+   *    deployment, a synced profile) keeps the one it came with;
+   *  - the file actually exists, checked with a real request rather than
+   *    assumed, so a build that ships without one degrades to the solid
+   *    default instead of painting a broken image.
+   */
+  async function applyPackagedWallpaper() {
+    const settings = StorageManager.getSettings();
+    if (settings.packagedWallpaperTried) return false;
+
+    settings.packagedWallpaperTried = true;
+
+    const untouched =
+      !settings.backgroundType || settings.backgroundType === "solid";
+    if (!untouched) {
+      StorageManager.saveSettings();
+      return false;
+    }
+
+    const url = packagedWallpaperUrl();
+    try {
+      // HEAD would be lighter, but the extension protocol does not answer it
+      // consistently across engines, so the file is fetched and discarded.
+      const res = await fetch(url, { cache: "force-cache" });
+      if (!res.ok) {
+        StorageManager.saveSettings();
+        return false;
+      }
+      const blob = await res.blob();
+      if (!blob.size || !/^image\//i.test(blob.type || "")) {
+        StorageManager.saveSettings();
+        return false;
+      }
+    } catch {
+      StorageManager.saveSettings();
+      return false;
+    }
+
+    rememberWallpaper({
+      id: "packaged-default",
+      type: "image",
+      value: url,
+      name: "Included wallpaper",
+    });
+    await applyWallpaper("image", url);
+    return true;
   }
 
   async function applyWallpaper(type, value, extract = true) {
@@ -1610,10 +2233,13 @@ const SettingsRenderer = (() => {
       if (photoBg) photoBg.classList.remove("active");
     } else if (type === "image") {
       if (photoBg) {
-        await waitForImagePaint(src);
+        const decoded = await waitForImagePaint(src);
         photoBg.style.backgroundImage = `url("${String(src).replace(/"/g, "%22")}")`;
         photoBg.classList.add("active");
-        cacheBootPreview(src, "image");
+        // The element when the wait produced one, the URL when it did not
+        // (a hidden document skips the wait entirely) - `cacheBootPreview`
+        // takes either and only re-decodes in the second case.
+        cacheBootPreview(decoded || src, "image");
       }
       if (videoBg) {
         videoBg.pause();
@@ -1634,9 +2260,9 @@ const SettingsRenderer = (() => {
     applyTheme();
   }
 
-  async function autoExtractColor(rawMediaUrl, isVideo = false) {
+  async function autoExtractColor(rawMediaUrl, isVideo = false, toneOnly = false) {
     const mod = await loadTab("theme");
-    return mod.autoExtractColor(rawMediaUrl, isVideo);
+    return mod.autoExtractColor(rawMediaUrl, isVideo, toneOnly);
   }
 
   function applyCursor() {
@@ -1661,59 +2287,219 @@ const SettingsRenderer = (() => {
     return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
   }
 
-  function relLuminance(hex) {
-    const { r, g, b } = hexToRgb(hex);
-    const lin = [r, g, b].map((v) => {
-      v /= 255;
-      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+  /* Accent text has to clear APCA Lc 60 - the body-text floor - not WCAG 2's
+     4.5:1 ratio.
+
+     The two disagree badly on exactly the colours this app deals in. A
+     saturated mid-tone accent can pass 4.5:1 and still score Lc 34, which is
+     roughly a third of readable; that is precisely what left the Boards and
+     Notes labels washed out on a solid ground for any accent a user picked.
+     WCAG 2's formula is symmetric and does not know that light-on-mid reads
+     worse than dark-on-mid, which is the whole reason DESIGN.md picked APCA
+     for the ink decision in the first place. This is the last place that had
+     not caught up. */
+  const INK_MIN_LC = 60;
+
+  // Fills only have to separate from the ground, not be read as text, so the
+  // bar is deliberately much lower and the accent nearly always survives it.
+  const FILL_MIN_LC = 25;
+  // Display type: the clock and other very large accent text.
+  const DISPLAY_MIN_LC = 35;
+
+  /**
+   * @param {string} [swatch] A preset's second colour - the dot its swatch
+   *   shows. Pastel presets pair a very pale first colour with a stronger
+   *   second one, and deriving everything from the pale one produced an accent
+   *   that matched nothing on the swatch: too faint to use as-is, so it was
+   *   darkened into a muted shade the user never picked. The shown colour now
+   *   leads the ink, and stands in for the fill when the first is too faint.
+   */
+  function accentTokens(accent, bg, swatch) {
+    const shown = HEX6.test(swatch || "") ? swatch : accent;
+    const ink = readableInk(shown, bg);
+    // Large type - the clock above all - stays readable at far lower contrast
+    // than body text, so it gets its own, brighter step of the same colour.
+    // Holding it to the body-text bar is what turned a pastel pink swatch into
+    // a dark wine on the page.
+    const display = Contrast.readable(shown, bg, DISPLAY_MIN_LC);
+    const ui =
+      [accent, shown].find((c) => Math.abs(Contrast.lc(c, bg)) >= FILL_MIN_LC) ||
+      Contrast.readable(shown, bg, FILL_MIN_LC + 5);
+    return { ui, ink, display };
   }
 
-  function contrastRatio(a, b) {
-    const L1 = relLuminance(a),
-      L2 = relLuminance(b);
-    return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
-  }
+  /** The swatch colour, only for a preset - a custom second colour is a gradient stop, not an ink. */
+  const presetSwatch = (s) => (presetById(s.preset) ? s.accent2 : "");
 
-  const INK_MIN_CONTRAST = 4.5;
+  const SVG_NS = "http://www.w3.org/2000/svg";
 
-  const FILL_MIN_CONTRAST = 2.0;
-
-  function accentTokens(accent, bg) {
-    const ink =
-      contrastRatio(accent, bg) >= INK_MIN_CONTRAST
-        ? accent
-        : readableInk(accent, bg);
-    const ui = contrastRatio(accent, bg) >= FILL_MIN_CONTRAST ? accent : ink;
-    return { ui, ink };
-  }
-
-  function readableInk(accent, bg) {
-    if (contrastRatio(accent, bg) >= INK_MIN_CONTRAST) return accent;
-    const { h, s } = hexToHsl(accent);
-
-    const sat = s < 0.08 ? s : Math.max(s, 0.35);
-    const goDarker = relLuminance(bg) > 0.4;
-    for (let i = 0; i < 24; i++) {
-      const l = goDarker ? 0.46 - i * 0.02 : 0.54 + i * 0.02;
-      const cand = hslToHex(h, sat, Math.max(0.04, Math.min(0.96, l)));
-      if (contrastRatio(cand, bg) >= INK_MIN_CONTRAST) return cand;
+  /**
+   * Recolours pinned-link icons on a solid background as a duotone.
+   *
+   * The dark parts of a logo take the accent and the light parts stay light,
+   * by mapping each pixel's luminance between the two. It replaced a mask that
+   * painted the icon's whole shape in the accent: that was fine for a line
+   * glyph and useless for a logo drawn as a filled shape - YouTube's play
+   * button, a solid app tile - which became a blank coloured blob. A filter
+   * works on the rendered pixels, so it also applies to icons loaded from
+   * another site, which a mask cannot read.
+   */
+  function applyIconTint(hex) {
+    if (!document.body || !HEX6.test(hex || "")) return;
+    let svg = document.getElementById("etIconTintSvg");
+    if (!svg) {
+      svg = document.createElementNS(SVG_NS, "svg");
+      svg.id = "etIconTintSvg";
+      svg.setAttribute("width", "0");
+      svg.setAttribute("height", "0");
+      svg.setAttribute("aria-hidden", "true");
+      svg.style.position = "absolute";
+      const filter = document.createElementNS(SVG_NS, "filter");
+      filter.id = "et-icon-tint";
+      filter.setAttribute("color-interpolation-filters", "sRGB");
+      filter.appendChild(document.createElementNS(SVG_NS, "feColorMatrix"));
+      svg.appendChild(filter);
+      document.body.appendChild(svg);
     }
-    return goDarker ? "#14151a" : "#ffffff";
+    const { r, g, b } = hexToRgb(hex);
+    const row = (c) => {
+      const a = c / 255;
+      const k = 1 - a;
+      return `${(k * 0.2126).toFixed(4)} ${(k * 0.7152).toFixed(4)} ${(k * 0.0722).toFixed(4)} 0 ${a.toFixed(4)}`;
+    };
+    const matrix = svg.querySelector("feColorMatrix");
+    matrix.setAttribute("type", "matrix");
+    matrix.setAttribute("values", `${row(r)} ${row(g)} ${row(b)} 0 0 0 1 0`);
   }
 
-  function contrastText(color) {
-    const { r, g, b } = hexToRgb(color);
-    const lin = [r, g, b].map((v) => {
-      v /= 255;
-      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-    });
-    const L = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
-    const againstWhite = 1.05 / (L + 0.05);
-    const againstInk = (L + 0.05) / 0.05265;
-    return againstInk >= againstWhite ? "#14151a" : "#ffffff";
+  /**
+   * The accent, kept as itself where it is already legible and nudged along
+   * its own hue toward the ground's ink where it is not.
+   *
+   * `Contrast.readable` walks the colour toward whichever ink the background
+   * calls for and stops the moment it clears the bar, so the hue survives and
+   * only lightness moves - a brand colour stays recognisable instead of
+   * collapsing to grey.
+   */
+  function readableInk(accent, bg) {
+    return Contrast.readable(accent, bg, INK_MIN_LC);
   }
+
+  // --- APCA (Accessible Perceptual Contrast Algorithm), constants from the
+  // published 0.98G-4g formulation.
+  //
+  // WCAG 2's contrast ratio is symmetric: it does not know that light text on
+  // a mid colour reads far worse than dark text on the same colour. Picking
+  // black-vs-white by ratio therefore flips to white too early on saturated
+  // mid-tones - the classic "white label on a medium blue button" that looks
+  // washed out. APCA models polarity, so the flip lands where the eye puts it.
+  /** Picks the ink - near-black or white - that reads best on `color`. */
+  const contrastText = (color) => Contrast.ink(color);
+
+  /**
+   * Makes every slider's numeric readout directly editable, everywhere in
+   * Settings, without touching each slider's own binding code.
+   *
+   * A value label opts in with `data-slider-val="<slider id>"`, or, for a
+   * slider addressed by a data-attribute rather than an id (the per-surface
+   * strength sliders), `data-slider-val-key="<key>"` naming the value of its
+   * `data-surface-slider`. Clicking the label swaps it for a number input;
+   * Enter or blur commits by writing the slider's `value` and dispatching a
+   * real `input` and `change` event on it, so the slider's own listener does
+   * the clamping, the storage write and the repaint exactly as if the user
+   * had dragged it. Escape cancels. This file never needs to know what a
+   * given slider is for.
+   */
+  const SliderValueEditor = (() => {
+    function resolveSlider(label) {
+      const key = label.getAttribute("data-slider-val-key");
+      if (key) return document.querySelector(`[data-surface-slider="${key}"]`);
+      const id = label.getAttribute("data-slider-val");
+      return id ? document.getElementById(id) : null;
+    }
+
+    function suffixOf(label) {
+      return label.getAttribute("data-slider-suffix") ?? "";
+    }
+
+    function startEdit(label) {
+      if (label.querySelector("input")) return;
+      const slider = resolveSlider(label);
+      if (!slider) return;
+
+      const suffix = suffixOf(label);
+      const min = Number(slider.min || 0);
+      const max = Number(slider.max || 100);
+      const original = label.textContent;
+
+      const input = document.createElement("input");
+      input.type = "number";
+      input.className = "st-slider-val-input";
+      input.value = slider.value;
+      input.min = String(min);
+      input.max = String(max);
+      input.step = slider.step || "1";
+
+      const commit = () => {
+        const n = parseFloat(input.value);
+        const clamped = Number.isFinite(n)
+          ? Math.min(max, Math.max(min, n))
+          : Number(slider.value);
+        slider.value = String(clamped);
+        slider.dispatchEvent(new Event("input", { bubbles: true }));
+        slider.dispatchEvent(new Event("change", { bubbles: true }));
+        // The dispatched events already repaint most labels; this covers the
+        // rare slider whose `input` handler does not touch its own label.
+        if (label.isConnected && label.querySelector("input"))
+          label.textContent = `${clamped}${suffix}`;
+      };
+
+      input.addEventListener("keydown", (e) => {
+        // Without this, Enter/Escape bubbles up to the label's own keydown
+        // listener (there so the label itself is keyboard-operable) and
+        // immediately reopens the editor it was just told to close.
+        e.stopPropagation();
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+          input.blur();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          label.textContent = original;
+        }
+      });
+      input.addEventListener("blur", () => {
+        if (label.contains(input)) commit();
+      });
+      input.addEventListener("click", (e) => e.stopPropagation());
+
+      label.textContent = "";
+      label.appendChild(input);
+      input.focus();
+      input.select();
+    }
+
+    function wire(root) {
+      (root || document)
+        .querySelectorAll("[data-slider-val], [data-slider-val-key]")
+        .forEach((label) => {
+          if (label.dataset.sliderValWired) return;
+          label.dataset.sliderValWired = "1";
+          label.setAttribute("tabindex", "0");
+          label.setAttribute("role", "button");
+          label.title = "Click to type a value";
+          label.addEventListener("click", () => startEdit(label));
+          label.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              startEdit(label);
+            }
+          });
+        });
+    }
+
+    return { wire };
+  })();
 
   /** Coalesces repeated repaints per key into one animation frame. */
   function createFrameScheduler() {
@@ -1750,13 +2536,9 @@ const SettingsRenderer = (() => {
     localiseImage,
     localiseAllRemoteWallpapers,
     resolveMode,
-    hexToHsl,
     hslToHex,
     hexToRgb,
-    relLuminance,
-    contrastRatio,
     accentTokens,
-    readableInk,
     contrastText,
     derivePalette,
     applySeed,
@@ -1767,6 +2549,8 @@ const SettingsRenderer = (() => {
     applyWallpaper,
     applyWallpaperStyle,
     applyWallpaperOverlay,
+    applyWallpaperVignette,
+    applyWallpaperBlur,
     setMode,
     waitForImagePaint,
     waitForVideoPaint,
@@ -1774,9 +2558,12 @@ const SettingsRenderer = (() => {
     openSideSheet,
     closeSideSheet,
     renderSideSheetContent: (...a) => renderSideSheetContent(...a),
-    getActiveTab: () => activeTab,
+    getActivePage: () => activePage,
     registerTab,
     loadTab,
+    surfaceStrengths,
+    overallStrength,
+    SliderValueEditor,
   };
 
   return {
@@ -1787,6 +2574,7 @@ const SettingsRenderer = (() => {
     applyPresetShell,
     setMode,
     applyWallpaper,
+    applyPackagedWallpaper,
     autoExtractColor,
     applyCursor,
   };

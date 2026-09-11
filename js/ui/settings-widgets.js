@@ -9,6 +9,8 @@
     applyWallpaper,
     applyWallpaperStyle,
     applyWallpaperOverlay,
+    applyWallpaperVignette,
+    applyWallpaperBlur,
   } = S;
   const renderSideSheetContent = (...a) => S.renderSideSheetContent(...a);
   const paintNextFrame = S.createFrameScheduler();
@@ -17,30 +19,12 @@
     const live = () => StorageManager.getSettings();
     const data = StorageManager.getData();
 
-    $("stCornerRadius")?.addEventListener("change", (e) => {
-      live().cornerRadius = e.target.value;
-      StorageManager.saveSettings();
-      applyPresetShell();
-    });
-    $("stFontFamily")?.addEventListener("change", (e) => {
-      live().fontFamily = e.target.value;
-      StorageManager.saveSettings();
-      applyPresetShell();
-    });
-    $("stBoardWidth")?.addEventListener("input", (e) => {
-      const val = parseInt(e.target.value, 10);
-      live().boardWidth = val;
-      const label = $("stBoardWidthVal");
-      if (label) label.textContent = `${val}px`;
-      StorageManager.saveSettings();
-      paintNextFrame("boards", () => BoardRenderer.renderBoards());
-    });
-
     $("stWpFit")?.addEventListener("change", (e) => {
       live().wallpaperFit = e.target.value;
       StorageManager.saveSettings();
       applyWallpaperStyle();
     });
+
     for (const [id, key, labelId] of [
       ["stWpZoom", "wallpaperZoom", "stWpZoomVal"],
       ["stWpPosX", "wallpaperPosX", "stWpPosXVal"],
@@ -54,13 +38,17 @@
         paintNextFrame("wallpaper", applyWallpaperStyle);
       });
     }
+
     $("stWpOverlayToggle")?.addEventListener("change", (e) => {
       live().wallpaperOverlay = e.target.checked;
       const row = $("stWpOverlayOpacityRow");
       if (row) row.style.display = e.target.checked ? "flex" : "none";
       StorageManager.saveSettings();
-      applyWallpaperOverlay();
+      // The wallpaper analysis folds the scrim into the ground it picks ink
+      // against, so dimming has to re-run the whole theme, not just the layer.
+      applyTheme();
     });
+
     $("stWpOverlayOpacity")?.addEventListener("input", (e) => {
       live().wallpaperOverlayOpacity = parseInt(e.target.value, 10);
       const label = $("stWpOverlayOpacityVal");
@@ -68,11 +56,45 @@
       StorageManager.saveSettings();
       paintNextFrame("overlay", applyWallpaperOverlay);
     });
+
+    $("stWpVignetteToggle")?.addEventListener("change", (e) => {
+      live().wallpaperVignette = e.target.checked;
+      const row = $("stWpVignetteRow");
+      if (row) row.style.display = e.target.checked ? "flex" : "none";
+      StorageManager.saveSettings();
+      applyWallpaperVignette();
+    });
+
+    $("stWpVignetteAmount")?.addEventListener("input", (e) => {
+      live().wallpaperVignetteAmount = parseInt(e.target.value, 10);
+      const label = $("stWpVignetteVal");
+      if (label) label.textContent = `${e.target.value}%`;
+      StorageManager.saveSettings();
+      paintNextFrame("vignette", applyWallpaperVignette);
+    });
+
+    $("stWpBlurToggle")?.addEventListener("change", (e) => {
+      live().wallpaperBlur = e.target.checked;
+      const row = $("stWpBlurAmountRow");
+      if (row) row.style.display = e.target.checked ? "flex" : "none";
+      StorageManager.saveSettings();
+      paintNextFrame("wpblur", applyWallpaperBlur);
+    });
+
+    $("stWpBlurAmount")?.addEventListener("input", (e) => {
+      live().wallpaperBlurAmount = parseInt(e.target.value, 10);
+      const label = $("stWpBlurAmountVal");
+      if (label) label.textContent = `${e.target.value}%`;
+      StorageManager.saveSettings();
+      paintNextFrame("wpblur", applyWallpaperBlur);
+    });
+
     $("stWpMuteToggle")?.addEventListener("change", (e) => {
       live().wallpaperMuted = e.target.checked;
       StorageManager.saveSettings();
       applyWallpaperStyle();
     });
+
     $("stWpVolume")?.addEventListener("input", (e) => {
       live().wallpaperVolume = parseInt(e.target.value, 10) / 100;
       const label = $("stWpVolumeVal");
@@ -80,6 +102,7 @@
       StorageManager.saveSettings();
       paintNextFrame("wallpaper", applyWallpaperStyle);
     });
+
     $$(".wp-gallery-item").forEach((item) => {
       item.addEventListener("click", (e) => {
         if (e.target.closest(".wp-gallery-del")) return;
@@ -88,6 +111,7 @@
         ToastSystem.success("Wallpaper switched");
       });
     });
+
     $$(".wp-gallery-del").forEach((button) => {
       button.addEventListener("click", async (e) => {
         e.stopPropagation();
@@ -113,6 +137,25 @@
         renderSideSheetContent();
         ToastSystem.info("Wallpaper removed");
       });
+    });
+
+    $("stCornerRadius")?.addEventListener("change", (e) => {
+      live().cornerRadius = e.target.value;
+      StorageManager.saveSettings();
+      applyPresetShell();
+    });
+    $("stFontFamily")?.addEventListener("change", (e) => {
+      live().fontFamily = e.target.value;
+      StorageManager.saveSettings();
+      applyPresetShell();
+    });
+    $("stBoardWidth")?.addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      live().boardWidth = val;
+      const label = $("stBoardWidthVal");
+      if (label) label.textContent = `${val}px`;
+      StorageManager.saveSettings();
+      paintNextFrame("boards", () => BoardRenderer.renderBoards());
     });
 
     $("stTimeFormat")?.addEventListener("change", (e) => {
@@ -154,71 +197,35 @@
     $("stWpShadowOpacity")?.addEventListener("input", (e) => {
       const val = parseInt(e.target.value, 10);
       live().wpShadowOpacity = val;
+      live().wpShadowAuto = false;
       const lbl = $("stWpShadowOpacityVal");
       if (lbl) lbl.textContent = val + "%";
       StorageManager.saveSettings();
-      paintNextFrame("widgets", () => WidgetsRenderer.applyWidgetVisibility());
+      paintNextFrame("theme", applyTheme);
     });
 
     $("stWpShadowColor")?.addEventListener("input", (e) => {
       live().wpShadowColor = e.target.value;
+      live().wpShadowAuto = false;
       StorageManager.saveSettings();
-      paintNextFrame("clock-style", () =>
-        WidgetsRenderer.applyClockAppearance(live()),
-      );
+      paintNextFrame("theme", applyTheme);
     });
 
-    $("stSearchEngine")?.addEventListener("change", (e) => {
-      live().searchEngine = e.target.value;
-      StorageManager.save();
-      WidgetsRenderer.initNavSearch();
-      ToastSystem.success("Default search engine saved");
+    $("stWpShadowAuto")?.addEventListener("click", () => {
+      live().wpShadowAuto = true;
+      StorageManager.saveSettings();
+      applyTheme();
+      renderSideSheetContent();
+      ToastSystem.info("Text shadow follows the wallpaper again");
     });
 
-    $$(".st-eng-chk").forEach((chk) => {
-      chk.addEventListener("change", () => {
-        const engs = [];
-        $$(".st-eng-chk").forEach((c) => {
-          if (c.checked) engs.push(c.dataset.engKey);
-        });
-        live().enabledEngines = engs.length ? engs : ["default"];
-        StorageManager.saveSettings();
-        WidgetsRenderer.initNavSearch();
-      });
+    WidgetsRenderer.attachCityPicker($("stWeatherCity"), {
+      onPick: () => $("stWeatherApplyBtn")?.click(),
     });
-
-    $("stBreaksEnabled")?.addEventListener("change", (e) => {
-      live().breaks.enabled = e.target.checked;
-      const body = $("stBreaksBody");
-      if (body) body.style.display = e.target.checked ? "flex" : "none";
-      StorageManager.save();
-      BreakTimer.restart();
-      ToastSystem[e.target.checked ? "success" : "info"](
-        e.target.checked
-          ? `Break reminder every ${live().breaks.everyMin} minutes`
-          : "Break reminders off",
-      );
-    });
-
-    $("stBreaksEvery")?.addEventListener("change", (e) => {
-      live().breaks.everyMin = parseInt(e.target.value, 10);
-      StorageManager.save();
-      // The countdown restarts from now rather than keeping the old due time,
-      // which would otherwise fire at the previous interval one last time.
-      BreakTimer.restart();
-      ToastSystem.success(`Reminding you every ${live().breaks.everyMin} minutes`);
-    });
-
-    $("stBreaksMessage")?.addEventListener("change", (e) => {
-      const val = e.target.value.trim();
-      live().breaks.message =
-        val.slice(0, 120) || StorageManager.DEFAULT_SETTINGS.breaks.message;
-      StorageManager.save();
-    });
-
-    $("stBreaksSound")?.addEventListener("change", (e) => {
-      live().breaks.sound = e.target.checked;
-      StorageManager.save();
+    // Enter with no list open saves what is typed. The picker takes Enter
+    // first when a list is showing, and marks it handled.
+    $("stWeatherCity")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.defaultPrevented) $("stWeatherApplyBtn")?.click();
     });
 
     $("stWeatherApplyBtn")?.addEventListener("click", () => {
@@ -233,15 +240,13 @@
 
   function render(settings, data) {
     const w = settings.widgets || {};
-    const hasWallpaper = ["image", "video"].includes(
-      settings.backgroundType,
-    );
-    const enabledEngs =
-      settings.enabledEngines || StorageManager.DEFAULT_SETTINGS.enabledEngines;
-    const breaks = settings.breaks || StorageManager.DEFAULT_SETTINGS.breaks;
+    // Text halos and every wallpaper control below are wallpaper-only - solid
+    // mode strips every text-shadow in CSS and has no picture to crop - so on a
+    // solid background they would move stored numbers that nothing reads.
+    const hasWallpaper = ["image", "video"].includes(settings.backgroundType);
     return `
         <div class="st-container">
-          <div class="st-accordion is-expanded">
+          <div class="st-accordion is-expanded" data-page="appearance">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">General appearance</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -252,13 +257,11 @@
                   <label class="st-label" for="stCornerRadius">Corner style</label>
                   ${CustomSelect.render({
                     id: "stCornerRadius",
-                    value: settings.cornerRadius || "default",
-                    options: [
-                      { value: "default", label: "Default" },
-                      { value: "0px", label: "Sharp" },
-                      { value: "8px", label: "Soft" },
-                      { value: "16px", label: "Round" },
-                    ],
+                    value: cornerStyle(settings.cornerRadius).value,
+                    options: CORNER_STYLES.map(({ value, label }) => ({
+                      value,
+                      label,
+                    })),
                     style: "width:160px;",
                   })}
                 </div>
@@ -266,24 +269,18 @@
                   <label class="st-label" for="stFontFamily">App font</label>
                   ${CustomSelect.render({
                     id: "stFontFamily",
-                    value: settings.fontFamily || "default",
-                    options: [
-                      { value: "default", label: "Default" },
-                      { value: "sans-serif", label: "Sans-serif" },
-                      { value: "geometric", label: "Geometric" },
-                      { value: "serif", label: "Serif" },
-                      { value: "monospace", label: "Monospace" },
-                      { value: "rounded", label: "Rounded" },
-                      { value: "slab", label: "Slab" },
-                      { value: "handwriting", label: "Handwriting" },
-                    ],
+                    value: appFont(settings.fontFamily).value,
+                    options: APP_FONTS.map(({ value, label }) => ({
+                      value,
+                      label,
+                    })),
                     style: "width:160px;",
                   })}
                 </div>
                 <div>
                   <div class="st-row" style="margin-bottom:6px;">
                     <span class="st-label">Board column width</span>
-                    <span class="st-val" id="stBoardWidthVal">${settings.boardWidth || 260}px</span>
+                    <span class="st-val" id="stBoardWidthVal" data-slider-val="stBoardWidth" data-slider-suffix="px">${settings.boardWidth || 260}px</span>
                   </div>
                   <input type="range" id="stBoardWidth" min="200" max="560" step="10" value="${settings.boardWidth || 260}" style="width:100%; cursor:pointer;" />
                 </div>
@@ -291,7 +288,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded">
+          <div class="st-accordion is-expanded" data-page="wallpaper">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Wallpaper customization</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -299,30 +296,45 @@
             <div class="st-accordion-body">
               ${
                 !hasWallpaper
-                  ? `<div class="st-card"><div class="st-hint">Enable a wallpaper in Quick Settings to adjust its fit, position and readability.</div></div>`
+                  ? `<div class="st-card"><div class="st-hint">Turn on a wallpaper to adjust it here.</div></div>`
                   : `
               <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
                 <div class="st-row">
                   <span class="st-label">Fit</span>
-                  ${CustomSelect.render({ id: "stWpFit", value: settings.wallpaperFit || "cover", options: [{ value: "cover", label: "Cover" }, { value: "contain", label: "Contain" }], style: "width:150px;" })}
+                  ${CustomSelect.render({ id: "stWpFit", value: settings.wallpaperFit || "cover", options: [{ value: "cover", label: "Cover (fill screen)" }, { value: "contain", label: "Contain (fit screen)" }], style: "width:190px;" })}
                 </div>
-                <div class="se-label" style="display:flex; justify-content:space-between;"><span>Zoom</span><span id="stWpZoomVal">${settings.wallpaperZoom || 100}%</span></div>
+                <div class="se-label" style="display:flex; justify-content:space-between;"><span>Zoom</span><span id="stWpZoomVal" data-slider-val="stWpZoom" data-slider-suffix="%">${settings.wallpaperZoom || 100}%</span></div>
                 <input type="range" class="se-slider" id="stWpZoom" min="10" max="500" step="5" value="${settings.wallpaperZoom || 100}" />
-                <div class="se-label" style="display:flex; justify-content:space-between;"><span>Horizontal position</span><span id="stWpPosXVal">${settings.wallpaperPosX ?? 50}%</span></div>
+                <div class="se-label" style="display:flex; justify-content:space-between;"><span>Horizontal position</span><span id="stWpPosXVal" data-slider-val="stWpPosX" data-slider-suffix="%">${settings.wallpaperPosX ?? 50}%</span></div>
                 <input type="range" class="se-slider" id="stWpPosX" min="-300" max="300" value="${settings.wallpaperPosX ?? 50}" />
-                <div class="se-label" style="display:flex; justify-content:space-between;"><span>Vertical position</span><span id="stWpPosYVal">${settings.wallpaperPosY ?? 50}%</span></div>
+                <div class="se-label" style="display:flex; justify-content:space-between;"><span>Vertical position</span><span id="stWpPosYVal" data-slider-val="stWpPosY" data-slider-suffix="%">${settings.wallpaperPosY ?? 50}%</span></div>
                 <input type="range" class="se-slider" id="stWpPosY" min="-300" max="300" value="${settings.wallpaperPosY ?? 50}" />
+
                 <label class="st-row" style="cursor:pointer;"><span class="st-label">Dim bright wallpapers</span><input type="checkbox" id="stWpOverlayToggle" ${settings.wallpaperOverlay ? "checked" : ""} /></label>
                 <div id="stWpOverlayOpacityRow" style="display:${settings.wallpaperOverlay ? "flex" : "none"}; flex-direction:column; gap:6px;">
-                  <div class="se-label" style="display:flex; justify-content:space-between;"><span>Dim amount</span><span id="stWpOverlayOpacityVal">${settings.wallpaperOverlayOpacity ?? 35}%</span></div>
+                  <div class="se-label" style="display:flex; justify-content:space-between;"><span>Dim amount</span><span id="stWpOverlayOpacityVal" data-slider-val="stWpOverlayOpacity" data-slider-suffix="%">${settings.wallpaperOverlayOpacity ?? 35}%</span></div>
                   <input type="range" class="se-slider" id="stWpOverlayOpacity" min="0" max="90" step="5" value="${settings.wallpaperOverlayOpacity ?? 35}" />
                 </div>
-                ${settings.backgroundType === "video" ? `<label class="st-row" style="cursor:pointer;"><span class="st-label">Mute video</span><input type="checkbox" id="stWpMuteToggle" ${settings.wallpaperMuted !== false ? "checked" : ""} /></label><div class="se-label" style="display:flex; justify-content:space-between;"><span>Volume</span><span id="stWpVolumeVal">${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}%</span></div><input type="range" class="se-slider" id="stWpVolume" min="0" max="100" step="5" value="${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}" />` : ""}
+
+                <label class="st-row" style="cursor:pointer;"><span class="st-label">Darken edges</span><input type="checkbox" id="stWpVignetteToggle" ${settings.wallpaperVignette ? "checked" : ""} /></label>
+                <div class="st-hint">Darkens the corners so text is easier to read.</div>
+                <div id="stWpVignetteRow" style="display:${settings.wallpaperVignette ? "flex" : "none"}; flex-direction:column; gap:6px;">
+                  <div class="se-label" style="display:flex; justify-content:space-between;"><span>Edge shading</span><span id="stWpVignetteVal" data-slider-val="stWpVignetteAmount" data-slider-suffix="%">${settings.wallpaperVignetteAmount ?? 45}%</span></div>
+                  <input type="range" class="se-slider" id="stWpVignetteAmount" min="0" max="100" step="5" value="${settings.wallpaperVignetteAmount ?? 45}" />
+                </div>
+
+                <label class="st-row" style="cursor:pointer;"><span class="st-label">Soften wallpaper</span><input type="checkbox" id="stWpBlurToggle" ${settings.wallpaperBlur ? "checked" : ""} /></label>
+                <div class="st-hint">Blurs the wallpaper so text stands out.</div>
+                <div id="stWpBlurAmountRow" style="display:${settings.wallpaperBlur ? "flex" : "none"}; flex-direction:column; gap:6px;">
+                  <div class="se-label" style="display:flex; justify-content:space-between;"><span>Softness</span><span id="stWpBlurAmountVal" data-slider-val="stWpBlurAmount" data-slider-suffix="%">${settings.wallpaperBlurAmount ?? 40}%</span></div>
+                  <input type="range" class="se-slider" id="stWpBlurAmount" min="0" max="100" step="1" value="${settings.wallpaperBlurAmount ?? 40}" />
+                </div>
+                ${settings.backgroundType === "video" ? `<label class="st-row" style="cursor:pointer;"><span class="st-label">Mute video</span><input type="checkbox" id="stWpMuteToggle" ${settings.wallpaperMuted !== false ? "checked" : ""} /></label><div class="se-label" style="display:flex; justify-content:space-between;"><span>Volume</span><span id="stWpVolumeVal" data-slider-val="stWpVolume" data-slider-suffix="%">${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}%</span></div><input type="range" class="se-slider" id="stWpVolume" min="0" max="100" step="5" value="${Math.round((settings.wallpaperVolume ?? 0.5) * 100)}" />` : ""}
               </div>
               `
               }
               ${
-                data.wallpapers?.length
+                data?.wallpapers?.length
                   ? `<div class="st-card" style="margin-top:10px;"><div class="st-label">Saved wallpapers</div><div class="wp-gallery-grid">${data.wallpapers
                       .map(
                         (wallpaper) => `<div class="wp-gallery-item ${wallpaper.value === settings.backgroundValue ? "active" : ""}" data-wp-val="${escapeHtml(wallpaper.value)}" data-wp-type="${wallpaper.type}"><div class="wp-gallery-thumb" data-wp-thumb="${escapeHtml(wallpaper.value)}" data-wp-thumb-type="${wallpaper.type}"></div><button class="wp-gallery-del" data-wp-del="${escapeHtml(wallpaper.value)}" title="Delete wallpaper">&times;</button></div>`,
@@ -333,7 +345,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded">
+          <div class="st-accordion is-expanded" data-page="home">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Clock and text</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -380,6 +392,7 @@
                 value: settings.clockFont || "system",
                 options: [
                   { value: "system", label: "System" },
+                  { value: "outfit", label: "Outfit" },
                   { value: "thin", label: "Thin (iOS style)" },
                   { value: "light", label: "Light (Android style)" },
                   { value: "default", label: "Digital (Orbitron)" },
@@ -401,103 +414,28 @@
             </div>`
                 : ""
             }
+            ${
+              hasWallpaper
+                ? `
             <div class="st-row" style="align-items:flex-start; flex-direction:column; gap:4px;">
               <div class="st-row" style="width:100%;">
                 <label class="st-label" for="stWpShadowOpacity">Shadow opacity</label>
-                <span class="st-val" id="stWpShadowOpacityVal">${settings.wpShadowOpacity ?? 60}%</span>
+                <span class="st-val" id="stWpShadowOpacityVal" data-slider-val="stWpShadowOpacity" data-slider-suffix="%">${settings.wpShadowOpacity ?? 60}%</span>
               </div>
               <input type="range" id="stWpShadowOpacity" min="0" max="100" step="1"
                      value="${settings.wpShadowOpacity ?? 60}" style="width:100%;" />
             </div>
             <div class="st-row">
               <label class="st-label" for="stWpShadowColor">Shadow colour</label>
-              <input type="color" id="stWpShadowColor" class="st-color"
-                     value="${/^#[0-9a-f]{6}$/i.test(settings.wpShadowColor || "") ? settings.wpShadowColor : "#000000"}" />
-            </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="color" id="stWpShadowColor" class="st-color"
+                       value="${/^#[0-9a-f]{6}$/i.test(settings.wpShadowColor || "") ? settings.wpShadowColor : "#000000"}" />
+                <button id="stWpShadowAuto" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Auto</button>
               </div>
             </div>
-          </div>
-
-          ${
-            w.navSearch !== false
-              ? `<div class="st-accordion is-expanded">
-            <button class="st-accordion-header" type="button">
-              <span class="st-group-title">Search</span>
-              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-            </button>
-            <div class="st-accordion-body">
-              <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
-            <div class="st-row">
-              <label class="st-label" for="stSearchEngine">Default engine</label>
-              ${CustomSelect.render({
-                id: "stSearchEngine",
-                value: settings.searchEngine || "default",
-                options: Object.entries(WidgetsRenderer.getEngines()).map(
-                  ([key, eng]) => ({
-                    value: key,
-                    label: eng.name,
-                  }),
-                ),
-                style: "width:180px;",
-              })}
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px;">
-              ${Object.entries(WidgetsRenderer.getEngines())
-                .map(
-                  ([key, eng]) => `
-                <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:6px;">
-                  <input type="checkbox" class="st-eng-chk" data-eng-key="${key}" ${enabledEngs.includes(key) ? "checked" : ""} />
-                  <span>${escapeHtml(eng.name)}</span>
-                </label>
-              `,
-                )
-                .join("")}
-            </div>
-              </div>
-            </div>
-          </div>`
-              : ""
-          }
-
-          <div class="st-accordion" data-accordion-key="breaks">
-            <button class="st-accordion-header" type="button">
-              <span class="st-group-title">Break reminders${breaks.enabled ? ` <span class="st-group-note">Every ${breaks.everyMin}m</span>` : ""}</span>
-              <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-            </button>
-            <div class="st-accordion-body">
-              <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
-                <label class="st-row" style="cursor:pointer; justify-content:flex-start; gap:8px; padding:0;">
-                  <input type="checkbox" id="stBreaksEnabled" ${breaks.enabled ? "checked" : ""} />
-                  <span class="st-label" style="font-weight:600;">Remind me to take a break</span>
-                </label>
-                <div class="st-hint">A nudge on this page while it is open. No background timers and no notification permission.</div>
-                <div id="stBreaksBody" style="display:${breaks.enabled ? "flex" : "none"}; flex-direction:column; gap:10px;">
-                  <div class="st-row">
-                    <label class="st-label" for="stBreaksEvery">Every</label>
-                    ${CustomSelect.render({
-                      id: "stBreaksEvery",
-                      value: String(breaks.everyMin),
-                      options: StorageManager.BREAK_INTERVALS.map((m) => ({
-                        value: String(m),
-                        label:
-                          m >= 60
-                            ? `${m / 60} hour${m > 60 ? "s" : ""}`
-                            : `${m} minutes`,
-                      })),
-                      style: "width:160px;",
-                    })}
-                  </div>
-                  <div class="st-row" style="flex-direction:column; align-items:stretch; gap:6px;">
-                    <label class="st-label" for="stBreaksMessage">What it should say</label>
-                    <input type="text" id="stBreaksMessage" class="st-input" maxlength="120"
-                           value="${escapeHtml(breaks.message || "")}"
-                           placeholder="${escapeHtml(StorageManager.DEFAULT_SETTINGS.breaks.message)}" />
-                  </div>
-                  <label class="st-row" style="cursor:pointer;">
-                    <span class="st-label">Play a chime</span>
-                    <input type="checkbox" id="stBreaksSound" ${breaks.sound !== false ? "checked" : ""} />
-                  </label>
-                </div>
+            <div class="st-hint">${settings.wpShadowAuto === false ? "Using your own shadow." : "Set automatically from your wallpaper."}</div>`
+                : ""
+            }
               </div>
             </div>
           </div>
@@ -505,7 +443,7 @@
           ${
             w.weather
               ? `
-          <div class="st-accordion is-expanded">
+          <div class="st-accordion is-expanded" data-page="home">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Weather</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -513,8 +451,8 @@
             <div class="st-accordion-body">
               <div class="st-card" style="display:flex; flex-direction:column; gap:10px;">
             <div class="st-row">
-              <label class="st-label">City</label>
-              <input type="text" id="stWeatherCity" class="st-input" value="${escapeHtml(settings.weatherCity || "")}" placeholder="City" style="width:140px;" />
+              <label class="st-label" for="stWeatherCity">City</label>
+              <input type="text" id="stWeatherCity" class="st-input" value="${escapeHtml(settings.weatherCity || "")}" placeholder="Start typing a city" style="width:200px;" />
             </div>
             <div class="st-row">
               <label class="st-label">Temperature unit</label>

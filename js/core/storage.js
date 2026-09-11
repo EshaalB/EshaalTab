@@ -12,6 +12,10 @@ function uuid() {
   });
 }
 
+/* Weather glyphs are stroke-only and take `currentColor`, so the row reads as
+   one line of text with a small picture in it rather than a coloured badge
+   sitting next to grey words - and it stays legible on any wallpaper, since it
+   inherits whatever ink the wallpaper analysis picked. */
 const ICONS = {
   edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>',
   trash:
@@ -20,22 +24,23 @@ const ICONS = {
   link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
   incognito:
     '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
+  /* A pushpin seen head-on: round head, straight shaft, point. The previous
+     glyph was a thumbtack drawn in outline, which at 12px collapsed into an
+     unreadable smudge - the shape only survives at that size when it is
+     solid and the silhouette is simple. */
+  pinFilled:
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M14.3 2.3a1 1 0 0 1 1.4 0l6 6a1 1 0 0 1-.7 1.7 4 4 0 0 0-2.9 1.2l-2.6 2.6a5.5 5.5 0 0 1-.9 4.6 1 1 0 0 1-1.5.1l-3.4-3.4-4.4 4.4a1 1 0 0 1-1.4-1.4l4.4-4.4-3.4-3.4a1 1 0 0 1 .1-1.5 5.5 5.5 0 0 1 4.6-.9l2.6-2.6a4 4 0 0 0 1.2-2.9 1 1 0 0 1 .3-.7z"/></svg>',
   pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
   grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
   check: '<polyline points="20 6 9 17 4 12"/>',
   search:
     '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5" fill="#fcd34d"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
-  weatherSun:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5" fill="#fcd34d"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
-  weatherCloud:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" fill="#e2e8f0"/></svg>',
-  weatherRain:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13v8M8 13v8M12 15v8M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" stroke="#94a3b8"/><path d="M18 7h-1.26A8 8 0 1 0 4 15.25" fill="#e2e8f0" stroke="none"/></svg>',
-  weatherSnow:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25" stroke="#94a3b8"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="16" y1="16" x2="16.01" y2="16"/><line x1="10" y1="21" x2="10.01" y2="21"/><line x1="14" y1="21" x2="14.01" y2="21"/><path d="M18 8h-1.26A8 8 0 1 0 4 16.25" fill="#e2e8f0" stroke="none"/></svg>',
-  weatherStorm:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9" fill="#cbd5e1"/><polygon points="13 11 9 17 15 17 11 23" fill="#fde047" stroke="#eab308"/></svg>',
+  weatherSun: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.4v2M12 19.6v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.4 12h2M19.6 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
+  weatherCloud: '<path d="M17.6 18.5H7.4a4.4 4.4 0 0 1-.5-8.77 6 6 0 0 1 11.4 1.42 3.7 3.7 0 0 1-.7 7.35Z"/>',
+  weatherRain: '<path d="M17.4 15.5H7.6a4.2 4.2 0 0 1-.5-8.38 5.8 5.8 0 0 1 11 1.36 3.55 3.55 0 0 1-.7 7.02Z"/><path d="M9 18.4 8.2 21M12.4 18.4l-.8 2.6M15.8 18.4l-.8 2.6"/>',
+  weatherSnow: '<path d="M17.4 15.5H7.6a4.2 4.2 0 0 1-.5-8.38 5.8 5.8 0 0 1 11 1.36 3.55 3.55 0 0 1-.7 7.02Z"/><path d="M8.6 19h.01M12 20.4h.01M15.4 19h.01"/>',
+  weatherStorm: '<path d="M17.4 14.5H7.6a4.2 4.2 0 0 1-.5-8.38 5.8 5.8 0 0 1 11 1.36 3.55 3.55 0 0 1-.7 7.02Z"/><path d="m12.8 16.6-2.4 3.4h3l-2 3"/>',
   coffee:
     '<svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" fill="#fcd34d"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>',
   sunset:
@@ -52,40 +57,57 @@ function icon(name, size = 16) {
 }
 
 const StorageManager = (() => {
+  /* A fresh install starts with an AI Tools board.
+
+     It used to be a "Quick Links" board holding YouTube and Gmail - two sites
+     everyone already has one keystroke away, which made the first thing a new
+     user saw an example of something they did not need. The assistants people
+     actually switch between all day are a better first board: they are
+     spread across a dozen domains, new ones arrive constantly, and nobody
+     remembers every URL. The first five are pinned to Home, which is the pin
+     limit, so Home opens as a working launcher rather than an empty row.
+
+     Existing profiles never see this - it only runs when there is no data. */
   function seedBoards() {
+    const tools = [
+      ["ChatGPT", "https://chatgpt.com"],
+      ["Claude", "https://claude.ai"],
+      ["Gemini", "https://gemini.google.com"],
+      ["Perplexity", "https://www.perplexity.ai"],
+      ["Grok", "https://grok.com"],
+      ["DeepSeek", "https://chat.deepseek.com"],
+      ["Copilot", "https://copilot.microsoft.com"],
+      ["Meta AI", "https://www.meta.ai"],
+      ["Le Chat", "https://chat.mistral.ai"],
+      ["NotebookLM", "https://notebooklm.google.com"],
+      ["AI Studio", "https://aistudio.google.com"],
+      ["HuggingChat", "https://huggingface.co/chat"],
+    ];
     return [
       {
         id: uuid(),
-        name: "Quick Links",
-        color: "#10b981",
+        name: "AI Tools",
+        color: "#a855f7",
         col: 0,
         order: 0,
-        bookmarks: [
-          {
-            id: uuid(),
-            title: "YouTube",
-            url: "https://youtube.com",
-            tags: ["video", "media"],
-            pinnedToHome: true,
-          },
-          {
-            id: uuid(),
-            title: "Gmail",
-            url: "https://mail.google.com",
-            tags: ["mail"],
-            pinnedToHome: true,
-          },
-        ],
+        // Pinned from the start, so the board button on a fresh Home opens
+        // straight onto it.
+        pinnedToHome: true,
+        bookmarks: tools.map(([title, url], i) => ({
+          id: uuid(),
+          title,
+          url,
+          tags: ["ai"],
+          ...(i < 5 ? { pinnedToHome: true } : {}),
+        })),
       },
     ];
   }
-
-  // Preset ids retired when the Gamer group became Neon. Kept here because
-  // the settings module that owns PRESETS is loaded lazily, long after this
-  // migration has to run.
   const RETIRED_PRESET_IDS = ["neon", "synthwave", "matrix", "amber"];
 
   const MAX_SESSIONS = 30;
+  const MAX_WORKSPACES = 30;
+  const MAX_READ_LATER = 200;
   const MAX_SESSION_TABS = 200;
 
   const MAX_NOTE_TABS = 5;
@@ -93,90 +115,129 @@ const StorageManager = (() => {
 
   const DEFAULT_DATA = {
     boards: seedBoards(),
-    // `notes` is kept as a mirror of the active note tab so older backups and
-    // the search index keep working. `noteTabs` is the source of truth.
     notes: "",
     noteTabs: [],
     activeNoteId: "",
     notesHistory: [],
-    // Saved windows of tabs. Canonical home is here inside `data`, so sessions
-    // ride along with backups; `tabStashes` is the pre-sessions key and is
-    // folded in on load.
+  
     sessions: [],
+    workspaces: [],
     tabStashes: [],
+   
+    readLater: [],
     todos: [],
-    tags: ["video", "media", "mail"],
+    tags: ["ai"],
     wallpapers: [],
     focus: {},
-    breakState: { nextAt: 0 },
-    // Reminders due before this instant are treated as already handled. Set
-    // when data arrives from outside the normal flow (a backup restore, a
-    // reset), so restored todos never chime for times that already passed.
-    remindersMutedBefore: 0,
+
     pinsMigrated: true,
   };
+
+  // The interface surfaces that can carry their own background strength.
+  const SURFACE_KEYS = ["boards", "topbar", "search", "notes", "widgets", "panels"];
+
+  /* Settings sheet pages, for validating the remembered one. Kept here rather
+     than imported from the settings module because storage is loaded first. */
+  const SETTINGS_PAGES = [
+    "appearance",
+    "themes",
+    "presets",
+    "wallpaper",
+    "home",
+    "backup",
+    "maintenance",
+    "privacy",
+    "reset",
+    "help",
+    "support",
+  ];
 
   const DEFAULT_SETTINGS = {
     mode: "dark",
     autoColor: false,
-    accentColor: "#212269",
+    accentColor: "#5888ec",
     boardColor: "#ffffff",
     boardOpacity: 0.08,
-    interfaceOpacity: 8,
+    interfaceOpacity: 90,
+    surfaceOpacity: {},
+    notesFontSize: 15,
     backgroundType: "solid",
     backgroundValue: "#0d1117",
+    solidSeed: "#5888ec",
     wallpaperZoom: 100,
     wallpaperFit: "cover",
     wallpaperPosX: 50,
     wallpaperPosY: 50,
     wallpaperMuted: true,
     wallpaperVolume: 0.5,
-    dualAccent: true,
 
     enabledEngines: [
       "default",
+      "google",
       "duckduckgo",
-      "youtube",
+      "yandex",
+      "yahoo",
       "chatgpt",
       "claude",
       "gemini",
-      "research",
       "perplexity",
+      "research",
+      "youtube",
+      "reddit",
+      "pinterest",
+      "quora",
     ],
-    lastSettingsTab: "theme",
+    lastSettingsPage: "appearance",
     collapsedSettingsAccordions: {
-      theme: ["position and crop", "share your theme"],
+     
+      theme: [
+        "themes",
+        "theme and colours",
+        "position and crop",
+        "share your theme",
+      ],
       widgets: [
         "general appearance",
         "clock and text",
         "search",
         "weather",
-        "breaks",
       ],
       data: ["privacy", "data management"],
     },
-    settingsLayoutVersion: 7,
+  
+    expandedSettingsAccordions: {},
+    settingsLayoutVersion: 13,
     settingsScrollPositions: {},
     lastSavedBoardId: "",
     boardWidth: 260,
+    boardTransparency: 0,
     searchEngine: "default",
+    homeTaskCount: 3,
+    pinsPosition: "center",
     weatherCity: "",
     weatherUnit: "c",
     widgets: {
       clock: true,
       navSearch: true,
+ 
+      date: false,
       weather: false,
-      todo: true,
       workspace: true,
+      // The open checklist lines Home lifts out of the notepad. On by default
+      // because it is the only thing on the page surfacing work the user has
+      // already written down - but it is also the one Home widget that shows
+      // content rather than chrome, so it has to be switchable off.
+      notesTodos: true,
+      greeting: true,
     },
     activeTab: "home",
     displayName: "",
     preset: "",
-    accent2: "",
+    accent2: "#fda6c8",
     accentGradient: false,
     cursorUrl: "",
-    cornerRadius: "default",
-    fontFamily: "default",
+    cornerRadius: "16px",
+    fontFamily: "inter",
     use12h: false,
     hidePinnedOnHome: false,
     clockPosition: "center",
@@ -184,22 +245,28 @@ const StorageManager = (() => {
     clockColor: "",
     solidAmbient: true,
     performanceMode: false,
+    wpShadowAuto: true,
     wpShadowOpacity: 60,
-    wpShadowBlur: 20,
     wpShadowColor: "#000000",
     wallpaperOverlay: false,
     wallpaperOverlayOpacity: 35,
-    remoteFavicons: false,
+    wallpaperBlur: false,
+    wallpaperBlurAmount: 40,
+    wallpaperVignette: false,
+    wallpaperVignetteAmount: 45,
+  
+    remoteFavicons: true,
+    
+    remoteFaviconsDefaultVersion: 1,
     onboardingSeen: false,
+    /* Whether the packaged wallpaper has had its one chance to be applied.
+       Set on the first run whatever the outcome, so a user who deletes the
+       shipped wallpaper - or replaces it with their own - is never handed it
+       back on the next launch. */
+    packagedWallpaperTried: false,
+  
+    welcomeSeen: false,
     aiAutoSend: false,
-    // Break nudges. Deliberately four fields: anything more belongs in a
-    // dedicated focus app, not a new tab page.
-    breaks: {
-      enabled: false,
-      everyMin: 45,
-      message: "Time for a break — look away and stretch.",
-      sound: true,
-    },
     workspaceFavorites: [
       "Search",
       "Gmail",
@@ -421,21 +488,6 @@ const StorageManager = (() => {
     return capPinnedBookmarks(d);
   }
 
-  const BREAK_INTERVALS = [15, 20, 25, 30, 45, 60, 90, 120];
-
-  function sanitizeBreaks(raw) {
-    const d = DEFAULT_SETTINGS.breaks;
-    const b = raw && typeof raw === "object" ? raw : {};
-    const every = parseInt(b.everyMin, 10);
-    const msg = typeof b.message === "string" ? b.message.trim() : "";
-    return {
-      enabled: typeof b.enabled === "boolean" ? b.enabled : d.enabled,
-      everyMin: BREAK_INTERVALS.includes(every) ? every : d.everyMin,
-      message: msg ? msg.slice(0, 120) : d.message,
-      sound: typeof b.sound === "boolean" ? b.sound : d.sound,
-    };
-  }
-
   const CLOCK_POSITIONS = [
     "center",
     "top-left",
@@ -488,9 +540,64 @@ const StorageManager = (() => {
     }
 
     d.noteTabs = tabs;
+    drainTodosIntoNotes(d, tabs);
     if (!tabs.some((t) => t.id === d.activeNoteId)) d.activeNoteId = tabs[0].id;
     d.notes = tabs.find((t) => t.id === d.activeNoteId).text;
     return d;
+  }
+
+  // Set when the one-time task migration below actually moved something, so
+  // `load` can flush the result. Without the flush the tasks would sit in
+  // memory only and be migrated again - and duplicated - on the next load.
+  let todosDrained = false;
+
+  const escapeNoteText = (s) =>
+    String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+  /**
+   * The standalone task list is gone; the notepad's checklist replaced it.
+   * Anyone who already had tasks keeps them: they become a checklist in a
+   * "Tasks" note, ticked boxes included, and `todos` is emptied so this runs
+   * exactly once. Old backups still carry `todos`, so this lives on the load
+   * path rather than in a one-shot version bump.
+   */
+  function drainTodosIntoNotes(d, tabs) {
+    const todos = Array.isArray(d.todos) ? d.todos.filter((t) => t && t.text) : [];
+    if (!Array.isArray(d.todos) || !d.todos.length) return;
+    d.todos = [];
+    todosDrained = true;
+    if (!todos.length) return;
+
+    const items = todos
+      .map(
+        (t) =>
+          `<li data-checked="${t.done ? "true" : "false"}">` +
+          escapeNoteText(t.text) +
+          "</li>",
+      )
+      .join("");
+    const block = `<ul class="et-note-checklist">${items}</ul>`;
+
+    // With every tab slot taken there is nowhere to put a new note, so the
+    // tasks go to the end of the first one rather than being dropped.
+    const target =
+      tabs.length < MAX_NOTE_TABS
+        ? (tabs.push({
+            id: uuid(),
+            title: "Tasks",
+            text: "",
+            updatedAt: Date.now(),
+          }),
+          tabs[tabs.length - 1])
+        : tabs[0];
+
+    target.text = (target.text ? target.text + "<div><br></div>" : "").concat(
+      block,
+    ).slice(0, MAX_NOTE_CHARS);
+    target.updatedAt = Date.now();
   }
 
   /**
@@ -548,17 +655,90 @@ const StorageManager = (() => {
     return d;
   }
 
+  /**
+   * Validates `data.readLater`. Same shape of defence as sessions: anything
+   * that is not an http(s) entry is dropped rather than trusted, since this
+   * list is rendered as links and can arrive from an imported backup.
+   */
+  function normalizeReadLater(d) {
+    if (!d || typeof d !== "object") return d;
+    const seen = new Set();
+    const out = [];
+
+    for (const raw of Array.isArray(d.readLater) ? d.readLater : []) {
+      if (!raw || typeof raw !== "object") continue;
+      if (typeof raw.url !== "string" || !/^https?:\/\//i.test(raw.url))
+        continue;
+      const url = raw.url.slice(0, 2000);
+      // One entry per URL: saving the same page twice should refresh it, not
+      // grow the list.
+      if (seen.has(url)) continue;
+      seen.add(url);
+      out.push({
+        id: typeof raw.id === "string" && raw.id ? raw.id : uuid(),
+        url,
+        title: String(raw.title || url).slice(0, 300),
+        addedAt: typeof raw.addedAt === "number" ? raw.addedAt : Date.now(),
+        read: raw.read === true,
+      });
+    }
+
+    out.sort((a, b) => b.addedAt - a.addedAt);
+    d.readLater = out.slice(0, MAX_READ_LATER);
+    return d;
+  }
+
+  /**
+   * Validates `data.workspaces` - named snapshots of a window's tabs.
+   *
+   * Same defence as sessions: this list is rendered as links and restored into
+   * real tabs, and it can arrive from an imported backup, so anything that is
+   * not an http(s) page is dropped rather than trusted. A board link that no
+   * longer points at a board is cleared instead of left dangling.
+   */
+  function normalizeWorkspaces(d) {
+    if (!d || typeof d !== "object") return d;
+    const boardIds = new Set(
+      (Array.isArray(d.boards) ? d.boards : []).map((b) => b && b.id),
+    );
+    const seen = new Set();
+    const out = [];
+    for (const raw of Array.isArray(d.workspaces) ? d.workspaces : []) {
+      if (!raw || typeof raw !== "object") continue;
+      const tabs = (Array.isArray(raw.tabs) ? raw.tabs : [])
+        .filter((t) => t && typeof t.url === "string" && /^https?:\/\//i.test(t.url))
+        .slice(0, MAX_SESSION_TABS)
+        .map((t) => ({
+          title: String(t.title || t.url).slice(0, 300),
+          url: t.url.slice(0, 2000),
+        }));
+      if (!tabs.length) continue;
+      const id = typeof raw.id === "string" && raw.id ? raw.id : uuid();
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const ts = typeof raw.ts === "number" ? raw.ts : Date.now();
+      out.push({
+        id,
+        name: typeof raw.name === "string" ? raw.name.trim().slice(0, 60) : "",
+        boardId:
+          typeof raw.boardId === "string" && boardIds.has(raw.boardId)
+            ? raw.boardId
+            : "",
+        ts,
+        updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : ts,
+        tabs,
+      });
+    }
+    out.sort((a, b) => b.updatedAt - a.updatedAt);
+    d.workspaces = out.slice(0, MAX_WORKSPACES);
+    return d;
+  }
+
   // Older saves predate this key entirely, and a hand-edited import could
   // carry anything, so it is rebuilt from whatever survives validation.
   function normalizeFeatureState(d) {
     if (!d || typeof d !== "object") return d;
 
-    const b = d.breakState && typeof d.breakState === "object"
-      ? d.breakState
-      : {};
-    d.breakState = {
-      nextAt: typeof b.nextAt === "number" ? b.nextAt : 0,
-    };
     d.remindersMutedBefore =
       typeof d.remindersMutedBefore === "number" ? d.remindersMutedBefore : 0;
     return d;
@@ -720,15 +900,20 @@ const StorageManager = (() => {
         collapsedSettingsAccordions.widgets = [...widgetCollapsed];
         collapsedSettingsAccordions.data = [...dataCollapsed];
       }
-      if ((loadedSettings.settingsLayoutVersion || 0) < 6) {
-        // Break reminders are opt-in, so the section arrives folded away
-        // rather than lengthening the page for everyone.
-        collapsedSettingsAccordions.widgets = [
-          ...new Set([
-            ...(collapsedSettingsAccordions.widgets || []),
-            "breaks",
-          ]),
-        ];
+      if ((loadedSettings.settingsLayoutVersion || 0) < 9) {
+        // Fold the two largest theme groups away for profiles that predate
+        // them shipping shut. Anyone who has actually opened one has it
+        // recorded in `expandedSettingsAccordions`, and that choice is left
+        // alone - this only catches sections that were open because they
+        // always had been, never because someone opened them.
+        const themeCollapsed = new Set(collapsedSettingsAccordions.theme || []);
+        const deliberate = new Set(
+          (loadedSettings.expandedSettingsAccordions || {}).theme || [],
+        );
+        ["themes", "theme and colours"].forEach((key) => {
+          if (!deliberate.has(key)) themeCollapsed.add(key);
+        });
+        collapsedSettingsAccordions.theme = [...themeCollapsed];
       }
       // The Gamer presets were replaced by the Neon group. A retired id is
       // cleared rather than remapped: the accent, seed and corner style the
@@ -743,11 +928,133 @@ const StorageManager = (() => {
           loadedSettings.cornerRadius = "0px";
       }
 
+      // Wallpaper softness was stored as a blur radius in pixels on a 2-40
+      // scale; it is a percentage on a 0-100 one now. A profile saved under
+      // the old scale is converted once, so a picture keeps roughly the
+      // softness it had rather than jumping when the meaning of the number
+      // changed underneath it.
+      if ((loadedSettings.settingsLayoutVersion || 0) < 10) {
+        const px = loadedSettings.wallpaperBlurAmount;
+        if (typeof px === "number")
+          loadedSettings.wallpaperBlurAmount = Math.round(
+            Math.sqrt(Math.min(26, Math.max(0, px)) / 26) * 100,
+          );
+      }
+
+      // "Default" is no longer a corner style, a typeface or a search engine -
+      // every menu now names the thing it actually applies - so a profile saved
+      // under the old sentinel is written across to the concrete value it
+      // always meant. The old "Default (Browser)" engine sent queries to
+      // whatever the browser was configured with, which for almost everyone
+      // was Google; that is now what it says.
+      if (!CORNER_RADII.includes(loadedSettings.cornerRadius))
+        loadedSettings.cornerRadius = CORNER_STYLES[0].value;
+      if (!APP_FONT_VALUES.includes(loadedSettings.fontFamily))
+        loadedSettings.fontFamily = APP_FONTS[0].value;
+      // 2.0.143 rewrote everyone's engine from "default" to "google", which
+      // took the browser's own search provider out of the loop and is what the
+      // Web Store flagged. Profiles carrying that rewrite are put back, and the
+      // browser default is restored to the engine list it was removed from.
+      if ((loadedSettings.settingsLayoutVersion || 0) < 11) {
+        if (loadedSettings.searchEngine === "google")
+          loadedSettings.searchEngine = "default";
+        if (Array.isArray(loadedSettings.enabledEngines))
+          loadedSettings.enabledEngines = [
+            ...new Set(["default", ...loadedSettings.enabledEngines]),
+          ];
+      }
+      // 2.0.152 added more engines. A saved list predates them, and without
+      // this they would exist only on the settings page, switched off, for
+      // everyone but a fresh install.
+      if (
+        (loadedSettings.settingsLayoutVersion || 0) < 13 &&
+        Array.isArray(loadedSettings.enabledEngines)
+      ) {
+        loadedSettings.enabledEngines = [
+          ...new Set([
+            ...loadedSettings.enabledEngines,
+            "yandex",
+            "yahoo",
+            "reddit",
+            "pinterest",
+            "quora",
+          ]),
+        ];
+      }
+
+      // Icons used to be off by default, and every profile saved since then
+      // carries a stored `false` that is indistinguishable from a deliberate
+      // opt-out. So the new default is applied once, and only to profiles that
+      // never actually touched the switch - `remoteFaviconsChoice` is written
+      // the moment someone toggles it, and is respected forever after.
+      const faviconDefaults = {};
+      if (
+        (loadedSettings.remoteFaviconsDefaultVersion || 0) <
+          DEFAULT_SETTINGS.remoteFaviconsDefaultVersion &&
+        loadedSettings.remoteFaviconsChoice === undefined
+      ) {
+        faviconDefaults.remoteFavicons = DEFAULT_SETTINGS.remoteFavicons;
+        faviconDefaults.remoteFaviconsDefaultVersion =
+          DEFAULT_SETTINGS.remoteFaviconsDefaultVersion;
+      }
+
+      /* The packaged wallpaper is for *new* profiles only.
+
+         `packagedWallpaperTried` defaults to false, and a default that new
+         reaches existing users too - so an upgrade would have handed the
+         shipped wallpaper to someone who has been happily running a solid
+         colour for months, replacing their background without being asked.
+         A profile that already has stored settings has, by definition,
+         already opened new tabs without a packaged wallpaper; it is marked as
+         having had its turn. Same shape of guard as the favicon default
+         above, and for the same reason. */
+      const packagedWallpaperDefaults = {};
+      if (
+        rawSettings &&
+        typeof rawSettings === "object" &&
+        Object.keys(rawSettings).length &&
+        rawSettings.packagedWallpaperTried === undefined
+      ) {
+        packagedWallpaperDefaults.packagedWallpaperTried = true;
+      }
+
+      // Interface strength changed meaning in layout version 8. It used to be
+      // the alpha of a white tint washed over the page, so 8% was a sensible
+      // default; it is now the opacity of the surface itself, where 100% is
+      // fully solid. Carrying the old number across would have made every
+      // panel 8% opaque - the whole interface would have vanished - so the
+      // one-time reset puts everyone on the new default instead of scaling a
+      // number that no longer means the same thing.
+      const strengthRescaled = (loadedSettings.settingsLayoutVersion || 0) >= 8;
+      const interfaceOpacity = strengthRescaled
+        ? Math.max(0, Math.min(100, migratedInterfaceOpacity))
+        : DEFAULT_SETTINGS.interfaceOpacity;
+      const surfaceOpacity = strengthRescaled
+        ? loadedSettings.surfaceOpacity || {}
+        : {};
+      // Board transparency was a second, independent alpha stacked on top of
+      // the board fill, so a board could be dimmed twice over by two controls
+      // that did not know about each other. It is folded into the "boards"
+      // surface override the first time settings pass through this migration,
+      // so a look someone already dialed in survives losing the extra knob.
+      if (
+        !strengthRescaled &&
+        typeof loadedSettings.boardTransparency === "number" &&
+        loadedSettings.boardTransparency > 0 &&
+        typeof surfaceOpacity.boards !== "number"
+      ) {
+        const transp = Math.min(90, Math.max(0, loadedSettings.boardTransparency));
+        surfaceOpacity.boards = Math.round(100 - transp);
+      }
+
       settings = refill(settings, {
         ...DEFAULT_SETTINGS,
         ...loadedSettings,
-        interfaceOpacity: Math.max(0, Math.min(100, migratedInterfaceOpacity)),
-        settingsLayoutVersion: 7,
+        ...faviconDefaults,
+        ...packagedWallpaperDefaults,
+        interfaceOpacity,
+        surfaceOpacity,
+        settingsLayoutVersion: 13,
         clockPosition:
           normalizeClockPosition(loadedSettings.clockPosition) ??
           DEFAULT_SETTINGS.clockPosition,
@@ -756,7 +1063,6 @@ const StorageManager = (() => {
           ...DEFAULT_SETTINGS.widgets,
           ...(loadedSettings.widgets || {}),
         },
-        breaks: sanitizeBreaks(loadedSettings.breaks),
       });
       if (rawSettings && rawSettings.theme && !rawSettings.mode) {
         settings.mode = rawSettings.theme === "light" ? "light" : "dark";
@@ -770,6 +1076,12 @@ const StorageManager = (() => {
     normalizeNoteTabs(data);
     normalizeFeatureState(data);
     normalizeSessions(data, legacyStashes);
+    normalizeReadLater(data);
+    normalizeWorkspaces(data);
+    if (todosDrained) {
+      todosDrained = false;
+      saveImmediate();
+    }
     // The legacy key is retired once its contents are folded into
     // `data.sessions`. Leaving it in place made the merge run on every load,
     // so a session the user deleted came straight back on the next one.
@@ -802,6 +1114,9 @@ const StorageManager = (() => {
       }
     });
     mirrorBootState();
+    // What storage now holds, as far as this tab knows - see `persist`.
+    storedData = snapshot(data);
+    storedSettings = snapshot(settings);
     return { data, settings };
   }
 
@@ -878,58 +1193,107 @@ const StorageManager = (() => {
     syncTimer = setTimeout(writeSyncNow, SYNC_MIN_INTERVAL);
   }
 
+  /* What storage last held for each key, as this tab read or wrote it.
+
+     A write from one tab makes every other open tab reload and repaint, and a
+     repaint calls save() on its way through. Writing back an identical copy
+     then woke the first tab, whose repaint wrote back again - so two new tabs
+     left open could keep rebuilding each other's pages indefinitely. That is
+     the text that shivered with nothing touched, the hover states that looked
+     stuck, and the clicks that took several tries because the page was being
+     replaced under the pointer. An unchanged copy is now never written, which
+     ends the exchange after the first repaint. */
+  let storedData = null;
+  let storedSettings = null;
+  const snapshot = (value) => {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return null;
+    }
+  };
+
   function persist() {
     mirrorBootState();
+    const nextData = snapshot(data);
+    const nextSettings = snapshot(settings);
+    const dataChanged = nextData === null || nextData !== storedData;
+    const settingsChanged = nextSettings === null || nextSettings !== storedSettings;
+    if (!dataChanged && !settingsChanged) return;
     if (isExtValid()) {
       try {
-        EXT.storage.local
-          .set({ data, settings, writer: nextWriterStamp() })
-          .catch((e) => handleStorageError("local save:", e));
+        const payload = { writer: nextWriterStamp() };
+        if (dataChanged) payload.data = data;
+        if (settingsChanged) payload.settings = settings;
+        storedData = nextData;
+        storedSettings = nextSettings;
+        EXT.storage.local.set(payload).catch((e) => {
+          storedData = storedSettings = null;
+          handleStorageError("local save:", e);
+        });
         queueSync();
       } catch (e) {
+        storedData = storedSettings = null;
         handleStorageError("local save:", e);
       }
     } else {
-      localStorage.setItem("markmez_settings", JSON.stringify(settings));
-      localStorage.setItem("markmez_data", JSON.stringify(data));
+      storedData = nextData;
+      storedSettings = nextSettings;
+      if (settingsChanged) localStorage.setItem("markmez_settings", nextSettings);
+      if (dataChanged) localStorage.setItem("markmez_data", nextData);
     }
   }
 
   function persistSettings() {
     mirrorBootState();
+    const nextSettings = snapshot(settings);
+    if (nextSettings !== null && nextSettings === storedSettings) return;
+    storedSettings = nextSettings;
     if (isExtValid()) {
       try {
         EXT.storage.local
           .set({ settings, writer: nextWriterStamp() })
-          .catch((e) => handleStorageError("local save:", e));
+          .catch((e) => {
+            storedSettings = null;
+            handleStorageError("local save:", e);
+          });
         queueSync();
       } catch (e) {
+        storedSettings = null;
         handleStorageError("local save:", e);
       }
     } else {
-      localStorage.setItem("markmez_settings", JSON.stringify(settings));
+      localStorage.setItem("markmez_settings", nextSettings);
     }
   }
 
   let pendingPersist = null;
+  // Settings-only writes skip the `data` blob. Dragging a slider fires `input`
+  // at pointer rate, and routing every one of those through the full persist
+  // re-serialised every board, note and session on each 120ms flush.
+  let dataDirty = false;
 
-  function schedule() {
-    pendingPersist = persist;
+  function schedule(withData) {
+    if (withData) dataDirty = true;
+    pendingPersist = () => {
+      const full = dataDirty;
+      dataDirty = false;
+      if (full) persist();
+      else persistSettings();
+    };
     clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-      pendingPersist = null;
-      persist();
-    }, 120);
+    saveTimeout = setTimeout(flush, 120);
   }
   function save() {
-    schedule();
+    schedule(true);
   }
   function saveSettings() {
-    schedule();
+    schedule(false);
   }
   function saveImmediate() {
     clearTimeout(saveTimeout);
     pendingPersist = null;
+    dataDirty = false;
     persist();
   }
 
@@ -1046,12 +1410,22 @@ const StorageManager = (() => {
     );
     pick("boardOpacity", num(raw.boardOpacity, 0, 1));
     pick("interfaceOpacity", num(raw.interfaceOpacity, 0, 100));
+    if (raw.surfaceOpacity && typeof raw.surfaceOpacity === "object") {
+      const clean = {};
+      SURFACE_KEYS.forEach((k) => {
+        const v = num(raw.surfaceOpacity[k], 0, 100);
+        if (v !== undefined) clean[k] = v;
+      });
+      out.surfaceOpacity = clean;
+    }
+    pick("notesFontSize", num(raw.notesFontSize, 11, 28));
     if (raw.interfaceOpacity === undefined && raw.boardOpacity !== undefined) {
       const legacyInterfaceOpacity = num(raw.boardOpacity, 0, 1);
       if (legacyInterfaceOpacity !== undefined)
         out.interfaceOpacity = legacyInterfaceOpacity * 100;
     }
     pick("boardWidth", num(raw.boardWidth, 200, 560));
+    pick("boardTransparency", num(raw.boardTransparency, 0, 90));
     pick(
       "backgroundType",
       ["solid", "image", "video"].includes(raw.backgroundType)
@@ -1064,27 +1438,11 @@ const StorageManager = (() => {
     );
     pick(
       "cornerRadius",
-      ["default", "0px", "8px", "16px", "circle", "9999px"].includes(
-        raw.cornerRadius,
-      )
-        ? raw.cornerRadius
-        : undefined,
+      CORNER_RADII.includes(raw.cornerRadius) ? raw.cornerRadius : undefined,
     );
     pick(
       "fontFamily",
-      [
-        "system",
-        "default",
-        "sans-serif",
-        "geometric",
-        "serif",
-        "monospace",
-        "rounded",
-        "slab",
-        "handwriting",
-      ].includes(raw.fontFamily)
-        ? raw.fontFamily
-        : undefined,
+      APP_FONT_VALUES.includes(raw.fontFamily) ? raw.fontFamily : undefined,
     );
     pick("searchEngine", str(raw.searchEngine, 30));
     pick("weatherCity", str(raw.weatherCity, 80));
@@ -1106,32 +1464,27 @@ const StorageManager = (() => {
     );
     pick("wallpaperVolume", num(raw.wallpaperVolume, 0, 1));
     pick(
-      "dualAccent",
-      typeof raw.dualAccent === "boolean" ? raw.dualAccent : undefined,
-    );
-    pick(
-      "lastSettingsTab",
-      ["theme", "widgets", "data", "help"].includes(raw.lastSettingsTab)
-        ? raw.lastSettingsTab
+      "lastSettingsPage",
+      SETTINGS_PAGES.includes(raw.lastSettingsPage)
+        ? raw.lastSettingsPage
         : undefined,
     );
     pick("settingsLayoutVersion", num(raw.settingsLayoutVersion, 0, 20));
-    if (
-      raw.collapsedSettingsAccordions &&
-      typeof raw.collapsedSettingsAccordions === "object" &&
-      !Array.isArray(raw.collapsedSettingsAccordions)
-    ) {
-      out.collapsedSettingsAccordions = {};
-      for (const tab of ["theme", "widgets", "data", "help"]) {
-        if (Array.isArray(raw.collapsedSettingsAccordions[tab])) {
-          out.collapsedSettingsAccordions[tab] =
-            raw.collapsedSettingsAccordions[tab]
-              .filter((v) => typeof v === "string")
-              .map((v) => v.slice(0, 100))
-              .slice(0, 30);
+    const pickAccordionMap = (key) => {
+      const src = raw[key];
+      if (!src || typeof src !== "object" || Array.isArray(src)) return;
+      out[key] = {};
+      for (const tab of ["theme", "widgets", "data", "help", "support"]) {
+        if (Array.isArray(src[tab])) {
+          out[key][tab] = src[tab]
+            .filter((v) => typeof v === "string")
+            .map((v) => v.slice(0, 100))
+            .slice(0, 30);
         }
       }
-    }
+    };
+    pickAccordionMap("collapsedSettingsAccordions");
+    pickAccordionMap("expandedSettingsAccordions");
     if ((num(raw.settingsLayoutVersion, 0, 20) || 0) < 2) {
       const themeCollapsed = new Set(
         out.collapsedSettingsAccordions.theme || [],
@@ -1191,13 +1544,29 @@ const StorageManager = (() => {
       out.collapsedSettingsAccordions.data = [...dataCollapsed];
       out.settingsLayoutVersion = 5;
     }
+    if ((num(raw.settingsLayoutVersion, 0, 20) || 0) < 9) {
+      // Same fold as the load path, so a restored backup opens the way a
+      // fresh profile does. A section the user had deliberately opened is
+      // recorded in `expandedSettingsAccordions` and is left as they left it.
+      const themeCollapsed = new Set(
+        out.collapsedSettingsAccordions.theme || [],
+      );
+      const deliberate = new Set(
+        (out.expandedSettingsAccordions || {}).theme || [],
+      );
+      ["themes", "theme and colours"].forEach((key) => {
+        if (!deliberate.has(key)) themeCollapsed.add(key);
+      });
+      out.collapsedSettingsAccordions.theme = [...themeCollapsed];
+      out.settingsLayoutVersion = 9;
+    }
     if (
       raw.settingsScrollPositions &&
       typeof raw.settingsScrollPositions === "object" &&
       !Array.isArray(raw.settingsScrollPositions)
     ) {
       out.settingsScrollPositions = {};
-      for (const tab of ["theme", "widgets", "data", "help"]) {
+      for (const tab of ["theme", "widgets", "data", "help", "support"]) {
         const pos = num(raw.settingsScrollPositions[tab], 0, 100000);
         if (pos !== undefined) out.settingsScrollPositions[tab] = pos;
       }
@@ -1222,9 +1591,19 @@ const StorageManager = (() => {
     );
     pick("use12h", typeof raw.use12h === "boolean" ? raw.use12h : undefined);
     pick("remoteFavicons", !!raw.remoteFavicons);
+    if (raw.remoteFaviconsChoice !== undefined)
+      out.remoteFaviconsChoice = !!raw.remoteFaviconsChoice;
+    pick(
+      "remoteFaviconsDefaultVersion",
+      num(raw.remoteFaviconsDefaultVersion, 0, 99),
+    );
     pick(
       "onboardingSeen",
       typeof raw.onboardingSeen === "boolean" ? raw.onboardingSeen : undefined,
+    );
+    pick(
+      "welcomeSeen",
+      typeof raw.welcomeSeen === "boolean" ? raw.welcomeSeen : undefined,
     );
     pick(
       "aiAutoSend",
@@ -1243,7 +1622,6 @@ const StorageManager = (() => {
     );
 
     pick("clockPosition", normalizeClockPosition(raw.clockPosition));
-    pick("breaks", raw.breaks ? sanitizeBreaks(raw.breaks) : undefined);
     pick(
       "clockFont",
       [
@@ -1278,8 +1656,8 @@ const StorageManager = (() => {
         ? raw.performanceMode
         : undefined,
     );
+    pick("wpShadowAuto", typeof raw.wpShadowAuto === "boolean" ? raw.wpShadowAuto : undefined);
     pick("wpShadowOpacity", num(raw.wpShadowOpacity, 0, 100));
-    pick("wpShadowBlur", num(raw.wpShadowBlur, 0, 40));
     pick(
       "wpShadowColor",
       HEX.test(raw.wpShadowColor || "") ? raw.wpShadowColor : undefined,
@@ -1292,8 +1670,30 @@ const StorageManager = (() => {
     );
     pick("wallpaperOverlayOpacity", num(raw.wallpaperOverlayOpacity, 0, 90));
     pick(
+      "wallpaperBlur",
+      typeof raw.wallpaperBlur === "boolean" ? raw.wallpaperBlur : undefined,
+    );
+    pick("wallpaperBlurAmount", num(raw.wallpaperBlurAmount, 0, 100));
+    pick(
+      "wallpaperVignette",
+      typeof raw.wallpaperVignette === "boolean" ? raw.wallpaperVignette : undefined,
+    );
+    pick("wallpaperVignetteAmount", num(raw.wallpaperVignetteAmount, 0, 100));
+    pick(
       "wpExtractedAccent",
       HEX.test(raw.wpExtractedAccent || "") ? raw.wpExtractedAccent : undefined,
+    );
+    pick(
+      "wpTone",
+      raw.wpTone && typeof raw.wpTone === "object"
+        ? {
+            top: HEX.test(raw.wpTone.top || "") ? raw.wpTone.top : "#4a4a52",
+            middle: HEX.test(raw.wpTone.middle || "") ? raw.wpTone.middle : "#4a4a52",
+            bottom: HEX.test(raw.wpTone.bottom || "") ? raw.wpTone.bottom : "#4a4a52",
+            overall: HEX.test(raw.wpTone.overall || "") ? raw.wpTone.overall : "#4a4a52",
+            spread: num(raw.wpTone.spread, 0, 1) ?? 0.15,
+          }
+        : undefined,
     );
     pick("lastSavedBoardId", str(raw.lastSavedBoardId, 120));
 
@@ -1362,10 +1762,10 @@ const StorageManager = (() => {
         normalizeNoteTabs(data);
         normalizeFeatureState(data);
         normalizeSessions(data);
+        normalizeReadLater(data);
+        normalizeWorkspaces(data);
         // A restore replays someone's past. Without this, every todo in the
-        // backup whose time already passed today would chime on load, and the
-        // break clock would fire off a timestamp from whenever the backup was
-        // taken.
+        // backup whose time already passed today would chime on load.
         muteRemindersFromNow();
         saveImmediate();
         await pruneMedia();
@@ -1388,8 +1788,6 @@ const StorageManager = (() => {
   function muteRemindersFromNow() {
     const now = Date.now();
     data.remindersMutedBefore = now;
-    if (data.breakState && data.breakState.nextAt <= now)
-      data.breakState.nextAt = 0; // re-armed by BreakTimer on next tick
   }
 
   function resetAll() {
@@ -1398,6 +1796,8 @@ const StorageManager = (() => {
     normalizeNoteTabs(data);
     normalizeFeatureState(data);
     normalizeSessions(data);
+    normalizeReadLater(data);
+    normalizeWorkspaces(data);
     muteRemindersFromNow();
     settings.activeTab = "home";
     saveImmediate();
@@ -1452,16 +1852,18 @@ const StorageManager = (() => {
     normalizeNoteTabs,
     normalizeFeatureState,
     normalizeSessions,
+    normalizeWorkspaces,
     MAX_SESSIONS,
+    MAX_WORKSPACES,
+    MAX_READ_LATER,
     muteRemindersFromNow,
-    sanitizeBreaks,
-    BREAK_INTERVALS,
     MAX_NOTE_TABS,
     MAX_NOTE_CHARS,
     setBootBg,
     setBootPreview,
     getWriterId: () => WRITER_ID,
     isOwnWriter,
+    SURFACE_KEYS,
     DEFAULT_SETTINGS,
     DEFAULT_DATA,
   };

@@ -47,12 +47,12 @@
         <div class="st-group-title">Focus, notes and tasks</div>
         <div class="st-card help-card">
           ${item("Pomodoro timer", "Click the timer icon on Home, or type <b>/focus</b>, to start a session. Choose a preset or use the wheel for a custom duration, switching between hour/minute and minute/second entry when needed. Space starts and pauses it, R resets it, and finished sessions are counted for the day.")}
-          ${item("Notes and todos", "The <b>Notes</b> tab is a scratchpad that saves as you type, and you can export it as a .txt file. The checklist icon on Home opens your todo list, where you can double-click a task to edit it or pin it to keep it at the top.")}
+          ${item("Notes and tasks", "The <b>Notes</b> tab is a scratchpad that saves as you type, and you can export it as a .txt file. Tasks live in your notes now: the checklist button in the note toolbar turns lines into tick boxes, and clicking a box marks it done.")}
         </div>
 
         <div class="st-group-title">Make it yours</div>
         <div class="st-card help-card">
-          ${item("Quick Settings", "Control Home visibility, choose a preset, set Light, Dark or System mode, and add a wallpaper by upload or URL. Fresh installs begin with one Quick Links board containing YouTube and Gmail.")}
+          ${item("Quick Settings", "Control Home visibility, choose a preset, set Light, Dark or System mode, and add a wallpaper by upload or URL. Fresh installs begin with one AI Tools board - ChatGPT, Claude, Gemini, Perplexity, Grok, DeepSeek and more.")}
           ${item("Customize", "Adjust wallpaper fit and position, interface strength, fonts, clock and text appearance, search engines, weather and other detailed controls. Performance mode reduces motion and visual effects on slower devices.")}
           ${item("Accent colours", "The accent colours buttons, highlights and the tint behind your boards. Reset it any time to follow your base colour again.")}
         </div>
@@ -60,7 +60,7 @@
         <div class="st-group-title">Your data</div>
         <div class="st-card help-card">
           ${item("Backup and restore", "In <b>Privacy &amp; data</b> you can export a full JSON backup, including locally stored wallpapers, restore one, or import from Chrome or Raindrop. Duplicate cleanup keeps the first copy of a repeated URL.")}
-          ${item("What leaves your browser", "Your boards, notes and todos stay on your device. There is no EshaalTab account, analytics service or server. A search is sent only when you submit it to your chosen search or AI provider. A wallpaper URL contacts that site when you add it. <b>Load icons from the web</b> is off by default and contacts Google and DuckDuckGo when enabled. Weather contacts Open-Meteo after you set a city.")}
+          ${item("What leaves your browser", "Your boards and notes stay on your device. There is no EshaalTab account, analytics service or server. A search is sent only when you submit it to your chosen search or AI provider. A wallpaper URL contacts that site when you add it. <b>Load icons from the web</b> is off by default and contacts Google and DuckDuckGo when enabled. Weather contacts Open-Meteo after you set a city.")}
         </div>
       </div>`;
   }

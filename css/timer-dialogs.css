@@ -6,35 +6,102 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--sp-4);
 }
 
+/* Dialogs ------------------------------------------------------------------
+   Sized to their content rather than to a fixed wide box. A short question in
+   a 440px card is mostly empty card, and the wider the card the further the
+   eye has to travel from the question to the buttons that answer it. */
 .et-modal-card {
-  width: min(92vw, calc(360px * var(--ui-scale)));
+  width: min(92vw, calc(400px * var(--ui-scale)));
+  max-height: calc(100dvh - var(--sp-8));
+  overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--panel-border);
-  border-radius: var(--r-md);
-  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
   box-shadow: var(--e3);
 }
 
+/* A one-field prompt is narrower still - close to square once the label, the
+   input and one row of buttons are stacked in it. */
+.et-modal-card:has(.modal-body-content > .dialog-field:only-child),
+.et-modal-card:has(.dialog-stack > .dialog-field:only-child) {
+  width: min(92vw, calc(340px * var(--ui-scale)));
+}
+
+/* The confirmation layout: icon, question, choices, straight down the middle. */
+.et-modal-card.is-centered {
+  width: min(92vw, calc(336px * var(--ui-scale)));
+  padding: var(--sp-6) var(--sp-5) var(--sp-5);
+  text-align: center;
+}
+
+.dialog-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin: 0 auto var(--sp-4);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--dialog-tone) 14%, transparent);
+  color: var(--dialog-tone);
+  --dialog-tone: var(--accent-color);
+}
+
+.dialog-icon.is-danger {
+  --dialog-tone: var(--danger);
+}
+.dialog-icon.is-warning {
+  --dialog-tone: var(--warning);
+}
+.dialog-icon.is-info {
+  --dialog-tone: var(--accent-color);
+}
+
+.dialog-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
 .dialog-modal-title {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  letter-spacing: 0;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text);
-  margin-bottom: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.et-modal-card.is-centered .dialog-modal-title {
+  font-size: var(--fs-md);
+  margin-bottom: var(--sp-2);
+}
+
+/* Both choices at equal width under the question, rather than pushed into the
+   bottom-right corner: at this width they read as a pair of answers, and the
+   destructive one is distinguished by colour rather than by position. */
+.et-modal-card.is-centered .dialog-modal-actions {
+  margin-top: var(--sp-5);
+  gap: var(--sp-2);
+}
+
+.et-modal-card.is-centered .et-modal-btn {
+  flex: 1;
+  min-width: 0;
 }
 
 .dialog-stack {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: var(--sp-4);
 }
 
 .dialog-field {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-1);
+  gap: var(--sp-2);
 }
 
 .dialog-label {
@@ -45,8 +112,9 @@
 
 .dialog-input {
   width: 100%;
+  min-height: 42px;
   padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   border: 1px solid var(--border-soft);
   background: var(--surface-panel, rgba(255, 255, 255, 0.05));
   color: var(--text);
@@ -68,18 +136,18 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--sp-2);
-  margin-top: var(--sp-4);
-  padding-top: var(--sp-3);
-  border-top: 1px solid var(--border-soft);
+  margin-top: var(--sp-5);
 }
 
 .et-modal-btn {
-  padding: calc(var(--sp-1) + 2px) var(--sp-3);
-  font-size: var(--fs-xs);
+  min-width: 92px;
+  min-height: 40px;
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   border: 1px solid var(--border-soft);
   background: var(--surface-panel, rgba(255, 255, 255, 0.05));
   color: var(--text-dim);
@@ -103,6 +171,19 @@
   opacity: 0.88;
 }
 
+/* A destructive confirm is red rather than accent-coloured. The accent is the
+   colour of every ordinary action in the app, so using it here made "Delete"
+   and "Save" the same button with different words on it. */
+.et-modal-btn.primary.danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.dialog-message {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
 .modal-error-msg {
   color: var(--danger-text, var(--danger));
   font-size: var(--fs-xs);
@@ -113,8 +194,17 @@
   --text: rgba(255, 255, 255, 0.95);
   --text-dim: rgba(255, 255, 255, 0.65);
   --text-faint: rgba(255, 255, 255, 0.35);
+  /* The flip clock is an object, not a themed surface: it is the same machined
+     dark face whatever the rest of the app is set to, because a countdown you
+     stare at for 25 minutes should not change colour with the wallpaper. The
+     shades are declared once here and referenced everywhere else, so the object
+     stays internally consistent. */
   --flip-face: #111214;
+  --flip-face-top: #151618;
   --flip-ink: #f0f0ec;
+  --flip-edge: #292a2d;
+  --flip-seam: #020203;
+  --flip-well: #050506;
   --accent-color: #ffffff;
   color-scheme: dark;
 
@@ -134,29 +224,9 @@
   display: flex;
 }
 
-.et-pomo-close-btn,
-.et-pomo-reset-fab,
-.et-pomo-preset-row,
-.et-pomo-status-badge,
-.et-pomo-sessions-badge {
-  opacity: 1;
-  visibility: visible;
-  transition:
-    opacity 0.4s var(--ease-out),
-    visibility 0.4s var(--ease-out),
-    color var(--dur-1) var(--ease-out),
-    background var(--dur-1) var(--ease-out),
-    border-color var(--dur-1) var(--ease-out),
-    transform var(--dur-3) ease;
-}
-
-.et-pomo-overlay.is-running .et-pomo-close-btn,
-.et-pomo-overlay.is-running .et-pomo-reset-fab,
-.et-pomo-overlay.is-running .et-pomo-preset-row,
-.et-pomo-overlay.is-running .et-pomo-status-badge,
-.et-pomo-overlay.is-running .et-pomo-sessions-badge {
+.et-pomo-overlay.is-zen .et-pomo-footer {
   opacity: 0;
-  visibility: hidden;
+  --pomo-footer-shift: 6px;
   pointer-events: none;
 }
 
@@ -207,22 +277,31 @@
   transform: rotate(180deg);
 }
 
+/* One segmented control rather than five separately outlined pills: the row is
+   secondary chrome and shouldn't compete with the clock. */
 .et-pomo-preset-row {
   position: absolute;
   top: 28px;
+  /* Explicitly centred. It was leaning on its static position inside the flex
+     column, which only holds while nothing else in the overlay changes width. */
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  width: min(92vw, 520px);
-  gap: var(--sp-2);
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.035);
   z-index: 10;
 }
 
 .et-pomo-preset-btn {
   padding: var(--sp-1) var(--sp-4);
   border-radius: var(--r-pill);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  background: transparent;
   color: rgba(255, 255, 255, 0.4);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -235,27 +314,26 @@
 
 .et-pomo-preset-btn:hover {
   color: rgba(255, 255, 255, 0.8);
-  border-color: rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.08);
 }
 
 .et-pomo-preset-btn.active {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.16);
   color: var(--text);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: transparent;
 }
 
 .et-pomo-custom-btn {
-  min-width: 76px;
   min-height: 28px;
-  margin-left: var(--sp-2);
-  padding: var(--sp-1) var(--sp-2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--r-sm);
+  margin-left: 2px;
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid transparent;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--r-pill);
   outline: none;
   color-scheme: dark;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
   font-family: inherit;
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -264,7 +342,7 @@
 }
 
 .et-pomo-custom-btn:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -277,7 +355,6 @@
 .et-pomo-display-switch {
   display: flex;
   min-height: 28px;
-  margin-left: var(--sp-1);
   padding: 2px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r-pill);
@@ -298,7 +375,7 @@
 
 .et-pomo-display-switch button.active {
   background: rgba(255, 255, 255, 0.14);
-  color: #f0f0ec;
+  color: var(--flip-ink);
 }
 
 .et-pomo-display-switch button:focus-visible {
@@ -313,11 +390,11 @@
   z-index: 20;
   width: min(300px, calc(100vw - 24px));
   overflow: hidden;
-  border: 1px solid #292a2d;
-  border-radius: 14px;
-  background: #111214;
+  border: 1px solid var(--flip-edge);
+  border-radius: var(--r-md);
+  background: var(--flip-face);
   box-shadow: var(--e4);
-  color: #f0f0ec;
+  color: var(--flip-ink);
   transform: translateX(-50%);
 }
 
@@ -331,7 +408,7 @@
   align-items: center;
   min-height: 44px;
   padding: 0 4px;
-  border-bottom: 1px solid #292a2d;
+  border-bottom: 1px solid var(--flip-edge);
   font-size: var(--fs-sm);
   font-weight: 600;
 }
@@ -362,10 +439,10 @@
   height: 180px;
   padding: 0 24px;
   background: linear-gradient(
-    #111214,
+    var(--flip-face),
     transparent 35%,
     transparent 65%,
-    #111214
+    var(--flip-face)
   );
 }
 
@@ -411,7 +488,7 @@
 }
 
 .et-pomo-wheel-item.is-selected {
-  color: #f0f0ec;
+  color: var(--flip-ink);
   font-weight: 600;
 }
 
@@ -424,7 +501,7 @@
   z-index: 1;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 7px;
+  border-radius: var(--r-xs);
   background: rgba(255, 255, 255, 0.055);
   pointer-events: none;
 }
@@ -445,9 +522,9 @@
   position: relative;
   width: clamp(72px, 35vw, 460px);
   height: clamp(100px, 38vw, 500px);
-  background: #111214;
-  border-radius: clamp(10px, 1.2vw, 16px);
-  border: 1px solid #292a2d;
+  background: var(--flip-face);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--flip-edge);
   box-shadow:
     0 18px 42px rgba(0, 0, 0, 0.72),
     inset 0 0 0 1px rgba(255, 255, 255, 0.018);
@@ -465,13 +542,13 @@
 }
 
 .et-flip-top {
-  background: #151618;
-  border-bottom: 1px solid #050506;
+  background: var(--flip-face-top);
+  border-bottom: 1px solid var(--flip-seam);
   box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.7);
 }
 
 .et-flip-bottom {
-  background: #111214;
+  background: var(--flip-face);
   box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.75);
 }
 
@@ -486,7 +563,7 @@
   justify-content: center;
   font-size: clamp(48px, 25vw, 340px);
   font-weight: 700;
-  color: #f0f0ec;
+  color: var(--flip-ink);
   line-height: 0.9;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
@@ -512,7 +589,7 @@
   justify-content: center;
   font-size: clamp(48px, 25vw, 340px);
   font-weight: 700;
-  color: #f0f0ec;
+  color: var(--flip-ink);
   line-height: 0.9;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
@@ -534,7 +611,7 @@
   right: 0;
   height: 3px;
   margin-top: -1px;
-  background: #020203;
+  background: var(--flip-seam);
   box-shadow:
     0 -1px rgba(255, 255, 255, 0.035),
     0 1px 2px rgba(0, 0, 0, 0.95);
@@ -550,8 +627,8 @@
   width: 5px;
   height: 14px;
   border-radius: 2px;
-  background: #050506;
-  box-shadow: inset 0 0 0 1px #25262a;
+  background: var(--flip-well);
+  box-shadow: inset 0 0 0 1px var(--flip-edge);
 }
 
 .et-flip-card::before {
@@ -567,130 +644,112 @@
   letter-spacing: -0.055em;
 }
 
-.et-pomo-status-badge {
+/* The display switch and both status lines share a single bottom row, so the
+   idle screen reads as clock + one line of chrome above and below it. */
+/* The footer's whole definition, in one place. It had been spread over three
+   separate `.et-pomo-footer` blocks, two of which only set `transition` and so
+   were silently cancelled by the third. */
+.et-pomo-footer {
   position: absolute;
-  bottom: 44px;
+  bottom: 28px;
+  left: 50%;
+  /* The zen offset is a variable rather than its own transform. Zen mode set
+     `transform: translateY(6px)` and, being the more specific selector, that
+     replaced this centring translate outright - so the controls slid to the
+     left edge on their way out instead of fading straight down. */
+  --pomo-footer-shift: 0px;
+  transform: translateX(-50%) translateY(var(--pomo-footer-shift));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  max-width: min(calc(100vw - 160px), 640px);
+  z-index: 10;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--dur-4, 400ms) var(--ease-out),
+    transform var(--dur-4, 400ms) var(--ease-out),
+    visibility var(--dur-4, 400ms) var(--ease-out);
+}
+
+.et-pomo-status-badge {
   font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.15em;
   color: rgba(255, 255, 255, 0.25);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .et-pomo-sessions-badge {
-  position: absolute;
-  bottom: 22px;
   font-size: var(--fs-xs);
   color: rgba(255, 255, 255, 0.18);
+  white-space: nowrap;
 }
 
-/* Break nudge ------------------------------------------------------------ */
+.et-pomo-sessions-badge::before {
+  content: "·";
+  margin-right: var(--sp-4);
+  color: rgba(255, 255, 255, 0.14);
+}
 
-/* Deliberately not a toast: a break reminder that can be missed is pointless,
-   so it takes the screen and waits for an answer. */
-.et-break-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 3600;
+.whats-new-list {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--sp-6);
-  background: rgba(8, 9, 12, 0.55);
-  backdrop-filter: blur(10px) saturate(120%);
-  -webkit-backdrop-filter: blur(10px) saturate(120%);
-  animation: et-break-in var(--dur-2, 220ms) var(--ease-out, ease-out);
-}
-
-.et-break-overlay[hidden] {
-  display: none;
-}
-
-.et-break-card {
-  width: min(420px, 100%);
-  padding: var(--sp-6);
-  border-radius: var(--r-lg, 18px);
-  background: var(--board-bg, rgba(24, 25, 32, 0.96));
-  border: 1px solid var(--board-border, rgba(255, 255, 255, 0.1));
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-  color: var(--board-text, #f4f4f6);
-  text-align: center;
-  animation: et-break-rise var(--dur-2, 220ms) var(--ease-out, ease-out);
-}
-
-.et-break-icon {
-  font-size: 40px;
-  line-height: 1;
-  margin-bottom: var(--sp-3);
-}
-
-.et-break-title {
-  margin: 0 0 var(--sp-2);
-  font-size: var(--fs-lg, 1.15rem);
-  font-weight: 650;
-}
-
-.et-break-msg {
-  margin: 0 0 var(--sp-5);
-  color: var(--board-text-secondary, rgba(244, 244, 246, 0.7));
-  font-size: var(--fs-sm, 0.9rem);
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: 0;
+  padding-left: var(--sp-5);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
   line-height: 1.5;
 }
 
-.et-break-actions {
-  display: flex;
-  gap: var(--sp-2);
-  justify-content: center;
-  flex-wrap: wrap;
+.whats-new-list li::marker {
+  color: var(--accent-color);
 }
 
-.et-break-btn {
-  flex: 1 1 auto;
-  min-width: 130px;
-  padding: 10px 18px;
-  border-radius: var(--r-sm, 10px);
-  border: 1px solid var(--board-border, rgba(255, 255, 255, 0.14));
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: 550;
-  cursor: pointer;
+/* Zen mode -----------------------------------------------------------------
+   Once the countdown is running and nothing has moved for a few seconds,
+the
+   controls fade out and the clock is left alone. Everything here animates
+   opacity and transform only - both compositor properties,
+so the fade costs
+   no layout and no repaint while a timer is the only thing on screen. */
+.et-pomo-overlay.is-zen .et-pomo-preset-row,
+.et-pomo-overlay.is-zen .et-pomo-close-btn,
+.et-pomo-overlay.is-zen .et-pomo-reset-fab{
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+.et-pomo-preset-row,
+.et-pomo-close-btn,
+.et-pomo-reset-fab{
   transition:
-    background var(--dur-1, 140ms) var(--ease-out, ease-out),
-    border-color var(--dur-1, 140ms) var(--ease-out, ease-out);
+    opacity var(--dur-4, 400ms) var(--ease-out),
+    transform var(--dur-4, 400ms) var(--ease-out);
 }
 
-.et-break-btn:hover {
-  background: rgba(127, 127, 127, 0.14);
+/* The clock takes the space the controls gave up. */
+.et-flip-container {
+  transition: transform var(--dur-4, 400ms) var(--ease-out);
 }
 
-.et-break-btn.primary {
-  background: var(--accent-fill, var(--accent-color));
-  border-color: transparent;
-  color: var(--accent-contrast, #fff);
+.et-pomo-overlay.is-zen .et-flip-container {
+  transform: scale(1.06);
 }
 
-.et-break-btn:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
-}
-
-@keyframes et-break-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes et-break-rise {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-  }
-}
-
+/* Zen mode used to lay a pulsing radial accent glow over the backdrop, on an
+   8s loop, forever. It was the one piece of motion in the app that never
+   stopped and never meant anything - decoration that draws the eye back to a
+   screen whose entire purpose is to stop doing that. The clock scaling up as
+   the controls fade is the whole effect now. */
 @media (prefers-reduced-motion: reduce) {
-  .et-break-overlay,
-  .et-break-card {
-    animation: none;
+  .et-pomo-overlay.is-zen .et-flip-container {
+    transform: none;
   }
 }
+

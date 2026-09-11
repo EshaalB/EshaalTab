@@ -1,4 +1,3 @@
-.et-pop-todo,
 .et-pop-workspace,
 .et-pop-sessions {
   position: fixed;
@@ -16,8 +15,6 @@
   contain: layout style;
 }
 
-.et-pop-todo.open,
-.et-pop-todo.active,
 .et-pop-workspace.open,
 .et-pop-workspace.active,
 .et-pop-sessions.open,
@@ -30,47 +27,6 @@
    the user opened, so a 40-tab session costs nothing while collapsed. */
 .et-pop-sessions {
   width: calc(380px * var(--ui-scale));
-}
-
-.et-session-save-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
-  margin: 0 var(--sp-2) var(--sp-3) 0;
-}
-
-.et-session-save-btn {
-  flex: 1;
-  padding: 7px var(--sp-3);
-  border-radius: var(--r-sm, 8px);
-  border: 1px solid transparent;
-  background: var(--accent-color);
-  color: var(--accent-contrast);
-  font-family: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity var(--dur-1) var(--ease-out);
-}
-
-.et-session-save-btn:hover:not(:disabled) {
-  opacity: 0.88;
-}
-
-.et-session-save-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.et-session-keep {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--fs-xs);
-  color: var(--text-dim);
-  cursor: pointer;
-  white-space: nowrap;
 }
 
 .et-session {
@@ -157,7 +113,7 @@
 }
 
 .et-session-btn.danger:hover {
-  background: var(--danger-soft, rgba(239, 68, 68, 0.15));
+  background: var(--danger-fill);
   color: var(--danger, #ef4444);
 }
 
@@ -184,7 +140,7 @@
 
 .et-session-tab-fav {
   flex: 0 0 auto;
-  border-radius: 3px;
+  border-radius: var(--r-xs);
 }
 
 .et-session-tab-title {
@@ -222,7 +178,7 @@
 }
 
 .et-session-tab-del:hover {
-  background: var(--danger-soft, rgba(239, 68, 68, 0.15));
+  background: var(--danger-fill);
   color: var(--danger, #ef4444);
 }
 
@@ -243,8 +199,7 @@
   margin-bottom: var(--sp-3);
 }
 
-.et-pop-title,
-.et-workspace-title {
+.et-workspace-title{
   font-size: var(--fs-sm);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -263,22 +218,10 @@
   border: none;
 }
 
-.et-pop-clear-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--accent-ink, var(--accent-color));
-  transition: opacity var(--dur-1) var(--ease-out);
-}
-
-.et-pop-clear-btn:hover {
-  opacity: 0.8;
-}
-
+/* Holds a sensible shape when the list is empty, instead of collapsing the
+   popover into a title bar with an input stuck under it. */
 .et-pop-list {
+  min-height: 140px;
   overflow-y: auto;
   padding-right: var(--sp-2);
   display: flex;
@@ -299,54 +242,6 @@
   margin: 0;
 }
 
-.et-workspace-tabs {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--r-sm);
-  background: rgba(var(--board-rgb, 255, 255, 255), 0.05);
-}
-
-.et-ws-tab {
-  padding: 4px 9px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--board-text-secondary, rgba(255, 255, 255, 0.72));
-  font-family: inherit;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  line-height: 1.2;
-  cursor: pointer;
-  transition:
-    background var(--dur-1) var(--ease-out),
-    color var(--dur-1) var(--ease-out);
-}
-
-.et-ws-tab:hover {
-  color: var(--board-text, #fff);
-}
-
-.et-ws-tab.is-active {
-  color: var(--accent-contrast, #fff);
-  background: var(--accent-color, #6366f1);
-}
-
-body.theme-light .et-workspace-tabs {
-  background: rgba(15, 23, 42, 0.06);
-  border-color: rgba(15, 23, 42, 0.16);
-}
-
-body.theme-light .et-ws-tab {
-  color: rgba(15, 23, 42, 0.68);
-}
-body.theme-light .et-ws-tab:hover {
-  color: #0f172a;
-}
-body.theme-light .et-ws-tab.is-active {
-  color: var(--accent-contrast, #fff);
-}
 
 .et-workspace-search {
   display: flex;
@@ -411,7 +306,7 @@ body.theme-light .et-ws-tab.is-active {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease-out;
+  transition: background var(--dur-1) var(--ease-out);
   user-select: none;
 }
 
@@ -438,25 +333,31 @@ body.theme-light .et-ws-tab.is-active {
   white-space: nowrap;
 }
 
+/* The menu's own hover token rather than a white film, which vanished on the
+   light panel - so in light mode the launcher gave no hover at all. */
 .workspace-item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--menu-hover) !important;
 }
 
+/* No disc behind the star and no shadow under it. The glyph turning amber is
+   the whole signal; a drop shadow on a 17px character sitting on a flat panel
+   is depth invented for something that is not raised off anything. */
 .workspace-star-btn {
   position: absolute;
-  top: 3px;
-  right: 3px;
+  top: 2px;
+  right: 2px;
   z-index: 2;
   display: grid;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   place-items: center;
   border: 0;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.32);
-  color: rgba(255, 255, 255, 0.42);
-  font-size: 11px;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-faint);
+  font-size: 17px;
+  line-height: 1;
   cursor: pointer;
   opacity: 0;
   transition:
@@ -475,9 +376,10 @@ body.theme-light .et-ws-tab.is-active {
   transform: scale(1.1);
 }
 
+/* Pinned: amber, and nothing else. */
 .workspace-star-btn.is-active {
-  color: #fbbf24;
-  background: rgba(120, 78, 0, 0.52);
+  color: var(--warning-text, #fbbf24);
+  background: none;
 }
 
 .workspace-section-header {
@@ -508,7 +410,7 @@ body.theme-light .et-ws-tab.is-active {
 .workspace-no-results-hint {
   display: block;
   margin-top: var(--sp-1);
-  color: var(--board-text-faint, rgba(255, 255, 255, 0.35));
+  color: var(--text-faint);
   font-size: 11px;
 }
 
@@ -527,6 +429,9 @@ body.theme-light .et-ws-tab.is-active {
   content: none;
 }
 
+/* Squared to whatever corner radius the user has chosen, not a hard circle.
+   A circle here was the only round tile in a grid of square app icons, so the
+   apps without a supplied icon stood out as a different kind of thing. */
 .workspace-icon.is-fallback::before {
   content: attr(data-letter);
   position: absolute;
@@ -534,7 +439,7 @@ body.theme-light .et-ws-tab.is-active {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: var(--r-sm);
   background: var(--accent-color, #6366f1);
   color: var(--accent-contrast, #fff);
   font-size: 14px;
@@ -553,117 +458,538 @@ body.theme-light .et-ws-tab.is-active {
   display: none;
 }
 
-.todo-pop-empty {
-  padding: var(--sp-5) var(--sp-2);
-  text-align: center;
-  font-size: var(--fs-xs);
-  color: var(--board-text-dim, rgba(255, 255, 255, 0.45));
+/* Sessions popover: two panes ---------------------------------------------
+   Sessions saves a whole window; Read later saves one page. They are the same
+   kind of thing - tabs you are not ready to lose - so they share a popover
+   rather than competing for another slot in the topbar. */
+.et-pop-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  width: 100%;
 }
 
-.todo-pop-row {
+.et-pop-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.et-pop-tab:hover {
+  color: var(--text);
+}
+
+.et-pop-tab.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent-color);
+}
+
+.et-pop-pane[hidden] {
+  display: none;
+}
+
+.et-readlater-tools {
+  display: flex;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3) var(--sp-2);
+}
+
+.et-readlater-tool {
+  flex: 1;
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.et-readlater-tool:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border-strong, var(--border-soft));
+}
+
+.et-readlater-tool:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.et-readlater-item {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-2);
+  padding: var(--sp-2);
   border-radius: var(--r-sm);
-  background: rgba(var(--board-rgb, 255, 255, 255), 0.04);
-  border: 1px solid rgba(var(--board-rgb, 255, 255, 255), 0.05);
-  transition:
-    background var(--dur-1) var(--ease-out),
-    opacity var(--dur-1) var(--ease-out);
 }
 
-.todo-pop-row:hover {
-  background: rgba(var(--board-rgb, 255, 255, 255), 0.08);
+.et-readlater-item:hover {
+  background: var(--panel-hover));
 }
 
-.todo-pop-row.done {
-  opacity: 0.55;
-}
-
-.todo-pop-row.done .todo-pop-text {
+/* Read items stay in the list rather than vanishing - "did I already read
+   that?" is the question the queue exists to answer - but they recede. */
+.et-readlater-item.is-read .et-readlater-title {
+  opacity: 0.45;
   text-decoration: line-through;
 }
 
-.todo-pop-check {
-  width: 18px;
-  height: 18px;
-  border-radius: var(--r-sm);
-  border: 1.5px solid var(--accent-color);
-  background: transparent;
-  color: var(--accent-contrast);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-.todo-pop-row.done .todo-pop-check {
-  background: var(--accent-fill, var(--accent-color));
-}
-
-.todo-pop-text {
-  flex: 1;
-  font-size: var(--fs-sm);
-  color: var(--board-text, #fff);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-}
-
-.todo-pop-move,
-.todo-pop-pin,
-.todo-pop-del {
-  background: transparent;
-  border: none;
-  color: var(--board-text-dim, rgba(255, 255, 255, 0.45));
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 2px 5px;
-  border-radius: var(--r-sm);
-  transition:
-    color var(--dur-1) var(--ease-out),
-    background var(--dur-1) var(--ease-out),
-    transform var(--dur-1) var(--ease-out);
+.et-readlater-check {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  line-height: 1;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1.5px solid var(--border-strong, var(--border-soft));
+  border-radius: var(--r-xs, 4px);
+  background: transparent;
+  color: var(--accent-contrast);
+  cursor: pointer;
 }
 
-.todo-pop-move:hover,
-.todo-pop-pin:hover,
-.todo-pop-del:hover {
-  color: var(--board-text, #fff);
-  background: rgba(var(--board-rgb, 255, 255, 255), 0.12);
+.et-readlater-item.is-read .et-readlater-check {
+  background: var(--accent-fill);
+  border-color: transparent;
 }
 
-.todo-pop-move:active {
-  transform: scale(0.88);
+.et-readlater-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
 }
 
-.todo-pop-pin.active {
-  color: var(--accent-ink, var(--accent-color));
-}
-
-.et-pop-input-wrap {
-  margin-top: var(--sp-2);
-  padding-right: var(--sp-2);
-}
-
-.et-pop-input {
-  width: 100%;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-sm);
-  background: rgba(var(--board-rgb, 255, 255, 255), 0.07);
-  border: 1px solid rgba(var(--board-rgb, 255, 255, 255), 0.08);
-  color: var(--board-text, #fff);
+.et-readlater-title {
   font-size: var(--fs-sm);
-  font-family: inherit;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.et-readlater-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.et-session-tab-later {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-xs, 4px);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.et-session-tab-later:hover {
+  color: var(--accent-color);
+  background: var(--panel-hover));
+}
+
+.et-readlater-hint {
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  line-height: var(--lh-body, 1.5);
+}
+
+/* Workspaces pane ------------------------------------------------------- */
+.et-ws-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.et-ws-name {
+  width: 100%;
+  height: 34px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+
+.et-ws-name::placeholder {
+  color: var(--text-faint);
+}
+
+.et-ws-name:focus {
   outline: none;
+  border-color: var(--accent-color);
+}
+
+.et-ws-form-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.et-ws-save {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 var(--sp-3);
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--accent-fill, var(--accent-color));
+  color: var(--accent-contrast);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.et-ws-save:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.et-ws-save:focus-visible,
+.et-session-tab:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.et-ws-save {
+  flex: 1;
+}
+
+.et-ws-secondary {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.et-ws-secondary:hover {
+  background: var(--menu-hover);
+  color: var(--text);
+}
+
+.et-ws-secondary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.et-ws-secondary:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Pinned boards on Home --------------------------------------------------- */
+
+.et-pb-panel {
+  position: fixed;
+  z-index: 1500;
+  display: none;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 48px));
+  max-height: min(460px, calc(100% - 140px));
+  padding: 12px;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--r-lg, 18px);
+  background: var(--menu-bg);
+  box-shadow: var(--e3);
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transform-origin: top left;
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+.et-pb-panel.open {
+  display: flex;
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  .et-pb-panel.open {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+.et-pb-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--menu-border);
+}
+
+.et-pb-tabs {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.et-pb-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.et-pb-tab {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: none;
+  border-radius: var(--r-pill, 999px);
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+
+.et-pb-tab:hover {
+  color: var(--text);
+  background: var(--menu-hover);
+}
+
+.et-pb-tab.is-active {
+  background: var(--menu-active-bg);
+  color: var(--menu-active-ink);
+}
+
+.et-pb-tab:focus-visible,
+.et-pb-edit:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.et-pb-edit {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.et-pb-edit:hover {
+  background: var(--menu-hover);
+  color: var(--text);
+}
+
+.et-pb-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  padding-top: 8px;
+  overflow-y: auto;
+}
+
+.et-pb-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.et-pb-link:hover {
+  background: var(--menu-hover);
+}
+
+.et-pb-link:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.et-pb-fav {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 5px;
+  transition: transform var(--dur-3) var(--ease-out);
+}
+
+.et-pb-link:hover .et-pb-fav {
+  transform: scale(1.12);
+}
+
+.et-pb-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.et-pb-empty {
+  grid-column: 1 / -1;
+  padding: 18px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+.et-board-pinned {
+  display: inline-grid;
+  place-items: center;
+  margin-left: 4px;
+  color: var(--board-title-ink, var(--accent-color));
+  opacity: 0.8;
+}
+
+/* Pinned boards, with no boards to show. */
+.et-pb-title {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.et-pb-intro {
+  padding: 10px 2px 6px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.et-pb-pick-row {
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.et-pb-pick-row:hover {
+  background: var(--menu-hover);
+}
+
+.et-pb-pick-row:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+/* The panel reads as a heading and a set of links: board names set as text
+   tabs split by a hairline rather than pills, and roomier rows with larger
+   icons, so the links are the thing you see when it opens. */
+.et-pb-panel {
+  width: min(480px, calc(100vw - 48px));
+  padding: 18px 14px 12px;
+  border-radius: calc(var(--r-lg, 18px) + 4px);
+}
+
+.et-pb-head {
+  padding: 0 4px 14px;
+}
+
+.et-pb-tabs {
+  align-items: center;
+  gap: 0;
+}
+
+.et-pb-tab {
+  position: relative;
+  padding: 4px 16px;
+  border-radius: var(--r-xs, 4px);
+  background: none;
+  color: var(--text-dim);
+  font-size: calc(16px * var(--ui-scale));
+  font-weight: 700;
+}
+
+.et-pb-tab:first-child {
+  padding-left: 6px;
+}
+
+.et-pb-tab + .et-pb-tab::before {
+  content: "";
+  position: absolute;
+  top: 22%;
+  bottom: 22%;
+  left: 0;
+  width: 1px;
+  background: var(--menu-border);
+}
+
+.et-pb-tab:hover,
+.et-pb-tab.is-active {
+  background: none;
+  color: var(--text);
+}
+
+.et-pb-edit {
+  width: 36px;
+  height: 36px;
+  border: none;
+}
+
+.et-pb-grid {
+  gap: 2px 8px;
+  padding-top: 12px;
+}
+
+.et-pb-link {
+  gap: 14px;
+  padding: 11px 12px;
+  font-size: calc(15px * var(--ui-scale));
+}
+
+.et-pb-fav {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
 }

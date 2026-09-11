@@ -9,10 +9,10 @@ const API =
 
 const CONTEXT_MENU_ID = "eshaaltab-save";
 
-// Break nudges and task reminders. Split out to keep this file about the
-// toolbar/context-menu surface; it uses `API` and `flashBadge` from here, so
-// it has to load after both exist (function declarations hoist, `API` does
-// not — hence the import at the bottom of this file).
+// Reminders. Split out to keep this file about the toolbar/context-menu
+// surface; it uses `API` and `flashBadge` from here, so it has to load after
+// both exist (function declarations hoist, `API` does not - hence the import
+// at the bottom of this file).
 
 function uuid() {
   return self.crypto && crypto.randomUUID
@@ -139,8 +139,43 @@ async function registerMenu() {
   }
 }
 
-API?.runtime?.onInstalled.addListener(() => {
+/* Updates have to actually land.
+
+   Chrome does not apply a pending extension update while the extension is
+   still "in use", and a new tab page is the worst possible case for that: a
+   pinned tab, or simply a browser that is never fully closed, keeps the
+   extension busy indefinitely. The update then sits in the queue for days,
+   which is what makes a fix look like it did not ship and pushes people
+   toward removing and reinstalling to get it.
+
+   Answering `onUpdateAvailable` by reloading immediately is the supported way
+   to say "go ahead now". The reload tears down this worker and swaps in the
+   new version; the open new tab pages notice their extension context has been
+   orphaned (`watchForUpdate` in whats-new.js polls for exactly that) and
+   reload themselves at the next safe moment, so a user who is mid-sentence in
+   a note does not lose it. */
+API?.runtime?.onUpdateAvailable?.addListener(() => {
+  try {
+    API.runtime.reload();
+  } catch {}
+});
+
+API?.runtime?.onInstalled.addListener((details) => {
   registerMenu();
+
+  /* An update can change what the context menu says or which contexts it
+     applies to, and the entry registered by the previous version survives the
+     swap - `registerMenu` already calls `removeAll` first, so this is simply
+     making sure it runs on the update path too, not only on a fresh install.
+
+     Anything else that ever needs to happen once per upgrade belongs here,
+     keyed off `details.previousVersion`, rather than in the new tab page:
+     the page only runs when someone opens a tab, which may be much later. */
+  if (details?.reason === "update") {
+    // Nothing version-specific to do yet. The settings layer migrates itself
+    // on load (see `sanitizeSettings`), so new keys arrive with their defaults
+    // without a step here.
+  }
 });
 API?.runtime?.onStartup?.addListener(registerMenu);
 
@@ -153,17 +188,3 @@ API?.commands?.onCommand.addListener((command) => {
   if (command === "save-current-tab") saveActiveTab();
 });
 
-// New tab pages ask the worker to flash the toolbar icon when a reminder or
-// break nudge fires, so it is noticeable even from another tab. Uses the
-// existing `action` API — no extra permission required.
-API?.runtime?.onMessage?.addListener((msg) => {
-  if (msg && msg.type === "et-reminder-badge") {
-    flashBadge(String(msg.text || "!").slice(0, 4), "#6366f1");
-  }
-});
-
-try {
-  importScripts("js/extension/reminders-sw.js");
-} catch (e) {
-  // A worker without alarms/notifications still runs everything above.
-}

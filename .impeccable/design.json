@@ -1,52 +1,404 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-05T21:23:55Z",
+  "generatedAt": "2026-09-05T11:42:08Z",
   "title": "Design System: EshaalTab",
   "extensions": {
     "colorMeta": {
-      "accent": { "role": "primary", "displayName": "User Accent", "canonical": "var(--accent-color)", "tonalRamp": [] },
-      "accent-contrast": { "role": "primary", "displayName": "Accent Contrast", "canonical": "var(--accent-contrast)", "tonalRamp": [] },
-      "surface-base-dark": { "role": "neutral", "displayName": "Void", "canonical": "#0d1117", "tonalRamp": ["#05060a", "#0a0c11", "#0d1117", "#1a1e28", "#2b303d", "#454b5c", "#6b7280", "#9ca3af"] },
-      "surface-base-light": { "role": "neutral", "displayName": "Paper", "canonical": "#f4f6f8", "tonalRamp": ["#c9cfd6", "#dde1e6", "#eef0f2", "#f4f6f8", "#f8f9fa", "#fbfcfc", "#fdfdfe", "#ffffff"] },
-      "text-dark": { "role": "neutral", "displayName": "Primary Text (Dark)", "canonical": "rgba(255,255,255,0.95)" },
-      "text-light": { "role": "neutral", "displayName": "Primary Text (Light)", "canonical": "rgba(0,0,0,0.88)" },
-      "text-dim-dark": { "role": "neutral", "displayName": "Dim Text (Dark)", "canonical": "rgba(255,255,255,0.65)" },
-      "text-dim-light": { "role": "neutral", "displayName": "Dim Text (Light)", "canonical": "rgba(0,0,0,0.5)" },
-      "border-soft-dark": { "role": "neutral", "displayName": "Soft Border (Dark)", "canonical": "rgba(255,255,255,0.12)" },
-      "border-soft-light": { "role": "neutral", "displayName": "Soft Border (Light)", "canonical": "rgba(0,0,0,0.12)" },
-      "danger": { "role": "status", "displayName": "Danger", "canonical": "#ef4444", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#dc2626", "#ef4444", "#f87171", "#fca5a5", "#fecaca"] },
-      "success": { "role": "status", "displayName": "Success", "canonical": "#22c55e", "tonalRamp": ["#052e16", "#14532d", "#166534", "#16a34a", "#22c55e", "#4ade80", "#86efac", "#bbf7d0"] },
-      "warning": { "role": "status", "displayName": "Warning", "canonical": "#f59e0b", "tonalRamp": ["#451a03", "#78350f", "#92400e", "#d97706", "#f59e0b", "#fbbf24", "#fcd34d", "#fde68a"] },
-      "scrollbar-thumb": { "role": "neutral", "displayName": "Scrollbar Thumb", "canonical": "rgba(150,150,150,0.3)" }
+      "accent": {
+        "role": "primary",
+        "displayName": "User Accent",
+        "canonical": "var(--accent-color)",
+        "tonalRamp": []
+      },
+      "accent-contrast": {
+        "role": "primary",
+        "displayName": "Accent Contrast",
+        "canonical": "var(--accent-contrast)",
+        "tonalRamp": []
+      },
+      "surface-base-dark": {
+        "role": "neutral",
+        "displayName": "Void",
+        "canonical": "#0d1117",
+        "tonalRamp": [
+          "#05060a",
+          "#0a0c11",
+          "#0d1117",
+          "#1a1e28",
+          "#2b303d",
+          "#454b5c",
+          "#6b7280",
+          "#9ca3af"
+        ]
+      },
+      "surface-base-light": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#f4f6f8",
+        "tonalRamp": [
+          "#c9cfd6",
+          "#dde1e6",
+          "#eef0f2",
+          "#f4f6f8",
+          "#f8f9fa",
+          "#fbfcfc",
+          "#fdfdfe",
+          "#ffffff"
+        ]
+      },
+      "text-dark": {
+        "role": "neutral",
+        "displayName": "Primary Text (Dark)",
+        "canonical": "rgba(255,255,255,0.95)"
+      },
+      "text-light": {
+        "role": "neutral",
+        "displayName": "Primary Text (Light)",
+        "canonical": "rgba(0,0,0,0.88)"
+      },
+      "text-dim-dark": {
+        "role": "neutral",
+        "displayName": "Dim Text (Dark)",
+        "canonical": "rgba(255,255,255,0.65)"
+      },
+      "text-dim-light": {
+        "role": "neutral",
+        "displayName": "Dim Text (Light)",
+        "canonical": "rgba(0,0,0,0.5)"
+      },
+      "border-soft-dark": {
+        "role": "neutral",
+        "displayName": "Soft Border (Dark)",
+        "canonical": "rgba(255,255,255,0.12)"
+      },
+      "border-soft-light": {
+        "role": "neutral",
+        "displayName": "Soft Border (Light)",
+        "canonical": "rgba(0,0,0,0.12)"
+      },
+      "danger": {
+        "role": "status",
+        "displayName": "Danger",
+        "canonical": "#ef4444",
+        "tonalRamp": [
+          "#450a0a",
+          "#7f1d1d",
+          "#991b1b",
+          "#dc2626",
+          "#ef4444",
+          "#f87171",
+          "#fca5a5",
+          "#fecaca"
+        ]
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Success",
+        "canonical": "#22c55e",
+        "tonalRamp": [
+          "#052e16",
+          "#14532d",
+          "#166534",
+          "#16a34a",
+          "#22c55e",
+          "#4ade80",
+          "#86efac",
+          "#bbf7d0"
+        ]
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Warning",
+        "canonical": "#f59e0b",
+        "tonalRamp": [
+          "#451a03",
+          "#78350f",
+          "#92400e",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a"
+        ]
+      },
+      "scrollbar-thumb": {
+        "role": "neutral",
+        "displayName": "Scrollbar Thumb",
+        "canonical": "rgba(150,150,150,0.3)"
+      },
+      "palette-light-ink": {
+        "role": "neutral",
+        "displayName": "Palette Ink",
+        "canonical": "#0f172a",
+        "tonalRamp": [
+          "#020617",
+          "#0f172a",
+          "#1e293b",
+          "#334155",
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1"
+        ]
+      },
+      "palette-light-ink-meta": {
+        "role": "neutral",
+        "displayName": "Palette Ink Meta",
+        "canonical": "#475569",
+        "tonalRamp": [
+          "#0f172a",
+          "#1e293b",
+          "#334155",
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#e2e8f0"
+        ]
+      },
+      "palette-light-ink-dim": {
+        "role": "neutral",
+        "displayName": "Palette Ink Dim",
+        "canonical": "#64748b",
+        "tonalRamp": [
+          "#1e293b",
+          "#334155",
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#e2e8f0",
+          "#f1f5f9"
+        ]
+      },
+      "palette-light-line": {
+        "role": "neutral",
+        "displayName": "Palette Line",
+        "canonical": "#cbd5e1",
+        "tonalRamp": [
+          "#334155",
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#e2e8f0",
+          "#f1f5f9",
+          "#f8fafc"
+        ]
+      },
+      "palette-light-hover": {
+        "role": "neutral",
+        "displayName": "Palette Hover",
+        "canonical": "#f1f5f9",
+        "tonalRamp": [
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#e2e8f0",
+          "#f1f5f9",
+          "#f8fafc",
+          "#ffffff"
+        ]
+      },
+      "flip-leaf-top": {
+        "role": "neutral",
+        "displayName": "Flip Leaf Top",
+        "canonical": "#151618",
+        "tonalRamp": [
+          "#000000",
+          "#0a0b0c",
+          "#151618",
+          "#212226",
+          "#2d2e33",
+          "#3a3b41",
+          "#54555d",
+          "#7a7b84"
+        ]
+      },
+      "flip-seam": {
+        "role": "neutral",
+        "displayName": "Flip Seam",
+        "canonical": "#292a2d",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#151618",
+          "#1f2023",
+          "#292a2d",
+          "#3a3b40",
+          "#4d4e54",
+          "#6d6e76",
+          "#9a9ba3"
+        ]
+      },
+      "flip-seam-inset": {
+        "role": "neutral",
+        "displayName": "Flip Seam Inset",
+        "canonical": "#25262a",
+        "tonalRamp": [
+          "#08090a",
+          "#121316",
+          "#1c1d20",
+          "#25262a",
+          "#33343a",
+          "#45464e",
+          "#63646d",
+          "#8f9099"
+        ]
+      },
+      "panel-solid": {
+        "role": "neutral",
+        "displayName": "Panel Solid",
+        "canonical": "#121620",
+        "tonalRamp": [
+          "#05070b",
+          "#0b0e15",
+          "#121620",
+          "#1c212e",
+          "#282f40",
+          "#3a4356",
+          "#57627a",
+          "#8892a6"
+        ]
+      },
+      "warning-wash": {
+        "role": "neutral",
+        "displayName": "Warning Wash",
+        "canonical": "rgba(120, 78, 0, 0.52)",
+        "tonalRamp": [
+          "#3d2800",
+          "#5c3c00",
+          "#7a5000",
+          "#996400",
+          "#b87800",
+          "#d68c00",
+          "#f5a000",
+          "#fbbf24"
+        ]
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display / Clock", "purpose": "New-tab clock only. Orbitron by default, user-selectable among clock-only font stacks." },
-      "body": { "displayName": "Body", "purpose": "All functional UI text — Inter." },
-      "label": { "displayName": "Label", "purpose": "Meta text, timestamps, field labels — the smallest step in the scale." },
-      "micro": { "displayName": "Micro", "purpose": "10-11px secondary hint text scoped to compact popovers and the toolbar popup only; never the main new-tab page." },
-      "accent": { "displayName": "Accent / Handwritten", "purpose": "Caveat — decorative flourish text only (e.g. greeting), never body copy." }
+      "display": {
+        "displayName": "Display / Clock",
+        "purpose": "New-tab clock only. Orbitron by default, user-selectable among clock-only font stacks."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All functional UI text — Inter."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Meta text, timestamps, field labels — the smallest step in the scale."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "10-11px secondary hint text scoped to compact popovers and the toolbar popup only; never the main new-tab page."
+      },
+      "accent": {
+        "displayName": "Accent / Handwritten",
+        "purpose": "Caveat — decorative flourish text only (e.g. greeting), never body copy."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Keyboard-shortcut chips in the Ctrl+K palette, and JetBrains Mono as a selectable clock face. Never prose."
+      }
     },
     "shadows": [
-      { "name": "e1", "value": "0 2px 8px rgba(0,0,0,0.18)", "purpose": "Resting board cards, small popovers." },
-      { "name": "e2", "value": "0 4px 16px rgba(0,0,0,0.28)", "purpose": "Hovered cards, dropdowns." },
-      { "name": "e3", "value": "0 8px 24px rgba(0,0,0,0.38)", "purpose": "Modals, command palette." },
-      { "name": "e4", "value": "0 16px 42px rgba(0,0,0,0.52)", "purpose": "Highest layer, full-screen overlays." },
-      { "name": "e-sheet", "value": "-8px 0 32px rgba(0,0,0,0.45)", "purpose": "Directional shadow for side sheets entering from the edge." },
-      { "name": "button-primary", "value": "0 2px 6px rgba(0,0,0,0.3)", "purpose": "Neutral elevation on primary buttons — deliberately not accent-tinted." }
+      {
+        "name": "e1",
+        "value": "0 2px 8px rgba(0,0,0,0.18)",
+        "purpose": "Resting board cards, small popovers."
+      },
+      {
+        "name": "e2",
+        "value": "0 4px 16px rgba(0,0,0,0.28)",
+        "purpose": "Hovered cards, dropdowns."
+      },
+      {
+        "name": "e3",
+        "value": "0 8px 24px rgba(0,0,0,0.38)",
+        "purpose": "Modals, command palette."
+      },
+      {
+        "name": "e4",
+        "value": "0 16px 42px rgba(0,0,0,0.52)",
+        "purpose": "Highest layer, full-screen overlays."
+      },
+      {
+        "name": "e-sheet",
+        "value": "-8px 0 32px rgba(0,0,0,0.45)",
+        "purpose": "Directional shadow for side sheets entering from the edge."
+      },
+      {
+        "name": "button-primary",
+        "value": "0 2px 6px rgba(0,0,0,0.3)",
+        "purpose": "Neutral elevation on primary buttons — deliberately not accent-tinted."
+      }
     ],
     "motion": [
-      { "name": "dur-1", "value": "100ms", "purpose": "Micro-interactions (hover filter shifts)." },
-      { "name": "dur-2", "value": "200ms", "purpose": "Default transition (borders, backgrounds)." },
-      { "name": "dur-3", "value": "300ms", "purpose": "Panel/sheet entrances." },
-      { "name": "dur-4", "value": "400ms", "purpose": "Larger overlay transitions." },
-      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Default easing, entrances." },
-      { "name": "ease-spring", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Playful confirmations only." }
+      {
+        "name": "dur-1",
+        "value": "70ms",
+        "purpose": "Hover and colour changes."
+      },
+      {
+        "name": "dur-2",
+        "value": "120ms",
+        "purpose": "Small state transitions."
+      },
+      {
+        "name": "dur-3",
+        "value": "180ms",
+        "purpose": "Board open/close slide."
+      },
+      {
+        "name": "dur-4",
+        "value": "240ms",
+        "purpose": "Largest surface transitions."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Default deceleration for entering elements."
+      },
+      {
+        "name": "ease-in",
+        "value": "cubic-bezier(0.7, 0, 0.84, 0)",
+        "purpose": "Exits."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.65, 0, 0.35, 1)",
+        "purpose": "Two-way movement."
+      },
+      {
+        "name": "view-transition",
+        "value": "110ms cubic-bezier(0.16, 1, 0.3, 1), first visit only",
+        "purpose": "A view animates the first time it is shown and is instant on every return; the outgoing view is cut rather than cross-faded."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition-property: opacity, color, background-color, border-color, box-shadow, fill, stroke; 120ms",
+        "purpose": "Under prefers-reduced-motion travel and scaling stop, but colour and opacity still cross-fade so state changes stay perceivable."
+      }
     ],
     "breakpoints": [
-      { "name": "sm", "value": "640px" },
-      { "name": "md", "value": "768px" },
-      { "name": "lg", "value": "1024px" },
-      { "name": "xl", "value": "1280px" }
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
     ]
   },
   "components": [
@@ -70,17 +422,17 @@
       "name": "Search Pill",
       "kind": "input",
       "refersTo": "search-pill",
-      "description": "Primary command/search entry point on the new tab.",
+      "description": "The new tab’s search field: 40px tall, 14px corners, sitting below the clock rather than dominating it.",
       "html": "<div class=\"ds-search-pill\"><input class=\"ds-search-input\" placeholder=\"Search boards, tabs, history…\" /></div>",
-      "css": ".ds-search-pill { display: flex; align-items: center; width: 100%; max-width: 500px; height: 44px; padding: 0 8px; border-radius: 999px; backdrop-filter: blur(24px) saturate(1.5); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); transition: border-color 0.2s; } .ds-search-pill:hover, .ds-search-pill:focus-within { border-color: var(--accent-color, #6366f1); } .ds-search-input { flex: 1; height: 100%; padding: 0 12px; background: none; border: none; outline: none; font-size: 15px; font-weight: 500; color: #fff; }"
+      "css": ".ds-search-pill { display:flex; align-items:center; gap:8px; height:40px; padding:0 8px; width:min(560px,84vw); background:var(--surface-2,rgba(255,255,255,0.06)); border:1px solid var(--border-soft,rgba(255,255,255,0.12)); border-radius:14px; color:var(--text,rgba(255,255,255,0.95)); font:400 15px Inter,system-ui,sans-serif; transition:border-color 120ms cubic-bezier(0.16,1,0.3,1); } .ds-search-pill:hover, .ds-search-pill:focus-within { border-color:var(--accent-color,#6366f1); } .ds-search-pill input { flex:1; min-width:0; background:none; border:none; outline:none; color:inherit; font:inherit; }"
     },
     {
       "name": "Board Card",
       "kind": "card",
       "refersTo": "board-card",
-      "description": "A saved-link collection, the primary content unit on the new tab.",
+      "description": "A board: its own colour as a filled card at 20px corners, with the links sitting in a darker well of the same hue.",
       "html": "<div class=\"ds-board-card\"><div class=\"ds-board-card-title\">Reading List</div></div>",
-      "css": ".ds-board-card { border-radius: 14px; background: rgba(255,255,255,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.18); padding: 16px; transition: box-shadow 0.2s, transform 0.2s; } .ds-board-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.28); } .ds-board-card-title { font-size: 20px; font-weight: 600; color: rgba(255,255,255,0.95); }"
+      "css": ".ds-board-card { --a:#6366f1; display:flex; flex-direction:column; border-radius:20px; border:none; background:color-mix(in srgb,var(--a) 56%,#181a20); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--a) 38%,transparent),0 1px 2px rgba(0,0,0,0.16),0 12px 28px -18px rgba(0,0,0,0.5); overflow:hidden; transition:box-shadow 120ms cubic-bezier(0.16,1,0.3,1); } .ds-board-card:hover { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--a) 58%,transparent),0 2px 4px rgba(0,0,0,0.18),0 16px 32px -18px rgba(0,0,0,0.55); } .ds-board-card-head { display:flex; align-items:center; gap:8px; padding:12px; color:#fff; font:600 16px Inter,system-ui,sans-serif; } .ds-board-card-count { font-size:13px; font-weight:500; opacity:0.45; } .ds-board-card-well { margin:0 12px 12px; padding:8px; border-radius:14px; background:color-mix(in srgb,var(--a) 20%,rgba(0,0,0,0.36)); }"
     },
     {
       "name": "Text Field",
@@ -110,23 +462,45 @@
       "No motion or color for its own sake"
     ],
     "rules": [
-      { "name": "The One Signal Rule", "body": "The accent color appears on focus states, hover borders, primary actions, and active toggles — never as a page background, a card fill, or body text.", "section": "colors" },
-      { "name": "The Clock-Only Rule", "body": "Font-family customization is scoped to the clock. No other UI element's typeface changes with user settings.", "section": "typography" },
-      { "name": "The Stack-Tells-The-Truth Rule", "body": "A component's shadow step must match its actual DOM/interaction layer — don't reach for a heavier shadow just to make something pop.", "section": "elevation" }
+      {
+        "name": "The One Signal Rule",
+        "body": "The accent color appears on focus states, hover borders, primary actions, and active toggles — never as a page background, a card fill, or body text.",
+        "section": "colors"
+      },
+      {
+        "name": "The Clock-Only Rule",
+        "body": "Font-family customization is scoped to the clock. No other UI element's typeface changes with user settings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Stack-Tells-The-Truth Rule",
+        "body": "A component's shadow step must match its actual DOM/interaction layer — don't reach for a heavier shadow just to make something pop.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Readable Ink Rule",
+        "body": "Accent-coloured text is scored with APCA and must clear Lc 60; accent fills only need Lc 25. WCAG 2's ratio is symmetric and passes saturated mid-tones that are genuinely unreadable, so it is never used to pick ink. Text never carries opacity — opacity is a contrast multiplier applied after the colour was checked.",
+        "section": "colors"
+      }
     ],
     "dos": [
       "Do let the user's accent color and wallpaper be the only strongly personalized visual choices; keep every other token fixed across installs.",
       "Do match shadow step to real stacking order.",
       "Do keep the clock as the sole surface where font-family is user-selectable.",
       "Do use neutral, non-tinted elevation shadows on interactive elements.",
-      "Do gate wallpaper-legibility text-shadow to wallpaper mode only."
+      "Do gate wallpaper-legibility text-shadow to wallpaper mode only.",
+      "Do derive any accent-coloured text through Contrast.readable(accent, bg, 60) so the hue survives and only lightness moves.",
+      "Do give every interactive control a 44px hit area, expanding it with a pseudo-element rather than growing the visual chip."
     ],
     "donts": [
       "Don't introduce a second brand/accent color.",
       "Don't use a colored/glowing shadow on any button or card.",
       "Don't let more than 2–3 distinct font sizes cluster within a few pixels of each other on one surface.",
       "Don't stack glass-blur panels on top of other glass-blur panels.",
-      "Don't ship an <img> with an empty src."
+      "Don't ship an <img> with an empty src.",
+      "Don't use opacity to de-emphasise text; reach for a colour token, or the change will silently undo a contrast check.",
+      "Don't kill every transition under prefers-reduced-motion; remove travel and keep colour/opacity feedback.",
+      "Don't animate a view swap the user has already seen; motion carries information the first time a surface appears and is only latency after that."
     ]
   }
 }

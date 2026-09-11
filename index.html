@@ -39,6 +39,16 @@
       href="icons/icon128.png"
     />
 
+    <!-- The default UI face, discovered only once tokens.css parses. Without the
+         preload every new tab paints in the fallback and re-flows on swap. -->
+    <link
+      rel="preload"
+      href="fonts/inter-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
     <script src="js/core/boot.js"></script>
     <link rel="stylesheet" href="css/tokens.css" />
     <link rel="stylesheet" href="css/layout.css" />
@@ -55,131 +65,200 @@
     <video id="video-bg" autoplay loop muted playsinline></video>
     <div id="photo-bg"></div>
     <div id="wallpaper-overlay"></div>
+    <div id="wallpaper-vignette"></div>
 
     <div class="app">
       <div class="et-topbar">
+        <!-- Three clusters, not two: optional utilities on the left, the views
+             in the middle, the things you open on the right. The nav is
+             centred by the grid rather than by the two clusters happening to
+             weigh the same, so it stays put when a utility is switched off. -->
         <div class="et-top-left" id="topLeft">
           <button class="et-topbar-btn" id="sessionsBtn" data-popover-trigger="sessions" title="Saved sessions">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M8 4v5" />
-            </svg>
-          </button>
-          <button class="et-topbar-btn" id="todoWidgetBtn" data-popover-trigger="todo" title="Todo list">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M9 11l3 3L22 4" />
-              <path
-                d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
-              />
-            </svg>
+          <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          >
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <path d="M3 9h18" />
+          <path d="M8 4v5" />
+          </svg>
           </button>
           <button
-            class="et-topbar-btn et-pomo-toggle-btn"
-            id="pomoToggleBtn"
-            title="Focus timer"
+          class="et-topbar-btn et-pomo-toggle-btn"
+          id="pomoToggleBtn"
+          title="Focus timer"
+          >
+          <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          >
+          <!-- A stopwatch with a filled crown and stem, rather than an
+          outlined circle with hands: at 25px the old one read as a
+          plain clock, which is the icon people expect to *tell* the
+          time rather than start a session. The progress arc says
+          "this counts down", which is what the button does. -->
+          <path d="M9 2.5h6" stroke-width="2.4" />
+          <path d="M12 2.5v2.6" stroke-width="2.4" />
+          <path d="M19.1 6.9l-1.6 1.6" stroke-width="2.2" />
+          <circle cx="12" cy="13.5" r="7.8" />
+          <path d="M12 13.5V9.2" stroke-width="2.4" />
+          </svg>
+          <span
+          class="pomo-toggle-count"
+          id="pomoToggleCount"
+          style="display: none"
+          >0</span
+          >
+          </button>
+        </div>
+
+        <nav class="et-main-tabs" id="mainTabs" aria-label="Views">
+          <button
+            class="et-main-tab et-main-tab-home"
+            data-tab="home"
+            title="Home"
+            aria-label="Home"
           >
             <svg
-              width="24"
-              height="24"
+              width="21"
+              height="21"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="2"
+              stroke-width="1.9"
               stroke-linecap="round"
               stroke-linejoin="round"
+              aria-hidden="true"
             >
-              <circle cx="12" cy="13" r="8" />
-              <path d="M12 9v4l2 2" />
-              <path d="M9 2h6" />
-              <path d="M20.2 7.8l-1.4-1.4" />
+              <path d="M2.4 11.2 12 3.2l9.6 8" />
+              <path d="M5 10.2V20a1.2 1.2 0 0 0 1.2 1.2h11.6A1.2 1.2 0 0 0 19 20v-9.8" />
+              <path d="M9.6 21.2v-6.4a1 1 0 0 1 1-1h2.8a1 1 0 0 1 1 1v6.4" />
             </svg>
-            <span
-              class="pomo-toggle-count"
-              id="pomoToggleCount"
-              style="display: none"
-              >0</span
-            >
           </button>
-        </div>
-        <nav class="et-main-tabs" id="mainTabs">
-          <button class="et-main-tab" data-tab="home">Home</button>
           <button class="et-main-tab" data-tab="boards">Boards</button>
           <button class="et-main-tab" data-tab="notes">Notes</button>
         </nav>
 
         <div class="et-top-right" id="topRight">
           <button
-            class="et-topbar-btn"
-            id="searchSideBtn"
-            title="Command palette"
+          class="et-topbar-btn"
+          id="searchSideBtn"
+          title="Command palette"
           >
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"
-              />
-            </svg>
+          <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          >
+          <!-- A search field with a caret in it, not the Mac command loop.
+               The loop is a keyboard legend: it says "there is a shortcut for
+               this", which is only meaningful if you already know what the
+               shortcut opens - and it means nothing at all on Windows or
+               Linux, where the key is Ctrl. A box with a magnifier says what
+               the button actually does. -->
+          <rect x="2.6" y="4.6" width="18.8" height="14.8" rx="3" />
+          <circle cx="10.6" cy="12" r="2.9" />
+          <path d="m12.8 14.2 2.6 2.6" />
+          </svg>
           </button>
           <button
-            class="et-topbar-btn"
-            id="workspaceBtn"
-            data-popover-trigger="workspace"
-            title="Google Workspace"
+          class="et-topbar-btn"
+          id="workspaceBtn"
+          data-popover-trigger="workspace"
+          title="Google Workspace"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="6" cy="6" r="2" />
-              <circle cx="12" cy="6" r="2" />
-              <circle cx="18" cy="6" r="2" />
-              <circle cx="6" cy="12" r="2" />
-              <circle cx="12" cy="12" r="2" />
-              <circle cx="18" cy="12" r="2" />
-              <circle cx="6" cy="18" r="2" />
-              <circle cx="12" cy="18" r="2" />
-              <circle cx="18" cy="18" r="2" />
-            </svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="6" cy="6" r="2" />
+          <circle cx="12" cy="6" r="2" />
+          <circle cx="18" cy="6" r="2" />
+          <circle cx="6" cy="12" r="2" />
+          <circle cx="12" cy="12" r="2" />
+          <circle cx="18" cy="12" r="2" />
+          <circle cx="6" cy="18" r="2" />
+          <circle cx="12" cy="18" r="2" />
+          <circle cx="18" cy="18" r="2" />
+          </svg>
           </button>
           <button class="et-topbar-btn" id="topSettingsBtn" title="Settings">
+          <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          >
+          <circle cx="12" cy="12" r="3" />
+          <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+          />
+          </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- First run: one question, over the wallpaper, before the app itself
+           is shown. Hidden by default and revealed by WelcomeScreen only when
+           there is no name stored and the screen has not been completed. -->
+      <div class="et-welcome" id="welcomeScreen" hidden>
+        <div class="et-welcome-inner">
+          <img
+            class="et-welcome-mark"
+            src="icons/icon128.png"
+            alt=""
+            width="56"
+            height="56"
+          />
+          <h1 class="et-welcome-title" id="welcomeTitle">
+            Hello! What's your name?
+          </h1>
+          <input
+            class="et-welcome-input"
+            id="welcomeName"
+            type="text"
+            maxlength="40"
+            autocomplete="given-name"
+            spellcheck="false"
+            aria-labelledby="welcomeTitle"
+            aria-describedby="welcomeHint"
+          />
+          <p class="et-welcome-hint" id="welcomeHint">
+            Please enter your first name or the name you prefer to be called.
+          </p>
+          <button class="et-welcome-btn" id="welcomeContinue" type="button">
+            Continue
             <svg
-              width="24"
-              height="24"
+              width="15"
+              height="15"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="2"
+              stroke-width="2.5"
               stroke-linecap="round"
               stroke-linejoin="round"
+              aria-hidden="true"
             >
-              <circle cx="12" cy="12" r="3" />
-              <path
-                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-              />
+              <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
         </div>
@@ -188,23 +267,34 @@
       <section class="et-view et-view-home" id="homeView">
         <div class="et-home-center">
           <div class="et-home-widgets" id="homeWidgets">
+            <!-- One block, read top to bottom: the day and the weather, then
+                 the time, then the greeting. Small, large, small - the number
+                 you actually came for sits in the middle at the largest size,
+                 with a line of context above it and a line of warmth below.
+                 The date and weather used to be pinned to opposite page
+                 corners, which made three separate things to find instead of
+                 one to scan. -->
             <div class="et-home-clock" id="clockWidget">
-              <div class="et-home-greeting" id="clockGreeting"></div>
-
-              <div class="et-home-time" id="clockTime"></div>
-              <div class="et-home-date-row">
-                <span class="et-home-date" id="clockDate"></span>
-                <span
-                  class="et-weather-inline"
-                  id="weatherWidget"
-                  style="display: none"
-                  title="Click to set city"
-                ></span>
+              <div class="et-home-meta" id="clockMeta">
+                <span class="et-home-corner et-home-corner-left" id="homeCornerLeft">
+                  <span class="et-home-date" id="clockDate"></span>
+                </span>
+                <span class="et-home-corner et-home-corner-right" id="homeCornerRight">
+                  <span
+                    class="et-weather-inline"
+                    id="weatherWidget"
+                    style="display: none"
+                    title="Click to set city"
+                  ></span>
+                </span>
               </div>
+              <div class="et-home-time" id="clockTime"></div>
+              <div class="et-home-greeting" id="clockGreeting"></div>
             </div>
           </div>
           <div id="navSearchBar"></div>
           <div class="et-home-pinned" id="homePinned"></div>
+          <div class="et-home-todos" id="homeTodos"></div>
         </div>
       </section>
       <section class="et-view et-view-boards" id="boardsView">
@@ -227,10 +317,12 @@
               <span class="et-notes-binder-hole"></span>
             </div>
             <div class="et-notes-header">
-              <div class="notes-title-wrap">
-                <span class="et-notes-title">Notepad</span>
-                <span class="et-notes-stats" id="notesStatsBadge">0 words</span>
-              </div>
+              <div
+                class="et-notes-tabs"
+                id="notesTabs"
+                role="tablist"
+                aria-label="Saved notes"
+              ></div>
               <div class="et-notes-header-actions">
                 <button
                   class="et-notes-save-btn"
@@ -281,17 +373,98 @@
               </div>
             </div>
             <div
-              class="et-notes-tabs"
-              id="notesTabs"
-              role="tablist"
-              aria-label="Saved notes"
-            ></div>
-            <textarea
+              class="et-notes-toolbar"
+              id="notesToolbar"
+              role="toolbar"
+              aria-label="Note actions"
+            >
+              <div class="et-notes-tool-group" role="group" aria-label="Text style">
+                <span class="et-notes-tool-caption" aria-hidden="true">Text</span>
+                <div class="et-notes-tool-row">
+                  <button type="button" class="et-notes-tool" data-note-cmd="bold" title="Bold (Ctrl+B)" aria-label="Bold" aria-pressed="false" data-no-tooltip><b>B</b></button>
+                  <button type="button" class="et-notes-tool" data-note-cmd="italic" title="Italic (Ctrl+I)" aria-label="Italic" aria-pressed="false" data-no-tooltip><i>I</i></button>
+                  <button type="button" class="et-notes-tool" data-note-cmd="underline" title="Underline (Ctrl+U)" aria-label="Underline" aria-pressed="false" data-no-tooltip><u>U</u></button>
+                  <button type="button" class="et-notes-tool" data-note-cmd="heading" title="Heading" aria-label="Heading" aria-pressed="false" data-no-tooltip>H</button>
+                  <button type="button" class="et-notes-tool" data-note-cmd="clearFormat" title="Clear formatting" aria-label="Clear formatting" data-no-tooltip>&#10005;</button>
+                </div>
+              </div>
+
+              <div class="et-notes-tool-group" role="group" aria-label="Colour">
+                <span class="et-notes-tool-caption" aria-hidden="true">Colour</span>
+                <div class="et-notes-tool-row">
+                  <button type="button" class="et-notes-tool et-note-swatch-btn" data-note-cmd="textColor" id="notesTextColorBtn" title="Text colour" aria-label="Text colour" aria-haspopup="true" aria-expanded="false" data-no-tooltip>
+                    <span class="et-note-swatch-glyph" aria-hidden="true">A</span>
+                    <span class="et-note-swatch-bar" id="notesTextColorBar" aria-hidden="true"></span>
+                  </button>
+                  <button type="button" class="et-notes-tool et-note-swatch-btn" data-note-cmd="highlight" id="notesHighlightBtn" title="Highlight" aria-label="Highlight" aria-haspopup="true" aria-expanded="false" data-no-tooltip>
+                    <span class="et-note-swatch-glyph et-note-swatch-glyph-hl" aria-hidden="true">A</span>
+                    <span class="et-note-swatch-bar" id="notesHighlightBar" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="et-notes-tool-group" role="group" aria-label="Lists">
+                <span class="et-notes-tool-caption" aria-hidden="true">Lists</span>
+                <div class="et-notes-tool-row">
+                  <button type="button" class="et-notes-tool" data-note-cmd="bullet" title="Bullet list" aria-label="Bullet list" aria-pressed="false" data-no-tooltip>&bull;</button>
+                  <button type="button" class="et-notes-tool" data-note-cmd="numbered" title="Numbered list" aria-label="Numbered list" aria-pressed="false" data-no-tooltip>1.</button>
+                  <button type="button" class="et-notes-tool" data-note-cmd="checklist" title="Checklist" aria-label="Checklist" aria-pressed="false" data-no-tooltip>&#9744;</button>
+                </div>
+              </div>
+
+              <div class="et-notes-tool-group" role="group" aria-label="Clipboard">
+                <span class="et-notes-tool-caption" aria-hidden="true">Clipboard</span>
+                <div class="et-notes-tool-row">
+                  <button type="button" class="et-notes-tool" data-note-cmd="cut" title="Cut selection" aria-label="Cut" data-no-tooltip>Cut</button>
+                  <button type="button" class="et-notes-tool" data-note-cmd="copy" title="Copy selection, or the whole note when nothing is selected" aria-label="Copy" data-no-tooltip>Copy</button>
+                  <button type="button" class="et-notes-tool" data-note-cmd="paste" title="Paste from clipboard" aria-label="Paste" data-no-tooltip>Paste</button>
+                  <button type="button" class="et-notes-tool" data-note-cmd="selectAll" title="Select all (Ctrl+A)" aria-label="Select all" data-no-tooltip>All</button>
+                </div>
+              </div>
+
+              <div class="et-notes-tool-group et-notes-tool-group-end" role="group" aria-label="View">
+                <span class="et-notes-tool-caption" aria-hidden="true">View</span>
+                <div class="et-notes-tool-row">
+                <button
+                  type="button"
+                  class="et-notes-tool et-notes-more-btn"
+                  id="notesMoreBtn"
+                  title="More"
+                  aria-label="More options"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  data-no-tooltip
+                >
+                  &#8943;
+                </button>
+                <div class="et-notes-more-menu" id="notesMoreMenu" role="menu" hidden>
+                  <div class="et-notes-more-row">
+                    <span class="et-notes-more-label">Text size</span>
+                    <div class="et-notes-more-stepper">
+                      <button type="button" class="et-notes-tool" data-note-cmd="fontDown" title="Smaller text" aria-label="Smaller text" data-no-tooltip>A&minus;</button>
+                      <span class="et-notes-font-val" id="notesFontVal" aria-live="polite">15</span>
+                      <button type="button" class="et-notes-tool" data-note-cmd="fontUp" title="Larger text" aria-label="Larger text" data-no-tooltip>A+</button>
+                    </div>
+                  </div>
+                  <div class="et-notes-more-row">
+                    <span class="et-notes-more-label"></span>
+                    <span class="et-notes-stats" id="notesStatsBadge">0 words</span>
+                  </div>
+                </div>
+                </div>
+              </div>
+            </div>
+            <div class="et-note-color-menu" id="notesColorMenu" role="menu" hidden></div>
+            <div
               class="et-notes-area"
               id="notesArea"
-              placeholder="Write something…"
+              contenteditable="true"
+              role="textbox"
+              aria-multiline="true"
+              aria-label="Note"
+              data-placeholder="Write something…"
               spellcheck="true"
-            ></textarea>
+            ></div>
           </div>
 
           <div class="et-notes-clipboard-col">
@@ -317,7 +490,7 @@
                   type="text"
                   class="et-clip-input"
                   id="clipTextInput"
-                  placeholder="Paste command, text, or link…"
+                  placeholder="Paste…"
                   style="flex: 1"
                 />
                 <button
@@ -338,62 +511,99 @@
 
     <div class="et-pop-sessions" id="sessionsPopover">
       <div class="et-pop-header">
-        <div class="todo-pop-title-wrap">
-          <span class="et-pop-title">Sessions</span>
-          <span class="et-pop-badge" id="sessionsPopBadge">0</span>
+        <div class="et-pop-tabs" role="tablist" aria-label="Saved tabs">
+          <button
+            type="button"
+            class="et-pop-tab is-active"
+            id="sessionsPaneTab"
+            role="tab"
+            aria-selected="true"
+            aria-controls="sessionsPane"
+            data-pane="sessions"
+          >
+            Sessions
+            <span class="et-pop-badge" id="sessionsPopBadge">0</span>
+          </button>
+          <button
+            type="button"
+            class="et-pop-tab"
+            id="readLaterPaneTab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="readLaterPane"
+            data-pane="readLater"
+          >
+            Read later
+            <span class="et-pop-badge" id="readLaterBadge">0</span>
+          </button>
+          <button
+            type="button"
+            class="et-pop-tab"
+            id="workspacesPaneTab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="workspacesPane"
+            data-pane="workspaces"
+            tabindex="-1"
+          >
+            Workspaces
+            <span class="et-pop-badge" id="workspacesBadge">0</span>
+          </button>
         </div>
       </div>
-      <div class="et-session-save-row">
-        <button class="et-session-save-btn" id="sessionsSaveBtn">
-          Save this window
-        </button>
-        <label class="et-session-keep">
-          <input type="checkbox" id="sessionsKeepOpen" />
-          <span>Keep tabs open</span>
-        </label>
+
+      <div class="et-pop-pane" id="sessionsPane" role="tabpanel" aria-labelledby="sessionsPaneTab">
+        <div class="et-pop-list" id="sessionsPopList"></div>
       </div>
-      <div class="et-pop-list" id="sessionsPopList"></div>
+
+      <div class="et-pop-pane" id="readLaterPane" role="tabpanel" aria-labelledby="readLaterPaneTab" hidden>
+        <div class="et-readlater-hint">
+          Save the page you are on with the EshaalTab button in your toolbar.
+        </div>
+        <div class="et-readlater-tools">
+          <button type="button" class="et-readlater-tool" id="readLaterToBoard">
+            Save unread to a board
+          </button>
+          <button type="button" class="et-readlater-tool" id="readLaterClearRead">
+            Clear read
+          </button>
+        </div>
+        <div class="et-pop-list" id="readLaterList"></div>
+      </div>
+
+      <!-- A workspace is a moment of work: the tabs you have open right now,
+           under a name, optionally tied to a board. Unlike a session it does
+           not close anything, and it can be updated in place. -->
+      <div class="et-pop-pane" id="workspacesPane" role="tabpanel" aria-labelledby="workspacesPaneTab" hidden>
+        <form class="et-ws-form" id="workspaceForm">
+          <input
+            type="text"
+            class="et-ws-name"
+            id="workspaceName"
+            maxlength="60"
+            placeholder="Name this workspace, e.g. BSCS Assignment"
+            aria-label="Workspace name"
+            autocomplete="off"
+          />
+          <div class="et-ws-form-row">
+            <button type="submit" class="et-ws-save" id="workspaceSave">
+              Snapshot open tabs
+            </button>
+            <button type="button" class="et-ws-secondary" id="workspaceToBoard">
+              Save as new board
+            </button>
+          </div>
+        </form>
+        <div class="et-pop-list" id="workspaceList"></div>
+      </div>
     </div>
 
-    <div class="et-pop-todo" id="todoPopover">
-      <div class="et-pop-header">
-        <div class="todo-pop-title-wrap">
-          <span class="et-pop-title">Tasks</span>
-          <span class="et-pop-badge" id="todoPopBadge">0</span>
-        </div>
-        <button
-          class="et-pop-clear-btn"
-          id="todoClearDone"
-          title="Clear completed tasks"
-          data-no-tooltip
-        >
-          Clear
-        </button>
-      </div>
-      <div class="et-pop-list" id="todoPopList"></div>
-      <div class="et-pop-input-wrap">
-        <input
-          type="text"
-          class="et-pop-input"
-          id="todoPopInput"
-          placeholder="Add a task"
-          autocomplete="off"
-        />
-      </div>
-    </div>
+    <div class="et-pb-panel" id="pinnedBoardsPanel" role="dialog" aria-label="Pinned boards"></div>
 
     <div class="et-pop-workspace" id="workspacePopover">
       <div class="et-workspace-top">
         <div class="et-workspace-header">
           <span class="et-workspace-title">Apps</span>
-          <div class="et-workspace-tabs">
-            <button class="et-ws-tab is-active" id="wsTabAll" data-view="all">
-              All
-            </button>
-            <button class="et-ws-tab" id="wsTabFav" data-view="fav">
-              Starred
-            </button>
-          </div>
         </div>
         <div class="et-workspace-search">
           <svg
@@ -484,41 +694,32 @@
             ×
           </button>
         </div>
-        <div class="et-set-tabs">
-          <button
-            class="et-set-tab active"
-            data-tab="theme"
-            aria-label="Quick settings"
-            title="Quick settings"
-          >
-            <span>Quick settings</span>
-          </button>
-          <button
-            class="et-set-tab"
-            data-tab="widgets"
-            aria-label="Customize"
-            title="Customize"
-          >
-            <span>Customize</span>
-          </button>
-          <button
-            class="et-set-tab"
-            data-tab="data"
-            aria-label="Privacy and data"
-            title="Privacy and data"
-          >
-            <span>Privacy &amp; data</span>
-          </button>
-          <button
-            class="et-set-tab"
-            data-tab="help"
-            aria-label="Help"
-            title="Help"
-          >
-            <span>Help</span>
-          </button>
+        <!-- Sidebar and page, side by side. The five tabs used to be a strip
+             of one-word buttons across the top, which meant every section was
+             two guesses away: which word hides it, then where in that page it
+             sits. The sidebar names every section outright and groups the ones
+             that belong together, so the answer is on screen instead of behind
+             a tab. -->
+        <div class="et-set-main">
+          <div class="et-set-sidebar">
+            <div class="et-set-search-wrap">
+              <svg class="et-set-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" /><path d="m16.5 16.5 4 4" />
+              </svg>
+              <input
+                type="search"
+                class="et-set-search"
+                id="settingsSearch"
+                placeholder="Search settings"
+                aria-label="Search settings"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+            <nav class="et-set-nav" id="settingsNav" aria-label="Settings sections"></nav>
+          </div>
+          <div class="et-set-body" id="sidesheetBody"></div>
         </div>
-        <div class="et-set-body" id="sidesheetBody"></div>
         <input
           type="file"
           id="fileInput"
@@ -526,25 +727,6 @@
           aria-label="Wallpaper image or video file"
           style="display: none"
         />
-      </div>
-    </div>
-
-    <div
-      class="et-break-overlay"
-      id="breakOverlay"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="breakOverlayTitle"
-      hidden
-    >
-      <div class="et-break-card">
-        <div class="et-break-icon" aria-hidden="true">&#9749;</div>
-        <h2 class="et-break-title" id="breakOverlayTitle">Time for a break</h2>
-        <p class="et-break-msg" id="breakOverlayMsg"></p>
-        <div class="et-break-actions">
-          <button class="et-break-btn primary" id="breakDoneBtn">Got it</button>
-          <button class="et-break-btn" id="breakSnoozeBtn">Snooze 5 min</button>
-        </div>
       </div>
     </div>
 
@@ -593,23 +775,6 @@
         >
           Custom
         </button>
-        <div
-          class="et-pomo-display-switch"
-          role="group"
-          aria-label="Timer display"
-        >
-          <button type="button" data-mode="hm" aria-pressed="false">
-            Hr : Min
-          </button>
-          <button
-            type="button"
-            data-mode="ms"
-            class="active"
-            aria-pressed="true"
-          >
-            Min : Sec
-          </button>
-        </div>
       </div>
 
       <div
@@ -664,12 +829,31 @@
         </div>
       </div>
 
-      <span class="et-pomo-status-badge" id="pomoStatusText"
-        >Press space to start</span
-      >
-      <span class="et-pomo-sessions-badge" id="pomoSessionsCount"
-        >No sessions yet today</span
-      >
+      <div class="et-pomo-footer">
+        <div
+          class="et-pomo-display-switch"
+          role="group"
+          aria-label="Timer display"
+        >
+          <button type="button" data-mode="hm" aria-pressed="false">
+            Hr : Min
+          </button>
+          <button
+            type="button"
+            data-mode="ms"
+            class="active"
+            aria-pressed="true"
+          >
+            Min : Sec
+          </button>
+        </div>
+        <span class="et-pomo-status-badge" id="pomoStatusText"
+          >Press space to start</span
+        >
+        <span class="et-pomo-sessions-badge" id="pomoSessionsCount"
+          >No sessions yet today</span
+        >
+      </div>
     </div>
 
     <div class="et-toast-container" id="toastContainer"></div>
@@ -680,13 +864,15 @@
     <script src="js/ui/render.js" defer></script>
     <script src="js/ui/timer-notifications.js" defer></script>
     <script src="js/ui/home-widgets.js" defer></script>
-    <script src="js/ui/reminders.js" defer></script>
     <script src="js/ui/workspace-tasks.js" defer></script>
     <script src="js/ui/sessions.js" defer></script>
+    <script src="js/ui/notes-html.js" defer></script>
     <script src="js/ui/notes-home.js" defer></script>
+    <script src="js/ui/pinned-boards.js" defer></script>
     <script src="js/core/browserext.js" defer></script>
     <script src="js/ui/search.js" defer></script>
     <script src="js/ui/settings-core.js" defer></script>
+    <script src="js/ui/whats-new.js" defer></script>
     <script src="js/main.js" defer></script>
   </body>
 </html>

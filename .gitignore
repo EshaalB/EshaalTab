@@ -11,6 +11,11 @@ Thumbs.db
 # Local QA scratch
 dev/.*
 
+# Wallpaper sources. The originals are full-resolution PNGs measured in tens of
+# megabytes; only the converted `wallpaper/default.webp` is meant to be tracked
+# or shipped. Run `python dev/make-wallpaper.py <source>` to regenerate it.
+dev/wallpaper-src/
+
 # Local editor and Claude metadata
 .claude/
 .vscode/

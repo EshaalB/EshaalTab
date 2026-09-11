@@ -30,15 +30,10 @@ const hexToRgb = (hex) => {
     ? { r: 99, g: 102, b: 241 }
     : { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 };
-const contrastText = (color) => {
-  const { r, g, b } = hexToRgb(color);
-  const lin = [r, g, b].map((v) => {
-    v /= 255;
-    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-  });
-  const L = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
-  return (L + 0.05) / 0.05265 >= 1.05 / (L + 0.05) ? "#14151a" : "#ffffff";
-};
+// The popup loads platform.js too, so it scores colour with the same APCA
+// implementation the new tab page uses rather than carrying a second copy that
+// could drift out of step.
+const contrastText = (color) => Contrast.ink(color);
 
 function applyPopupTheme(settings) {
   const s = settings || {};
@@ -84,7 +79,31 @@ function applyPopupTheme(settings) {
     "--field-line",
     light ? "rgba(13,17,23,0.14)" : "rgba(255,255,255,0.14)",
   );
-  if (s.cornerRadius && s.cornerRadius !== "default") {
+
+  /* The dropdown tokens. The board picker is the shared CustomSelect, whose
+     menu is painted from `--menu-bg` / `--menu-border` / `--menu-hover`. The
+     popup never set them, so they fell through to tokens.css's root values -
+     the new tab page's dark panel - in both themes. In light mode that put
+     near-black option text on a near-black menu. They follow the popup's own
+     light/dark decision now, like every other surface in it. */
+  const panelRgb = light ? "255, 255, 255" : "22, 27, 34";
+  const menuLine = light ? "rgba(13,17,23,0.12)" : "rgba(255,255,255,0.12)";
+  root.setProperty("--panel-rgb", panelRgb);
+  root.setProperty("--panel-solid", `rgb(${panelRgb})`);
+  root.setProperty("--panel-border", menuLine);
+  root.setProperty("--menu-bg", `rgb(${panelRgb})`);
+  root.setProperty("--menu-border", menuLine);
+  root.setProperty(
+    "--menu-hover",
+    light ? "rgba(13,17,23,0.06)" : "rgba(255,255,255,0.08)",
+  );
+  root.setProperty(
+    "--e3",
+    light
+      ? "0 12px 28px -8px rgba(15,23,42,0.18)"
+      : "0 12px 28px -8px rgba(0,0,0,0.6)",
+  );
+  if (s.cornerRadius) {
     root.setProperty(
       "--radius",
       s.cornerRadius === "9999px" ? "999px" : s.cornerRadius,
@@ -314,6 +333,66 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // Read later: one click on whatever page you are looking at. This is the
+  // whole point of it living in the toolbar popup rather than the new tab
+  // page - by the time you have opened a new tab to paste a URL into, the
+  // page you wanted to save is behind you.
+  const readLaterBtn = $("readLaterBtn");
+  readLaterBtn?.addEventListener("click", async () => {
+    const url = activeTab?.url || manualUrl.value.trim();
+    const title = activeTab?.title || manualTitle.value.trim() || url;
+
+    if (!/^https?:\/\//i.test(url || "")) {
+      fail("This page can’t be saved to read later.");
+      return;
+    }
+    if (!(HAS_EXT && EXT.storage)) {
+      fail("Read later needs the installed extension.");
+      return;
+    }
+
+    readLaterBtn.disabled = true;
+    readLaterBtn.textContent = "Saving…";
+    try {
+      // Re-read immediately before writing rather than trusting the copy this
+      // popup loaded on open: a new tab page may have changed the queue since,
+      // and the popup must not write a stale list back over it.
+      const bag = await EXT.storage.local.get("data");
+      const data =
+        bag.data && typeof bag.data === "object" ? bag.data : { boards: [] };
+      if (!Array.isArray(data.readLater)) data.readLater = [];
+
+      const existing = data.readLater.find((i) => i && i.url === url);
+      if (existing) {
+        existing.addedAt = Date.now();
+        existing.read = false;
+        existing.title = String(title).slice(0, 300);
+      } else {
+        data.readLater.unshift({
+          id:
+            (crypto.randomUUID && crypto.randomUUID()) ||
+            String(Date.now()) + Math.random().toString(16).slice(2),
+          url: url.slice(0, 2000),
+          title: String(title).slice(0, 300),
+          addedAt: Date.now(),
+          read: false,
+        });
+        if (data.readLater.length > 200) data.readLater.length = 200;
+      }
+
+      await EXT.storage.local.set({ data });
+      readLaterBtn.textContent = existing ? "Moved to top ✓" : "Saved ✓";
+      setTimeout(() => window.close(), 700);
+      return;
+    } catch {
+      fail("Could not save this page.");
+    } finally {
+      readLaterBtn.disabled = false;
+      if (readLaterBtn.textContent === "Saving…")
+        readLaterBtn.textContent = "Read later";
+    }
+  });
+
   const stashBtn = $("stashBtn");
   stashBtn?.addEventListener("click", async () => {
     if (!(HAS_EXT && EXT.tabs)) {
@@ -362,7 +441,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (dupeCount > 0) {
         errorMsg.classList.add("qs-info");
-        errorMsg.textContent = `Stashed ${tabs.length} tab${tabs.length === 1 ? "" : "s"} — ${dupeCount} ${dupeCount === 1 ? "is" : "are"} already saved as bookmark${dupeCount === 1 ? "" : "s"}.`;
+        errorMsg.textContent = `Stashed ${tabs.length} tab${tabs.length === 1 ? "" : "s"}; ${dupeCount} ${dupeCount === 1 ? "is" : "are"} already saved as bookmark${dupeCount === 1 ? "" : "s"}.`;
         errorMsg.style.display = "block";
       }
     } catch (e) {

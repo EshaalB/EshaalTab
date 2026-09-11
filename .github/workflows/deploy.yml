@@ -41,6 +41,15 @@ jobs:
           mkdir -p dist/extension
           cp -r manifest.json index.html popup.html favicon.ico \
                 icons css js fonts LICENSE dist/extension/
+          # The packaged wallpaper is optional: a build shipping without one
+          # falls back to the solid background at runtime (see
+          # `applyPackagedWallpaper`). Copied conditionally because git does
+          # not track empty directories, so an unconditional `cp -r wallpaper`
+          # would fail the release on any checkout that has none.
+          if [ -f wallpaper/default.webp ]; then
+            mkdir -p dist/extension/wallpaper
+            cp wallpaper/default.webp dist/extension/wallpaper/
+          fi
           cd dist/extension && zip -r ../../extension.zip .
 
       - name: Show package contents

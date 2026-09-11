@@ -129,7 +129,6 @@ const WorkspaceWidget = (() => {
   };
 
   let built = false;
-  let activeView = "all";
   let filterQuery = "";
 
   function localAppIcon(name) {
@@ -187,7 +186,7 @@ const WorkspaceWidget = (() => {
   function renderAppItem([name, url], isFav) {
     return `
       <div class="workspace-item" title="${escapeHtml(name)}">
-        <button class="workspace-star-btn ${isFav ? "is-active" : ""}" data-app="${escapeHtml(name)}" title="${isFav ? "Unstar" : "Star"}" aria-label="${isFav ? "Remove " + escapeHtml(name) + " from starred apps" : "Star " + escapeHtml(name)}" aria-pressed="${isFav}">★</button>
+        <button class="workspace-star-btn ${isFav ? "is-active" : ""}" data-app="${escapeHtml(name)}" data-tooltip="${isFav ? "Unpin" : "Pin to top"}" aria-label="${isFav ? "Unpin " + escapeHtml(name) : "Pin " + escapeHtml(name) + " to the top"}" aria-pressed="${isFav}">★</button>
         <a href="${escapeHtml(safeHref(url))}" class="workspace-link">
           <span class="workspace-icon" data-letter="${escapeHtml(name.charAt(0))}">
             <img ${getAppIconAttr(name, url)} alt="" decoding="async" width="40" height="40" />
@@ -216,42 +215,17 @@ const WorkspaceWidget = (() => {
       return;
     }
 
-    if (activeView === "fav") {
-      const favApps = filteredApps.filter(([name]) => favs.has(name));
-      if (favApps.length === 0) {
-        setSafeHTML(
-          grid,
-          `<div class="workspace-no-results">No starred apps.<span class="workspace-no-results-hint">Star an app from the All view.</span></div>`,
-        );
-        return;
-      }
-      setSafeHTML(
-        grid,
-        favApps.map((app) => renderAppItem(app, true)).join(""),
-      );
-    } else {
-      if (!query) {
-        const favApps = APPS.filter(([name]) => favs.has(name));
-        const otherApps = APPS.filter(([name]) => !favs.has(name));
-        let html = "";
-        if (favApps.length > 0) {
-          html += `<div class="workspace-section-header">Starred</div>`;
-          html += favApps.map((app) => renderAppItem(app, true)).join("");
-        }
-        if (otherApps.length > 0) {
-          html += `<div class="workspace-section-header">All Apps</div>`;
-          html += otherApps.map((app) => renderAppItem(app, false)).join("");
-        }
-        setSafeHTML(grid, html);
-      } else {
-        setSafeHTML(
-          grid,
-          filteredApps
-            .map((app) => renderAppItem(app, favs.has(app[0])))
-            .join(""),
-        );
-      }
-    }
+    // One grid, pinned apps first. There used to be an All / Starred switch
+    // and a separate Starred section, so pinning an app moved it into a
+    // category rather than simply to the front.
+    const ordered = [
+      ...filteredApps.filter(([name]) => favs.has(name)),
+      ...filteredApps.filter(([name]) => !favs.has(name)),
+    ];
+    setSafeHTML(
+      grid,
+      ordered.map((app) => renderAppItem(app, favs.has(app[0]))).join(""),
+    );
 
     wireFavicons(grid);
   }
@@ -279,25 +253,6 @@ const WorkspaceWidget = (() => {
         renderGrid();
       });
       searchInput.addEventListener("click", (e) => e.stopPropagation());
-    }
-
-    const tabAll = $("wsTabAll");
-    const tabFav = $("wsTabFav");
-    if (tabAll && tabFav) {
-      tabAll.addEventListener("click", (e) => {
-        e.stopPropagation();
-        activeView = "all";
-        tabAll.classList.add("is-active");
-        tabFav.classList.remove("is-active");
-        renderGrid();
-      });
-      tabFav.addEventListener("click", (e) => {
-        e.stopPropagation();
-        activeView = "fav";
-        tabFav.classList.add("is-active");
-        tabAll.classList.remove("is-active");
-        renderGrid();
-      });
     }
 
     const grid = $("workspaceGrid");
@@ -346,184 +301,4 @@ const WorkspaceWidget = (() => {
   }
 
   return { init, open, close };
-})();
-
-const TodoWidget = (() => {
-  /**
-   * Resolves a todo's reminder to a concrete hour and minute.
-   *
-   * Newer todos carry `remindH`/`remindM`, resolved against the wall clock at
-   * the moment they were typed (so "2:20" typed at 1pm means 14:20). Todos
-   * created before that existed fall back to a daytime assumption.
-   */
-  function taskReminder(t) {
-    const parsed = ReminderKit.parseTime(t.text);
-    if (!parsed) return null;
-
-    if (Number.isInteger(t.remindH) && Number.isInteger(t.remindM))
-      return { h: t.remindH, min: t.remindM };
-
-    const h = ReminderKit.assumeDaytimeHour(parsed);
-    return h === null ? null : { h, min: parsed.min };
-  }
-
-  // Everything currently awaiting a chime, with absolute due timestamps so the
-  // scheduler can fire on "past due" instead of "exactly now".
-  function collectReminders() {
-    const today = todayKey();
-    // Reminders older than this were settled elsewhere (e.g. a backup restore
-    // brought them in already overdue) and must not chime now.
-    const muted = StorageManager.getData().remindersMutedBefore || 0;
-    const out = [];
-    for (const t of TodoManager.getAll()) {
-      if (t.done) continue;
-      const r = taskReminder(t);
-      if (!r) continue;
-      const due = ReminderKit.timeOn(Date.now(), r.h, r.min);
-      if (due < muted) continue;
-      out.push({
-        key: `todo_${t.id}_${today}_${r.h}:${r.min}`,
-        due,
-        fire: () => {
-          ReminderKit.flashBadge("⏰");
-          // Long-lived rather than the old 8s: a reminder you were not at the
-          // keyboard for is exactly the one worth still being there.
-          ToastSystem.show(`⏰ Reminder: ${t.text}`, "info", 30000);
-          ReminderKit.chime();
-        },
-      });
-    }
-    return out;
-  }
-
-  let bound = false;
-
-  function init() {
-    if (bound) return;
-    bound = true;
-    const btn = $("todoWidgetBtn");
-    const pop = $("todoPopover");
-    const input = $("todoPopInput");
-    const clearBtn = $("todoClearDone");
-    btn?.addEventListener("click", () => toggle());
-    input?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && input.value.trim()) {
-        TodoManager.add(input.value.trim());
-        StorageManager.saveImmediate();
-        input.value = "";
-        render();
-      }
-    });
-    clearBtn?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      TodoManager.clearDone();
-      render();
-    });
-    PopoverRegistry.register("todo", () => $("todoPopover"), close);
-    render();
-
-    ReminderKit.register(collectReminders);
-  }
-  function toggle() {
-    const pop = $("todoPopover");
-    if (!pop) return;
-    pop.classList.contains("open") ? close() : open();
-  }
-  function open() {
-    const pop = $("todoPopover");
-    const btn = $("todoWidgetBtn");
-    if (!pop || !btn) return;
-    PopoverRegistry.closeAll("todo");
-    render();
-    PopoverRegistry.position(pop, btn, { width: 340 });
-    pop.classList.add("open");
-    btn.classList.add("is-active");
-    $("todoPopInput")?.focus();
-  }
-  function close() {
-    $("todoPopover")?.classList.remove("open");
-    $("todoWidgetBtn")?.classList.remove("is-active");
-  }
-  function render() {
-    const list = $("todoPopList");
-    const badge = $("todoPopBadge");
-    const clearBtn = $("todoClearDone");
-    if (!list) return;
-    const todos = TodoManager.getAll();
-    const pendingCount = todos.filter((t) => !t.done).length;
-    const doneCount = todos.filter((t) => t.done).length;
-
-    if (badge) badge.textContent = pendingCount;
-    if (clearBtn)
-      clearBtn.style.display = doneCount > 0 ? "inline-block" : "none";
-
-    setSafeHTML(
-      list,
-      todos.length
-        ? ""
-        : '<div class="todo-pop-empty"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4; margin-bottom:8px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><br/>Add your first task below</div>',
-    );
-    todos.forEach((t, idx) => {
-      const r = taskReminder(t);
-      const timeHint = r
-        ? ` <span style="opacity:0.5; font-size:11px;">⏰ ${escapeHtml(ReminderKit.formatTime(r.h, r.min))}</span>`
-        : "";
-      const row = document.createElement("div");
-      row.className = `todo-pop-row ${t.done ? "done" : ""} ${t.pinned ? "pinned" : ""}`;
-      setSafeHTML(
-        row,
-        `
-        <button class="todo-pop-check" title="${t.done ? "Mark pending" : "Mark done"}">
-          ${t.done ? icon("check", 16) : ""}
-        </button>
-        <span class="todo-pop-text" data-no-tooltip>${escapeHtml(t.text)}${timeHint}</span>
-        <button class="todo-pop-move" data-dir="-1" title="Move up" aria-label="Move task up">↑</button>
-        <button class="todo-pop-move" data-dir="1" title="Move down" aria-label="Move task down">↓</button>
-        <button class="todo-pop-pin ${t.pinned ? "active" : ""}" title="${t.pinned ? "Unpin" : "Pin"}">
-          ${icon("pin", 16)}
-        </button>
-        <button class="todo-pop-del" title="Delete task">&times;</button>`,
-      );
-
-      row.querySelector(".todo-pop-check").addEventListener("click", (e) => {
-        e.stopPropagation();
-        TodoManager.toggle(t.id);
-        render();
-      });
-      row.querySelector(".todo-pop-pin").addEventListener("click", (e) => {
-        e.stopPropagation();
-        TodoManager.togglePin(t.id);
-        render();
-      });
-      row.querySelectorAll(".todo-pop-move").forEach((mb) => {
-        mb.addEventListener("click", (e) => {
-          e.stopPropagation();
-          if (TodoManager.shift(t.id, parseInt(mb.dataset.dir, 10))) render();
-        });
-      });
-
-      const textEl = row.querySelector(".todo-pop-text");
-      textEl.addEventListener("dblclick", (e) => {
-        e.stopPropagation();
-        showPrompt("Edit Task", "Update task description:", t.text, (val) => {
-          if (val && val.trim()) {
-            TodoManager.edit(t.id, val.trim());
-            render();
-          }
-        });
-      });
-
-      row.querySelector(".todo-pop-del").addEventListener("click", (e) => {
-        e.stopPropagation();
-        TodoManager.remove(t.id);
-        render();
-        ToastSystem.action("Task deleted", "Undo", () => {
-          TodoManager.insertAt(t, idx);
-          render();
-        });
-      });
-      list.appendChild(row);
-    });
-  }
-  return { init, render, open, close };
 })();

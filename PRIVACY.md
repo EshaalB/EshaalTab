@@ -48,8 +48,11 @@ is not sent to the developer.
 
 ## Network features
 
-The default new-tab view loads packaged files and makes no automatic network
-request. Fonts are included in the extension package.
+The new-tab view loads packaged files, and fonts are included in the extension
+package. The only automatic network request is for site icons while remote
+favicons are on (see below); in Chrome most icons come from the browser's own
+local cache instead. With remote favicons off, a new tab makes no network
+request.
 
 The following optional or user-initiated features contact third parties
 directly. These requests do not pass through a developer-operated server.
@@ -58,17 +61,20 @@ information such as the user's IP address and browser headers.
 
 ### Weather
 
-Weather is off by default. When you enter a city, its name is sent to
-Open-Meteo's geocoding API. The returned coordinates are then sent to
-Open-Meteo's forecast API. EshaalTab does not attach an account, advertising ID
+Weather is off by default. While you type in the city field, the text typed so
+far is sent to Open-Meteo's geocoding API to suggest matching places - only after
+two characters and a short pause. The coordinates of the place you pick are then
+sent to Open-Meteo's forecast API. EshaalTab does not attach an account, advertising ID
 or extension-generated user identifier. Open-Meteo's privacy policy applies to
 its handling of the request.
 
 ### Remote favicons
 
-Remote favicons are off by default. While disabled, Chrome's local favicon cache
-or a packaged fallback is used. If enabled, saved domains may be sent to Google,
-DuckDuckGo or the saved site itself to retrieve an icon.
+Remote favicons are on by default, so link, pin and search-engine icons show up
+on a fresh install. While on, the domains of your saved links and of the search
+engines in the search bar may be sent to Google, DuckDuckGo or the site itself to
+retrieve an icon. Turn off "Load icons from the web" under Settings, Privacy to
+stop this; Chrome's local favicon cache or a packaged icon is then used instead.
 
 ### Wallpapers from a URL
 
@@ -78,10 +84,16 @@ images that cannot be stored may be requested again on later new tabs.
 
 ### Search and AI providers
 
-When you submit a search, the query is sent to the browser's configured default
-search provider or to the provider you explicitly selected. Available providers
-include DuckDuckGo, YouTube, Brave, Perplexity, ChatGPT, Claude and Gemini.
-Their respective privacy policies apply.
+By default the search box hands your query to the browser's own configured
+search provider, using the `search` permission. EshaalTab does not choose your
+search engine and does not change it - whatever you have already set in your
+browser is what answers.
+
+You can send an individual search somewhere else by picking a provider in the
+bar: Google, DuckDuckGo, Yandex, Yahoo, Brave, Perplexity, ChatGPT, Claude,
+Gemini, YouTube, Reddit, Pinterest or Quora.
+That choice is stored locally and applies only to searches you start from this
+page. Their respective privacy policies apply.
 
 ## Chrome Sync
 

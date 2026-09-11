@@ -10,22 +10,57 @@ const TabManager = (() => {
     localTab = TABS.includes(t) ? t : "home";
     return localTab;
   }
+  // Kept in this tab only. Every new tab opens on Home regardless, so the
+  // stored value was never read back - but writing it meant two tabs on
+  // different views each saved their own, and each save woke the other.
   function set(tab) {
     if (!TABS.includes(tab)) return;
     localTab = tab;
-    StorageManager.getSettings().activeTab = tab;
   }
   return { TABS, get, set };
 })();
 const BoardManager = (() => {
   const boards = () => StorageManager.getData().boards;
 
+  // A board colour is either one of the preset hex swatches or null, which
+  // means "follow the theme accent". Anything else is ignored so a bad import
+  // cannot inject a value into the style attribute.
+  /* Hue seeds, not final colours. Each one is run through `Contrast.tint` for
+     the current mode before it reaches the page, so the row stays legible
+     against both a dark card and a light one without storing two palettes. */
+  const BOARD_COLORS = [
+    "#6366f1",
+    "#0ea5e9",
+    "#14b8a6",
+    "#22c55e",
+    "#f59e0b",
+    "#f43f5e",
+    "#a855f7",
+    "#64748b",
+  ];
+
+  /**
+   * @param {?string} color Any 6-digit hex, or null to follow the theme accent.
+   *   The list above is only the set offered in the menu - a colour picked from
+   *   the wheel is just as valid, and is softened into the mode it is shown in
+   *   at paint time rather than being stored pre-adjusted, so it survives a
+   *   light/dark switch.
+   */
+  function setColor(boardId, color) {
+    const b = find(boardId);
+    if (!b) return false;
+    if (color !== null && !/^#[0-9a-f]{6}$/i.test(color)) return false;
+    b.color = color ? color.toLowerCase() : null;
+    StorageManager.save();
+    return true;
+  }
+
   function addBoard(name = "", targetCol = null) {
     if (!name) name = "New board";
     const board = {
       id: uuid(),
       name: name.trim(),
-      color: StorageManager.getSettings().accentColor,
+      color: null,
       col: targetCol,
       order: boards().length,
       pinnedToHome: false,
@@ -41,6 +76,10 @@ const BoardManager = (() => {
   function deleteBoard(id) {
     const d = StorageManager.getData();
     d.boards = d.boards.filter((b) => b.id !== id);
+    // Without this the id lingers in collapsedBoards forever, so the list
+    // grows by one entry for every board ever deleted.
+    if (Array.isArray(d.collapsedBoards))
+      d.collapsedBoards = d.collapsedBoards.filter((bid) => bid !== id);
     StorageManager.save();
   }
   function rename(id, name) {
@@ -89,15 +128,166 @@ const BoardManager = (() => {
     StorageManager.save();
     return true;
   }
+
+  /**
+   * Writes a computed column layout (id -> column index) back onto the
+   * boards, so the masonry pass in render.js has to figure out "which column
+   * is shortest" only once per shape of the grid rather than on every paint -
+   * and so up/down/left/right moves have something stable to act on. `order`
+   * is left as-is: it already increases with array position, which is
+   * exactly the right within-column sequence for boards that just landed in
+   * a column together for the first time.
+   */
+  function applyColumnLayout(idToCol) {
+    let changed = false;
+    boards().forEach((b) => {
+      const col = idToCol.get(b.id);
+      if (col != null && b.col !== col) {
+        b.col = col;
+        changed = true;
+      }
+    });
+    if (changed) StorageManager.save();
+    return changed;
+  }
+
+  /**
+   * Squeezes empty columns out of the persisted layout.
+   *
+   * Columns are stored as absolute indices, so moving the last board out of
+   * column 0 used to leave column 0 empty and every board shifted one place
+   * right of where the grid actually starts - the "add board, gap, board"
+   * layout. Renumbering the occupied columns to 0..n-1 after every move keeps
+   * the stored indices and what is on screen describing the same thing.
+   */
+  function compactColumns() {
+    const used = [...new Set(boards().map((b) => b.col))]
+      .filter((c) => Number.isInteger(c))
+      .sort((a, b) => a - b);
+    const remap = new Map(used.map((col, i) => [col, i]));
+    let changed = false;
+    boards().forEach((b) => {
+      const next = remap.get(b.col);
+      if (next != null && next !== b.col) {
+        b.col = next;
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
+  /** Boards in one column, in the order they stack visually. */
+  function columnBoards(col) {
+    return boards()
+      .filter((b) => b.col === col)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
+  /**
+   * Swaps a board with its neighbour one step up or down in its own column.
+   * Acts on the persisted `col`/`order` pair rather than the flat board
+   * array, so it moves the board exactly where it visibly sits - the flat
+   * array's neighbour and the visual neighbour are different boards as soon
+   * as boards are spread across more than one column, which is what made the
+   * old up/down controls also appear to move things sideways.
+   */
+  function moveVertical(id, delta) {
+    const b = find(id);
+    if (!b || b.col == null) return false;
+    const col = columnBoards(b.col);
+    const i = col.findIndex((x) => x.id === id);
+    const j = i + delta;
+    if (i < 0 || j < 0 || j >= col.length) return false;
+    const tmp = col[i].order;
+    col[i].order = col[j].order;
+    col[j].order = tmp;
+    StorageManager.save();
+    return true;
+  }
+
+  /**
+   * Moves a board into the neighbouring column, one step left or right, and
+   * appends it to the end of that column. `numCols` comes from the live
+   * layout (render.js), since the grid's own column count is not something
+   * this module tracks.
+   */
+  function moveHorizontal(id, deltaCol, numCols) {
+    const b = find(id);
+    if (!b || b.col == null) return false;
+    const targetCol = b.col + deltaCol;
+    if (targetCol < 0 || targetCol >= numCols) return false;
+    const dest = columnBoards(targetCol);
+    // Moving into empty space is only a real move when the board leaves
+    // something behind: a lone board stepping right just drags the whole grid
+    // sideways, which is the gap the compaction below would undo anyway.
+    if (!dest.length && columnBoards(b.col).length < 2) return false;
+
+    /* Same row, not the bottom. The board used to be given an order one past
+       the last board in the target column, so "Move left" on the second
+       board of a column dropped it to the foot of the next column - it moved
+       sideways *and* down, even with room at its own height. It now goes in
+       at the row it came from, or at the end when the target column is
+       shorter than that. Both columns are renumbered so their orders stay a
+       clean 0..n and a later move up/down means exactly one step. */
+    const fromCol = b.col;
+    const row = columnBoards(fromCol).findIndex((x) => x.id === b.id);
+    const at = Math.min(Math.max(row, 0), dest.length);
+    dest.splice(at, 0, b);
+    b.col = targetCol;
+    dest.forEach((x, i) => (x.order = i));
+    columnBoards(fromCol).forEach((x, i) => (x.order = i));
+
+    compactColumns();
+    StorageManager.save();
+    return true;
+  }
+
+  /**
+   * Puts a board at a given row of a given column - what a drag and drop
+   * means. `index` is counted without the board itself, and anything past the
+   * end appends. Both the column it leaves and the one it joins are
+   * renumbered 0..n, the same invariant the arrow moves above keep.
+   */
+  function placeBoard(id, targetCol, index) {
+    const b = find(id);
+    if (!b || !Number.isInteger(targetCol) || targetCol < 0) return false;
+    const fromCol = b.col;
+    const dest = columnBoards(targetCol).filter((x) => x.id !== id);
+    const at = Math.max(0, Math.min(Number(index) || 0, dest.length));
+    dest.splice(Number.isFinite(index) ? at : dest.length, 0, b);
+    b.col = targetCol;
+    dest.forEach((x, i) => (x.order = i));
+    if (Number.isInteger(fromCol) && fromCol !== targetCol)
+      columnBoards(fromCol).forEach((x, i) => (x.order = i));
+    compactColumns();
+    StorageManager.save();
+    return true;
+  }
+
+  const moveUp = (id) => moveVertical(id, -1);
+  const moveDown = (id) => moveVertical(id, 1);
+  const moveLeft = (id, numCols) => moveHorizontal(id, -1, numCols);
+  const moveRight = (id, numCols) => moveHorizontal(id, 1, numCols);
+
   return {
     addBoard,
+    setColor,
     find,
     deleteBoard,
     rename,
     restoreBoard,
     reorder,
     shift,
+    applyColumnLayout,
+    compactColumns,
+    columnBoards,
+    placeBoard,
+    moveUp,
+    moveDown,
+    moveLeft,
+    moveRight,
     getAll: boards,
+    BOARD_COLORS,
   };
 })();
 
@@ -484,127 +674,6 @@ const ClipboardManager = (() => {
     );
   }
   return { getAll, add, remove, copy };
-})();
-
-const TodoManager = (() => {
-  const list = () => StorageManager.getData().todos;
-  function getAll() {
-    const todos = list();
-    return todos
-      .map((t, i) => ({ t, i }))
-      .sort((a, b) => (b.t.pinned ? 1 : 0) - (a.t.pinned ? 1 : 0) || a.i - b.i)
-      .map((x) => x.t);
-  }
-  function shift(id, delta) {
-    const arr = list();
-    const item = arr.find((t) => t.id === id);
-    if (!item) return false;
-
-    const section = arr.filter((t) => !!t.pinned === !!item.pinned);
-    const secIndex = section.findIndex((t) => t.id === id);
-    const targetSecIndex = secIndex + delta;
-
-    if (secIndex < 0 || targetSecIndex < 0 || targetSecIndex >= section.length)
-      return false;
-
-    const targetItem = section[targetSecIndex];
-    const realIdxA = arr.indexOf(item);
-    const realIdxB = arr.indexOf(targetItem);
-
-    if (realIdxA < 0 || realIdxB < 0) return false;
-
-    [arr[realIdxA], arr[realIdxB]] = [arr[realIdxB], arr[realIdxA]];
-    StorageManager.save();
-    return true;
-  }
-  /**
-   * Pins down what a bare time in the task text means, using the clock at the
-   * moment it was typed. "2:20" entered at 1pm is 14:20, not 02:20 tomorrow.
-   * Stored on the todo so later reads don't re-guess and drift.
-   */
-  function stampReminder(t) {
-    if (typeof ReminderKit === "undefined") return t;
-    const parsed = ReminderKit.parseTime(t.text);
-    if (!parsed) {
-      delete t.remindH;
-      delete t.remindM;
-      return t;
-    }
-    t.remindH = ReminderKit.resolveHour(parsed);
-    t.remindM = parsed.min;
-    return t;
-  }
-
-  function add(text) {
-    const t = {
-      id: uuid(),
-      text: String(text).trim(),
-      done: false,
-      pinned: false,
-    };
-    if (!t.text) return null;
-    stampReminder(t);
-    list().push(t);
-    StorageManager.save();
-    return t;
-  }
-  function toggle(id) {
-    const t = list().find((x) => x.id === id);
-    if (t) {
-      t.done = !t.done;
-      StorageManager.save();
-    }
-  }
-  function togglePin(id) {
-    const t = list().find((x) => x.id === id);
-    if (t) {
-      t.pinned = !t.pinned;
-      StorageManager.save();
-    }
-  }
-  function edit(id, newText) {
-    const clean = String(newText || "").trim();
-    if (!clean) {
-      remove(id);
-      return;
-    }
-    const t = list().find((x) => x.id === id);
-    if (t) {
-      t.text = clean;
-      stampReminder(t);
-      StorageManager.save();
-    }
-  }
-  function remove(id) {
-    const d = StorageManager.getData();
-    d.todos = d.todos.filter((x) => x.id !== id);
-    StorageManager.save();
-  }
-  function insertAt(todo, index) {
-    const arr = list();
-    const i =
-      Number.isInteger(index) && index >= 0
-        ? Math.min(index, arr.length)
-        : arr.length;
-    arr.splice(i, 0, todo);
-    StorageManager.save();
-  }
-  function clearDone() {
-    const d = StorageManager.getData();
-    d.todos = d.todos.filter((t) => !t.done);
-    StorageManager.save();
-  }
-  return {
-    getAll,
-    add,
-    toggle,
-    togglePin,
-    edit,
-    remove,
-    insertAt,
-    clearDone,
-    shift,
-  };
 })();
 
 const TagManager = (() => {

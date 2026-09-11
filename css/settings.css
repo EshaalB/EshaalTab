@@ -15,7 +15,7 @@
 }
 
 .et-set-panel {
-  width: min(95vw, calc(480px * var(--ui-scale)));
+  width: min(95vw, calc(700px * var(--ui-scale)));
   max-width: 95vw;
   height: calc(100vh - 24px);
   height: calc(100dvh - 24px);
@@ -86,44 +86,147 @@ body.radius-sharp .et-set-panel {
   transform: translateY(-50%) scale(0.92) !important;
 }
 
-.et-set-tabs {
+/* Sidebar and page share the panel's remaining height; only the page scrolls,
+   so the section list stays put while you read down a long one. */
+.et-set-main {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--sp-1);
-  padding: var(--sp-2) var(--sp-4);
-  background: var(--surface-panel, rgba(255, 255, 255, 0.04));
-  border-bottom: 1px solid var(--border-soft);
-  width: 100%;
+  grid-template-columns: calc(196px * var(--ui-scale)) minmax(0, 1fr);
 }
 
-.et-set-tab {
+.et-set-sidebar {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-2);
-  border-radius: var(--r-sm);
-  border: none;
-  background: transparent;
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  text-align: center;
-  transition:
-    background var(--dur-1) var(--ease-out),
-    color var(--dur-1) var(--ease-out);
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--border-soft);
+  background: var(--surface-panel, rgba(255, 255, 255, 0.03));
 }
 
-.et-set-tab:hover {
-  background: var(--surface-panel-2, rgba(255, 255, 255, 0.06));
+.et-set-search-wrap {
+  position: relative;
+  flex-shrink: 0;
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+}
+
+.et-set-search-icon {
+  position: absolute;
+  left: calc(var(--sp-3) + var(--sp-2));
+  top: 50%;
+  transform: translateY(-25%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.et-set-search {
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--sp-2) 0 calc(var(--sp-5) + 6px);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-panel-2, rgba(255, 255, 255, 0.05));
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  outline: none;
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out);
+}
+
+.et-set-search::placeholder {
+  color: var(--text-faint);
+}
+
+.et-set-search:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 16%, transparent);
+}
+
+/* The browser's own clear button is a second, differently-shaped affordance
+   next to the one Escape already provides. */
+.et-set-search::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.et-set-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--sp-2) var(--sp-3);
+  scrollbar-width: thin;
+}
+
+.et-set-nav-group + .et-set-nav-group {
+  margin-top: var(--sp-3);
+}
+
+/* The group name is a label on the list, not an item in it: smaller, quieter
+   and not clickable, so the eye separates the four headings from the fifteen
+   destinations without either competing. */
+.et-set-nav-group-title {
+  padding: var(--sp-2) var(--sp-2) 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  user-select: none;
+}
+
+.et-set-nav-item {
+  display: block;
+  width: 100%;
+  padding: 7px var(--sp-2);
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.et-set-nav-item:hover {
+  background: var(--panel-hover);
   color: var(--text);
 }
 
-.et-set-tab.active {
-  background: var(--accent-color);
-  color: var(--accent-contrast);
+.et-set-nav-item.is-active {
+  background: color-mix(in srgb, var(--accent-color) 16%, transparent);
+  color: var(--accent-ink, var(--accent-color));
+  font-weight: var(--fw-semi);
+}
+
+.et-set-nav-item:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.et-set-nav-empty {
+  padding: var(--sp-4) var(--sp-2);
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
+}
+
+@media (max-width: 720px) {
+  /* No room for two columns: the list goes back on top of the page it opens. */
+  .et-set-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .et-set-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border-soft);
+    max-height: 38vh;
+  }
 }
 
 .et-set-body {
@@ -175,7 +278,9 @@ body.radius-sharp .et-set-panel {
   flex-direction: column;
   gap: var(--sp-2);
   background: var(--surface-panel, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--border-soft);
+  /* The fill already separates the card from the panel behind it; the white
+     hairline on top of it was a second, louder edge doing the same job. */
+  border: none;
   border-radius: min(var(--r-lg), 16px);
   padding: var(--sp-3) var(--sp-4);
   box-shadow: none;
@@ -231,6 +336,9 @@ body.radius-sharp .et-set-panel {
   width: 100%;
 }
 
+/* Per-surface strength: the slider keeps the full width of an ordinary slider
+   row, with the Auto escape hatch parked beside it. */
+
 .st-row {
   padding: var(--sp-1) 0;
   display: flex;
@@ -252,26 +360,132 @@ body.radius-sharp .et-set-panel {
   font-weight: 500;
 }
 
+/* A per-surface row: the slider and its Auto escape hatch on one line, so the
+   override and the way back out of it are the same object. */
+.st-surface-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.st-surface-controls .se-slider {
+  flex: 1;
+  min-width: 0;
+}
+
+.st-surface-val {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.st-surface-auto {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-panel);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
+}
+
+.st-surface-auto:hover:not(:disabled) {
+  background: var(--surface-panel-2);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* Disabled means "this surface is already on Auto" - it is a state readout as
+   much as a button, so it stays legible rather than fading to nothing. */
+.st-surface-auto:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Any slider readout: percentages, px widths, the per-surface labels. Shares
+   one look so clicking any of them to type a number feels like one feature
+   rather than a handful of one-off inputs. */
+[data-slider-val],
+[data-slider-val-key] {
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  padding: 1px 5px;
+  margin: -1px -5px;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+[data-slider-val]:hover,
+[data-slider-val-key]:hover {
+  background: var(--surface-3);
+}
+
+[data-slider-val]:focus-visible,
+[data-slider-val-key]:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.st-slider-val-input {
+  width: 4.5em;
+  padding: 0 4px;
+  border: 1px solid var(--accent-color);
+  border-radius: var(--r-sm);
+  background: var(--surface-3);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  text-align: right;
+  outline: none;
+  /* Hides the spinner arrows most engines add to a bare number input - they
+     read as a second, redundant slider sitting next to the real one. */
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.st-slider-val-input::-webkit-outer-spin-button,
+.st-slider-val-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .st-hint {
   font-size: var(--fs-sm);
   color: var(--text-dim);
   line-height: 1.45;
 }
 
+/* Filled field, no resting outline. The white hairline was doing no work a
+   field's own fill does not already do, and it is the detail that made every
+   input read as a generic form control. The border stays in the box model as
+   a transparent line so focus can colour it without the field shifting. */
 .st-input {
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-sm);
-  border: 1px solid var(--border-soft);
+  border: 1px solid transparent;
   background: var(--surface-3);
   color: var(--text);
   font-size: var(--fs-base);
   font-family: inherit;
   outline: none;
-  transition: border-color var(--dur-1) var(--ease-out);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.st-input:hover {
+  background: var(--surface-panel-2, var(--surface-3));
 }
 
 .st-input:focus {
   border-color: var(--accent-color);
+  background: var(--surface-3);
 }
 
 .st-data-stack {
@@ -408,14 +622,23 @@ body.radius-sharp .et-set-panel {
   border-radius: var(--r-sm, 8px);
   cursor: pointer;
   transition: all var(--dur-1) var(--ease-out);
-  border: 1px solid var(--danger-border);
-  background: var(--danger-fill);
-  color: var(--danger-text);
+  /* Solid red rather than a tinted ghost: this is the only control in the app
+     that destroys everything, and it should not read as one more grey button
+     in a column of them. */
+  border: 1px solid var(--danger);
+  background: var(--danger);
+  color: #ffffff;
 }
 
 .st-reset-btn:hover {
-  background: var(--danger);
+  background: color-mix(in srgb, var(--danger) 88%, #000);
+  border-color: color-mix(in srgb, var(--danger) 88%, #000);
   color: #ffffff;
+}
+
+.st-reset-btn:active {
+  background: color-mix(in srgb, var(--danger) 74%, #000);
+  border-color: color-mix(in srgb, var(--danger) 74%, #000);
 }
 
 .mynt-mode-seg {
@@ -494,7 +717,9 @@ body.radius-sharp .et-set-panel {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
+  /* The knob is the ground showing through the track, so it follows the panel
+     rather than being white in a light theme where white is the page. */
+  background: var(--knob, #ffffff);
   box-shadow: var(--e1);
   transition: transform 0.18s var(--ease-out);
 }
@@ -527,7 +752,7 @@ body.radius-sharp .et-set-panel {
   height: 17px;
   border-radius: 50%;
   background: var(--accent-color);
-  border: 2px solid #fff;
+  border: 2px solid var(--knob, #ffffff);
   box-shadow: var(--e1);
   cursor: pointer;
 }
@@ -537,6 +762,87 @@ body.radius-sharp .et-set-panel {
   line-height: 1.55;
   color: var(--text);
   margin-bottom: var(--sp-2);
+}
+
+/* Support tab: just the marks, centred in the panel. Muted at rest so the two
+   brand colours do not shout over a settings page, and each takes its own
+   colour only on hover. */
+.support-marks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-6, 32px);
+  padding: var(--sp-6, 32px) 0;
+}
+
+.support-mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--text);
+  opacity: 0.55;
+  cursor: pointer;
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+.support-mark svg {
+  width: 32px;
+  height: 32px;
+}
+
+.support-mark:hover,
+.support-mark:focus-visible {
+  opacity: 1;
+  color: var(--brand);
+}
+
+/* The mark rises, not the button, so the pointer never loses the target it
+   is resting on. */
+.support-mark svg {
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.support-mark:hover svg,
+.support-mark:focus-visible svg {
+  transform: translateY(-2px);
+}
+
+/* No URL yet: still shown, but reads as inactive rather than as a dead link. */
+.support-mark.is-soon {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.support-mark.is-soon:hover {
+  opacity: 0.25;
+  color: var(--text);
+  transform: none;
+}
+
+/* Stands in for the links while none of them are live. */
+.support-note {
+  margin: var(--sp-5) auto 0;
+  max-width: 34ch;
+  text-align: center;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  color: var(--text-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .support-mark,
+  .support-mark:hover,
+  .support-mark:focus-visible {
+    transform: none;
+  }
 }
 
 .help-card {
@@ -710,7 +1016,7 @@ body.radius-sharp .et-set-panel {
 
 @media (max-width: 620px) {
   .et-set-tabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .et-set-tab {
@@ -825,7 +1131,7 @@ body.radius-sharp .et-set-panel {
 }
 
 .wp-gallery-thumb.is-video {
-  background-color: #1e293b;
+  background-color: var(--surface-3);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff' opacity='0.75'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E");
   background-size: 26px;
   background-repeat: no-repeat;
@@ -854,7 +1160,7 @@ body.radius-sharp .et-set-panel {
   opacity: 1;
 }
 .wp-gallery-del:hover {
-  background: #ef4444;
+  background: var(--danger);
 }
 
 .st-accordion {
@@ -914,16 +1220,37 @@ body.radius-sharp .et-set-panel {
   transform: rotate(180deg);
 }
 
-.st-quick-wallpaper-advanced {
-  display: none !important;
-}
-
+/* Slides open/shut via the shared `slideHeight` helper (js/core/platform.js)
+   - the same mechanism board cards use - instead of the hard `display: none`
+   toggle this used to be. That toggle was the reason every accordion's
+   chevron glided smoothly while its content snapped instantly right next to
+   it: same click, two different speeds. */
 .st-accordion-body {
+  height: 0;
+  overflow: hidden;
   padding: var(--sp-1) 0;
 }
 
-.st-accordion:not(.is-expanded) > .st-accordion-body {
-  display: none;
+/* An open section stops clipping once it has finished opening. `overflow:
+   hidden` is what lets the slide animate a height, but it also cut off any
+   dropdown opened inside the section - the menu rendered at full height and
+   then had two thirds of it clipped away by the panel it sat in, which is why
+   a select looked broken rather than merely short. The clip comes back for the
+   duration of the animation, which is the only time it is needed. */
+.st-accordion.is-expanded > .st-accordion-body {
+  height: auto;
+  overflow: visible;
+}
+
+.st-accordion-body.is-animating {
+  overflow: hidden !important;
+  will-change: height;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-accordion-body {
+    transition: none;
+  }
 }
 
 .st-tab-status {
@@ -1054,11 +1381,12 @@ body.radius-sharp .et-set-panel {
   }
 }
 
- 
+/* `.et-board-card` is deliberately not in this list. The rule strips glassy
+   drop shadows in solid mode, but a board's shadow now carries its inset
+   colour ring, which is the card's only edge since the white border was
+   removed. Muting it here left a fully transparent board with no shape. */
 body.solid-mode .st-card,
-body.solid-mode .et-board-card,
 body.solid-mode .et-search-modal,
-body.solid-mode .et-pop-todo,
 body.solid-mode .et-pop-workspace,
 body.solid-mode .dock-pin-wrap,
 body.solid-mode .st-action-btn,
@@ -1067,4 +1395,62 @@ body.solid-mode .qs-save-btn,
 .et-set-panel *::before,
 .et-set-panel *::after {
   box-shadow: none !important;
+}
+
+/* Settings: Search engines ---------------------------------------------- */
+.st-eng-group-title {
+  margin-bottom: 6px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.st-eng-grid {
+  display: grid;
+  /* Wide enough for "Default (Browser)" beside a switch without truncating. */
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 6px;
+}
+
+.st-eng-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
+}
+
+.st-eng-row:hover {
+  background: var(--menu-hover);
+}
+
+.st-eng-row.is-on {
+  border-color: color-mix(in srgb, var(--accent-color) 45%, var(--border-soft));
+}
+
+.st-eng-row:has(input:focus-visible) {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.st-eng-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.st-eng-row input[disabled] {
+  cursor: not-allowed;
 }

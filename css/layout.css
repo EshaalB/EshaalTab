@@ -10,7 +10,7 @@
   object-position: center;
   z-index: 0;
   opacity: 0;
-  transition: opacity var(--dur-1) ease-out;
+  transition: opacity var(--dur-1) var(--ease-out);
   transform: translateZ(0);
 }
 
@@ -18,6 +18,25 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+/* Blurs the picture itself, not a layer over it, so the photo softens without
+   also being dimmed. The overscan tracks the blur radius (set alongside it in
+   `applyWallpaperBlur`) rather than being a fixed 1.06: a blur samples past the
+   edges of its own element, and a scale too small for the radius leaves a
+   feathered grey band around the viewport. */
+body.wp-blur-on #photo-bg,
+body.wp-blur-on #video-bg {
+  filter: blur(var(--wp-blur-amount, 0px));
+  transform: translateZ(0) scale(var(--wp-blur-scale, 1));
+  transition: filter var(--dur-3) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.wp-blur-on #photo-bg,
+  body.wp-blur-on #video-bg {
+    transition: none;
+  }
 }
 
 #video-bg.active,
@@ -37,6 +56,27 @@
 
 body.wallpaper-mode.wp-overlay-on #wallpaper-overlay {
   opacity: var(--wp-overlay-opacity, 0.35);
+}
+
+/* Darkens the edges and leaves the subject lit. Its own layer rather than a
+   second job for #wallpaper-overlay, so dimming and vignetting can be used
+   together or apart. Sits above the picture and below the app. */
+#wallpaper-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-3) var(--ease-out);
+  background: radial-gradient(
+    ellipse 78% 78% at 50% 45%,
+    transparent 38%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+body.wallpaper-mode.wp-vignette-on #wallpaper-vignette {
+  opacity: var(--wp-vignette-opacity, 0.45);
 }
 
 body:not(.wallpaper-mode)::before {
@@ -109,7 +149,7 @@ body.theme-light.solid-mode.ambient-on::after {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 28px 0 var(--sp-6) 0;
+  padding: 15px 0 15px 0;
   visibility: hidden;
 }
 
@@ -117,6 +157,13 @@ body.loaded .app {
   visibility: visible;
 }
 
+/* Two clusters pushed to the edges, so the middle of the bar - and the whole
+   column beneath it - stays empty. */
+/* Three columns with equal outer tracks, so the nav sits on the page's centre
+   line rather than wherever the two icon clusters happen to balance. The
+   utilities on the left can be switched off individually; with `space-between`
+   that silently dragged the nav sideways, which is the kind of layout that
+   moves under you for reasons you cannot see. */
 .et-topbar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -125,47 +172,67 @@ body.loaded .app {
   position: relative;
   z-index: 500;
   isolation: isolate;
-  padding: 0 var(--sp-8);
-  min-height: calc(52px * var(--ui-scale));
+  padding: 0 var(--sp-4);
+  min-height: calc(46px * var(--ui-scale));
 }
 
+/* One group, not a line of separate icons. The buttons carry their own 44px
+   target, so the gap between them only has to say "these belong together" -
+   at 8px each icon read as its own floating object, and the eye counted three
+   things on the right instead of one control cluster. 4px puts them close
+   enough to group while the hover plate still shows which one you are on. */
+.et-top-left,
+.et-top-right {
+  display: flex;
+  align-items: center;
+  gap: calc(4px * var(--ui-scale));
+}
+
+/* Explicit columns, not auto-placement. A cluster can leave the flow entirely -
+   `position: fixed` when a corner clock evicts it, or `display: none` when both
+   its buttons are switched off - and auto-placement would then slide the nav
+   into the vacated column. Naming the columns keeps the centre column on the
+   centre line no matter which of its neighbours is present. */
 .et-top-left {
   grid-column: 1;
   justify-self: start;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding-left: var(--sp-12);
+}
+
+.et-main-tabs {
+  grid-column: 2;
 }
 
 .et-top-right {
   grid-column: 3;
   justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding-right: var(--sp-12);
+}
+
+/* An empty cluster must not hold its gap open. */
+.et-top-left:empty,
+.et-top-right:empty {
+  display: none;
 }
 
 .et-topbar-btn {
-  width: calc(38px * var(--ui-scale));
-  height: calc(38px * var(--ui-scale));
+  /* The target and the button are now the same box. A 38px button with an
+     invisible 44px pad stapled over it hit the size guideline on paper, but
+     the thing you could *see* to aim at was still 38px - and at a wide
+     `--ui-scale` the pads of neighbouring icons started overlapping, so the
+     one on the right quietly ate clicks meant for its neighbour. Growing the
+     button itself fixes both, and makes the strip legible from further away. */
+  width: calc(44px * var(--ui-scale));
+  height: calc(44px * var(--ui-scale));
   border-radius: var(--r-md, 10px);
   display: flex;
   align-items: center;
   justify-content: center;
-
-  background: rgba(
-    var(--accent-rgb, 99, 102, 241),
-    var(--widget-bg-alpha, 0.95)
-  );
-  color: var(--accent-contrast, #ffffff);
+  background: none;
+  color: inherit;
 
   border: none;
   outline: none;
   cursor: pointer;
-  box-shadow: 0 3px 10px
-    rgba(0, 0, 0, calc(var(--widget-bg-alpha, 0.95) * 0.22));
+  box-shadow: none;
   transition:
     opacity var(--dur-2) var(--ease-out),
     background var(--dur-2) var(--ease-out),
@@ -173,96 +240,235 @@ body.loaded .app {
     transform var(--dur-2) var(--ease-out),
     border-radius var(--dur-2) var(--ease-out);
   padding: 0;
+  position: relative;
 }
 
+/* A plate the size of the button, in the accent at low alpha. A plate is a
+   background rather than a foreground, so it can carry the accent at full hue
+   without putting any contrast at risk - the icon on top of it is still drawn
+   in the bar's own measured ink. This is the accent doing what an accent is
+   for: marking the thing you are about to press.
+
+   `--accent-ink` rather than the raw accent, so a mid-tone brand colour that
+   would vanish into a dark bar has already been walked far enough along its
+   hue to register there. */
+/* No lift on the button itself. A hover transform on a hit box moves the box
+   out from under a pointer resting near its edge; the hover ends, the box
+   drops back under the pointer, the hover starts again - that loop is the
+   "shivering" icons. The plate and the glyph (below) carry the feedback and
+   the target never moves. */
 .et-topbar-btn:hover {
   opacity: 1;
-  background: rgba(
-    var(--accent-rgb, 99, 102, 241),
-    var(--widget-bg-alpha, 0.95)
-  );
-  color: var(--accent-contrast, #ffffff);
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--accent-ink, currentColor) 22%, transparent);
+}
+
+.et-topbar-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+  background: color-mix(in srgb, var(--accent-ink, currentColor) 18%, transparent);
 }
 
 body.theme-light .et-topbar-btn {
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, calc(var(--widget-bg-alpha, 0.95) * 0.12));
+  box-shadow: none;
 }
 
 .et-topbar-btn svg {
-  width: calc(25px * var(--ui-scale));
-  height: calc(25px * var(--ui-scale));
+  width: calc(27px * var(--ui-scale));
+  height: calc(27px * var(--ui-scale));
   stroke-width: 2px;
   stroke-linecap: round;
   stroke-linejoin: round;
+  transition: transform var(--dur-2) var(--ease-out);
 }
 
+/* The glyph leads the plate by a hair, and takes the press too. Transforming
+   the drawing rather than the button keeps the hit box perfectly still, which
+   is what stops edge-of-button hovers oscillating and edge-of-button clicks
+   from being released outside a target that shrank away from the pointer. */
+.et-topbar-btn:hover svg {
+  transform: scale(1.06);
+}
+
+.et-topbar-btn:active svg {
+  transform: scale(0.9);
+}
+
+/* No pill, no border, no fill. The bar around these was the heaviest thing on
+   the page after the clock; the views read perfectly well as three plain words
+   with the current one marked underneath. */
 .et-main-tabs {
-  grid-column: 2;
-  justify-self: center;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px;
-  background: var(--surface-topbar);
-  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.14));
-  border-radius: var(--r-md, 12px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-}
-
-@media (min-width: 768px) {
-  .et-main-tabs {
-    grid-column: auto;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-  }
+  justify-self: center;
+  gap: var(--sp-1);
+  /* The topbar already sets the page margin; the nav starting further in than
+     that read as an indent nobody asked for. */
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
 }
 
 .et-main-tab {
-  padding: 6px 16px;
+  /* 44px minimum target. The words keep their size; the box around them grows
+     to something a thumb can actually hit (WCAG 2.2 AA 2.5.8). */
+  min-height: calc(44px * var(--ui-scale));
+  padding: 6px calc(13px * var(--ui-scale));
   border: none;
   background: transparent;
   cursor: pointer;
   border-radius: var(--r-sm, 8px);
-  font-size: var(--fs-sm);
+  /* Up from `--fs-sm` (14px). The navigation is the second-most important
+     thing on the page after the clock and it was set at the size of a form
+     label, which is why the top of the screen read as chrome rather than as
+     the place you steer from. Still well clear of the clock. */
+  font-size: calc(16px * var(--ui-scale));
   font-weight: 500;
   font-family: inherit;
   color: var(--text, #ffffff);
-  opacity: 0.75;
+  /* No opacity on text. Opacity is a contrast multiplier applied *after* any
+     colour has been checked for legibility, so an accent ink that just cleared
+     the bar was being pulled back under it here - the inactive labels measured
+     Lc -22 against a floor of 60. The current view is marked by weight and the
+     dot beneath it, which costs no contrast at all. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
-    color 0.15s ease,
-    background 0.15s ease,
-    opacity 0.15s ease,
-    transform 0.15s ease;
+    color var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
   position: relative;
   white-space: nowrap;
+} 
+/* Hover on a text control: a hair of scale and a shift toward the accent.
+   `--accent-ink` rather than `--accent-color` - the ink is the accent already
+   walked toward whichever end of the scale the ground calls for, so a mid-tone
+   accent stays readable on a dark bar and a pale one stays readable on a light
+   one. The raw accent would pass some pairings and quietly fail others.
+   Scale rather than a lift: 1.04 is felt without moving the word off its
+   baseline, so a row of tabs stays a row. */
+.et-main-tab:hover {
+  color: var(--accent-ink, var(--accent-color));
+  background: none;
 }
 
-.et-main-tab:hover {
-  color: var(--text, #ffffff);
+/* Inactive views step back rather than the active one stepping forward with a
+   filled button. A small, uniform reduction: enough that the current view is
+   the brightest word in the row at a glance, small enough that the labels are
+   still comfortably legible - which is why the type size went up in the same
+   pass rather than the opacity going down on its own. */
+.et-main-tab:not(.active) {
+  opacity: 0.72;
+  transition:
+    color var(--dur-2) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+.et-main-tab:not(.active):hover,
+.et-main-tab:not(.active):focus-visible {
   opacity: 1;
-  background: rgba(var(--board-rgb, 255, 255, 255), 0.12);
+}
+
+.et-main-tab::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(4px * var(--ui-scale));
+  width: calc(7px * var(--ui-scale));
+  height: calc(7px * var(--ui-scale));
+  margin-left: calc(-3.5px * var(--ui-scale));
+  border-radius: 50%;
+  /* `--accent-ink`, not the raw accent. The raw accent is also what tints the
+     page background, so on a theme built from one hue the marker was a dot of
+     nearly the ground colour - technically present, invisible in practice.
+     The ink is that same accent already walked along its own hue until it
+     clears the ground, so the marker is recognisably the user's colour *and*
+     always visible, which the page's plain ink was only ever the second of. */
+  background: var(--accent-ink, var(--text));
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
 }
 
 .et-main-tab.active {
-  background: var(--accent-fill, var(--accent-color, #6366f1)) !important;
-  color: var(--accent-contrast, #ffffff) !important;
-  font-weight: 600;
-  opacity: 1 !important;
-  box-shadow: 0 2px 10px -2px color-mix(in srgb, var(--accent-color) 35%, transparent);
+  background: none !important;
+  color: var(--text, #ffffff) !important;
+  font-weight: 650;
+  opacity: 1;
+  box-shadow: none;
 }
 
-body.radius-round .et-main-tabs,
-body.radius-round .et-main-tab {
-  border-radius: var(--r-pill, 9999px) !important;
+.et-main-tab.active::after {
+  opacity: 1;
+  transform: scale(1);
 }
 
-body.radius-sharp .et-main-tabs,
-body.radius-sharp .et-main-tab {
-  border-radius: 0 !important;
+/* The marker arrives rather than appearing: it drops the last two pixels into
+   place as the view swaps, which is the one moment the dot is carrying news. */
+.et-main-tab::after {
+  transition:
+    opacity var(--dur-3) var(--ease-out),
+    transform var(--dur-3) cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+/* Over a wallpaper the ink is measured from the picture behind the bar, and a
+   plain accent swap would throw that measurement away. The marker takes the
+   same floored accent the clock's colon does, so the two accent moments on the
+   page are literally the same colour rather than two nearby ones. */
+body.wallpaper-mode .et-main-tab::after {
+  background: var(--accent-on-wp, var(--wp-ink, #fff));
+  /* A hairline of the measured halo around it, for the one case even the mix
+     cannot cover: an accent that happens to match the strip of picture
+     directly behind the bar. */
+  box-shadow: 0 0 0 1px
+    rgba(var(--wp-halo, 0, 0, 0), calc(var(--wp-shadow-opacity, 0.4) * 0.5));
+}
+
+/* Hover is an invitation to go somewhere. The view you are already on is not
+   somewhere to go, so it keeps its normal ink and only the others shift. */
+.et-main-tab.active:hover {
+  color: var(--text) !important;
+  transform: none;
+}
+
+body.wallpaper-mode .et-main-tab.active:hover {
+  color: var(--wp-ink, #fff) !important;
+}
+
+body.wallpaper-mode .et-main-tab:hover {
+  color: color-mix(
+    in srgb,
+    var(--accent-color) 55%,
+    var(--wp-ink, #fff)
+  ) !important;
+}
+
+ 
+.et-main-tab-home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.et-main-tab-home svg {
+  display: block;
+  /* Square, because the viewBox is square - 23x21 was scaling the house
+     non-uniformly and squashing the roof. Alignment is handled by the nudge
+     below instead, which moves the glyph without distorting it. */
+  width: calc(25px * var(--ui-scale));
+  height: calc(25px * var(--ui-scale));
+  /* Optical, not geometric. The button boxes already match the word buttons
+     exactly; but a line of text carries its visual mass above the box centre
+     (the descender space below it is empty), while an icon is centred on its
+     own bounding box. Dead-centring the glyph therefore reads as sitting low
+     beside "Boards". A pixel up puts it on the same optical line - and takes
+     the active dot, which is positioned from the same box, with it. */
+  transform: translateY(-1px);
 }
 
 body.theme-light .et-main-tab:not(.active) {
@@ -271,11 +477,10 @@ body.theme-light .et-main-tab:not(.active) {
 
 body.theme-light .et-main-tab:not(.active):hover {
   color: var(--text, #0f172a) !important;
-  background: rgba(0, 0, 0, 0.08) !important;
+  background: none !important;
 }
 
-body.theme-light .et-search-pill,
-body.theme-light .et-main-tabs {
+body.theme-light .et-search-pill {
   border-color: rgba(0, 0, 0, 0.14) !important;
 }
 
@@ -293,13 +498,220 @@ body.theme-light .et-main-tabs {
   flex-direction: column;
 }
 
+/* Positioning context for the bottom-corner date and weather. */
+.et-view-home {
+  position: relative;
+}
+
+/* ---------------------------------------------------------------- welcome
+   First run. It sits over the whole app on the user's own wallpaper, asks one
+   thing, and gets out of the way. Everything here is sized in viewport units
+   so the question holds its proportions from a laptop to a wide monitor. */
+.et-welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6, 32px);
+  /* The app is behind this, not just a wallpaper, so a light scrim left the
+     clock and search bar legible underneath and competing with the question.
+     Blurring as well as darkening pushes the whole interface out of focus:
+     what remains reads as the user's wallpaper with one question on it, which
+     is the point of the screen. */
+  background: rgba(8, 10, 14, 0.82);
+  backdrop-filter: blur(24px) saturate(115%);
+  -webkit-backdrop-filter: blur(24px) saturate(115%);
+  animation: et-welcome-in var(--dur-3) var(--ease-out) both;
+}
+
+.et-welcome[hidden] {
+  display: none;
+}
+
+@keyframes et-welcome-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.et-welcome-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: min(560px, 100%);
+  gap: var(--sp-3);
+}
+
+.et-welcome-mark {
+  border-radius: 50%;
+  margin-bottom: var(--sp-6, 32px);
+  box-shadow: 0 6px 24px -8px rgba(0, 0, 0, 0.5);
+}
+
+.et-welcome-title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 46px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #fff;
+  text-wrap: balance;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Underline only. A boxed field here would look like a form; a single rule
+   under the text reads as somewhere to write. */
+.et-welcome-input {
+  width: min(420px, 100%);
+  margin-top: var(--sp-4);
+  padding: var(--sp-2) var(--sp-2) var(--sp-3);
+  border: none;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 0;
+  background: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: clamp(24px, 3vw, 36px);
+  font-weight: 500;
+  text-align: center;
+  outline: none;
+  caret-color: #fff;
+  transition: border-color var(--dur-2) var(--ease-out);
+}
+
+.et-welcome-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.et-welcome-input:focus {
+  border-bottom-color: #fff;
+}
+
+.et-welcome-hint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+
+.et-welcome-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--sp-5, 24px);
+  padding: 11px 22px;
+  border: none;
+  border-radius: var(--r-pill, 999px);
+  background: #fff;
+  color: #111;
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform var(--dur-1) var(--ease-out),
+    opacity var(--dur-1) var(--ease-out);
+}
+
+.et-welcome-btn:hover {
+}
+
+.et-welcome-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+.et-welcome-btn:focus-visible,
+.et-welcome-input:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .et-welcome,
+  .et-welcome-btn:hover {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* View switching rides the browser's own View Transitions API (see
+   ViewController in js/ui/render.js), so a tab change is composited the same
+   way the browser moves between pages instead of being a bespoke animation.
+   The API's default cross-fade is half a second, which reads as waiting for a
+   swap inside a single page: cut to a snap, with a slight settle on the
+   incoming view so the change is legible without being sat through. */
+/* Only ever runs on the first visit to a view (see ViewController in
+   js/ui/render.js). The outgoing view is cut outright and the incoming one
+   resolves in place: no travel, no fade-up drift, just a brief settle so the
+   arrival is legible. A rising fade reads as decoration bolted onto a page
+   swap; this reads as the page already being there. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 110ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: et-view-out;
+  animation-duration: 1ms;
+}
+
+::view-transition-new(root) {
+  animation-name: et-view-in;
+}
+
+@keyframes et-view-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes et-view-in {
+  from {
+    opacity: 0;
+    transform: scale(0.994);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
 .et-view-home.active {
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Not `center`. A centred flex column that grows taller than its container
+     overflows equally off both ends, and the half that goes off the top is
+     outside the scroll range - so adding tasks pushed the date and clock up
+     under the tab bar where they could not be scrolled back to. `margin-block:
+     auto` on the child centres it exactly the same while it fits and simply
+     top-aligns it once it does not. */
+  justify-content: flex-start;
+
+  /* Home is a single screen, so it never shows a scrollbar. The vertical axis
+     stays scrollable but with its bar hidden - on a short window the content
+     still has somewhere to go rather than being clipped - and the horizontal
+     axis is shut off outright, since nothing here is ever meant to run wide.
+     Same treatment the boards area already uses. */
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 
   padding: 0 var(--sp-6) clamp(56px, 10vh, 120px);
+}
+
+.et-view-home.active::-webkit-scrollbar {
+  display: none;
 }
 
 .et-view-notes.active {
@@ -307,6 +719,12 @@ body.theme-light .et-main-tabs {
   padding: var(--sp-4) var(--sp-6) var(--sp-6);
 }
 
+/* One home block, read top to bottom, with a deliberate rhythm rather than one
+   uniform gap: the meta row introduces the clock (tight), the greeting hangs
+   off the clock (tighter still, set on the greeting itself), and the search
+   and shortcuts read as the next section down (this gap). Three sizes of space
+   are what make four stacked elements read as one composition instead of four
+   things that happen to be centred. */
 .et-home-center {
   width: 100%;
   max-width: min(92vw, calc(760px * var(--ui-scale)));
@@ -314,8 +732,58 @@ body.theme-light .et-main-tabs {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  gap: clamp(18px, 2.4vh, 30px);
   margin: 0 auto;
+  position: relative;
+}
+
+/* The only contrast treatment behind the centre column, and deliberately at
+   the edge of visible. Two things keep it from becoming a card: it is far
+   wider than the text it serves, so its edge is off in open wallpaper where
+   nothing is being compared against it, and the ramp runs almost the whole
+   radius, so there is no distance at which the falloff reads as a boundary.
+   A first pass at 14% over a short ramp did read as a shape - a dark oval you
+   could point at - which is exactly the thing this must not be. At 9%, most
+   wallpapers show nothing at all; the ones that show anything show slightly
+   calmer ground under the one part of the page made entirely of text.
+
+   Hung off `.app`, which is deliberately *outside* the scrolling view.
+
+   An oversized decoration inside a scroll container counts toward that
+   container's scrollable overflow, and this one is 900px tall inside a column
+   half that height - so the home view gained about 160px of empty scrolling
+   with nothing in it, and a page that should never scroll did. Moving it to
+   `position: fixed` was not enough on its own: `.et-view.active` carries an
+   entrance animation, an animated transform makes an element the containing
+   block for its fixed descendants, and the layer was pulled straight back
+   into the scroll box. `.app` has no transform and is not a scroller, and
+   `body` is `overflow: hidden`, so from here the layer can be as large as it
+   likes without making anything scroll.
+
+   Home only: on Boards and Notes the content has its own surfaces and a pool
+   of shade behind them would be visible as a shape. */
+body.wallpaper-mode.view-home .app::before {
+  content: "";
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(1500px, 150vw);
+  height: min(900px, 150vh);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(var(--wp-halo-mid, 0, 0, 0), 0.09),
+    rgba(var(--wp-halo-mid, 0, 0, 0), 0.06) 34%,
+    rgba(var(--wp-halo-mid, 0, 0, 0), 0.025) 62%,
+    transparent 88%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+body.performance-mode .app::before {
+  display: none;
 }
 
 .et-home-widgets {
@@ -324,6 +792,90 @@ body.theme-light .et-main-tabs {
   justify-content: center;
   gap: var(--sp-4);
   flex-wrap: wrap;
+}
+
+/* Home arrival -------------------------------------------------------------
+   The page already waits for its first frame before it un-hides itself (see
+   the boot reveal in main.js), so the alternative to this is the whole home
+   block appearing at once, fully formed, with no sense of where to look. A
+   short staggered rise reads the block in the order it is meant to be read -
+   day, time, greeting, then the things you can act on - and it is over in
+   under half a second, which is short enough that it never stands between a
+   click and its result.
+
+   Once only, per page load: `body.home-intro` is dropped a beat after the
+   reveal, so returning to Home from Boards or Notes is instant. Anything that
+   animates here is a container the app does not re-create, so a repaint of the
+   pins or a clock tick cannot restart it. */
+@keyframes et-home-rise {
+  from {
+    opacity: 0;
+    /* 6px, not 10: over a shorter run the same distance has to be covered
+       faster, and past a certain speed a rise stops reading as a rise and
+       starts reading as a jolt. */
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Short, because this runs on every single new tab.
+
+   The first version finished at 430ms - a 240ms rise on a 190ms delay - which
+   is a fine number for a page you visit occasionally and the wrong one for a
+   page opened dozens of times a day. Waiting even a third of a second to see
+   the shortcut you came to click is a cost paid every time, and it is paid by
+   the people who use the product most.
+
+   The stagger is kept because reading order is what it is for, but it is
+   compressed into roughly the length of a single UI transition: the whole
+   block has arrived by 250ms, and the clock - the thing most people are
+   actually looking at - is there in 140. */
+body.home-intro .et-home-meta,
+body.home-intro .et-home-time,
+body.home-intro .et-home-greeting,
+body.home-intro .et-home-center > #navSearchBar,
+body.home-intro .et-home-pinned {
+  animation: et-home-rise var(--dur-3, 180ms) var(--ease-out) backwards;
+}
+
+body.home-intro .et-home-meta {
+  animation-delay: 20ms;
+}
+body.home-intro .et-home-time {
+  animation-delay: 0ms;
+}
+body.home-intro .et-home-greeting {
+  animation-delay: 35ms;
+}
+body.home-intro .et-home-center > #navSearchBar {
+  animation-delay: 50ms;
+}
+body.home-intro .et-home-pinned {
+  animation-delay: 70ms;
+}
+
+/* Travel is the part that causes trouble; the fade is the part that carries
+   the information. Reduced motion keeps the second and drops the first. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes et-home-rise {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+body.performance-mode .et-home-meta,
+body.performance-mode .et-home-time,
+body.performance-mode .et-home-greeting,
+body.performance-mode .et-home-center > #navSearchBar,
+body.performance-mode .et-home-pinned {
+  animation: none !important;
 }
 
 .et-home-center #navSearchBar,
@@ -353,9 +905,13 @@ body.theme-light .et-main-tabs {
 }
 
 .et-home-time {
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: center;
+  /* A block, not an inline-flex. The digits, colon and AM/PM are one line of
+     text, so the box is exactly one line tall and the spacing measured under
+     the digits (see "Clock and greeting spacing, measured") holds. A
+     baseline-aligned flex row reserved extra space below the digits. */
+  display: block;
+  white-space: nowrap;
+  text-align: center;
   font-family: var(
     --clock-font,
     system-ui,
@@ -366,15 +922,36 @@ body.theme-light .et-main-tabs {
   );
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-display);
-  font-weight: var(--clock-weight, 600);
+  font-weight: var(--clock-weight, 400);
   letter-spacing: var(--clock-tracking, 0.02em);
   line-height: 1;
 }
 
+/* Three layers rather than one 20px blob dropped 4px down: a tight contact
+   shadow that defines the letter edges, a mid one that lifts them off the
+   photo, and a wide faint one that darkens the area behind the whole numeral.
+   Each is weaker than the single blob was, but together they read as the text
+   sitting *on* the image instead of floating above it with a shadow attached.
+   All three still scale from the user's own blur and opacity settings. */
 body.wallpaper-mode .et-home-clock .et-home-time,
-body.wallpaper-mode .et-home-clock .clock-colon {
-  text-shadow: 0 4px var(--wp-shadow-blur, 20px)
-    rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.6));
+body.wallpaper-mode .et-home-clock .clock-colon,
+body.wallpaper-mode .et-home-greeting {
+  text-shadow:
+    0 1px 2px
+      rgba(
+        var(--wp-shadow-rgb, 0, 0, 0),
+        calc(var(--wp-shadow-opacity, 0.6) * 0.55)
+      ),
+    0 3px calc(var(--wp-shadow-blur, 20px) * 0.45)
+      rgba(
+        var(--wp-shadow-rgb, 0, 0, 0),
+        calc(var(--wp-shadow-opacity, 0.6) * 0.45)
+      ),
+    0 6px var(--wp-shadow-blur, 20px)
+      rgba(
+        var(--wp-shadow-rgb, 0, 0, 0),
+        calc(var(--wp-shadow-opacity, 0.6) * 0.3)
+      );
 }
 
 body:not(.wallpaper-mode) *,
@@ -382,47 +959,95 @@ body.solid-mode * {
   text-shadow: none !important;
 }
 
-.clock-digits {
+/* Over a wallpaper the clock is built on the measured ink, not on the accent.
+   It used to be mixed from the accent and the theme's own text colour, which
+   is a decision made about the *page* rather than about the picture - so a
+   light theme over a dark photo painted near-black digits onto a near-black
+   sky. That stays true. What is added back is a *tint*: a quarter of the way
+   toward the accent, which is little enough that the measured ink still
+   decides whether the numeral is readable, and enough that the clock is
+   visibly the user's colour rather than plain white on every wallpaper.
+
+   An explicit clock colour still wins; all of this sits in the fallback. */
+body.wallpaper-mode .clock-digits,
+body.wallpaper-mode .clock-ampm {
   color: var(
     --clock-color,
-    color-mix(in srgb, var(--accent-color) 75%, var(--text))
+    color-mix(in srgb, var(--accent-color) 25%, var(--wp-ink-mid, #ffffff))
   );
+}
+
+/* The colon carries no information - the position of the digits already says
+   which is hours and which is minutes - so it is the one part of the clock
+   that can go furthest toward the accent without costing anything if it reads
+   a shade quieter than the numerals. It is also dead centre of the largest
+   element on the page, which makes it the single best place the accent can
+   appear. Through `--accent-on-wp`, so that "furthest" still has a floor. */
+body.wallpaper-mode .clock-colon {
+  color: var(--clock-color, var(--accent-on-wp, var(--wp-ink-mid, #ffffff)));
+}
+
+/* Without a wallpaper the clock is the primary accent, the colour the preset's
+   swatch shows - not three-quarters of it mixed into the text colour, which
+   turned every pastel into a greyed-out version of itself. `--accent-ink` is
+   that same accent walked just far enough to read on this ground, so a pale
+   pastel on a light page darkens along its own hue instead of washing out. */
+.clock-digits {
+  color: var(--clock-color, var(--accent-display, var(--accent-ink, var(--accent-color))));
 }
 
 .clock-colon {
-  display: inline-block;
+  /* Inline, so it shares the digits' line box. As an inline-block it carried a
+     full line-height of its own that no trim could reach into. */
+  display: inline;
   margin: 0 2px;
-  color: var(
-    --clock-color,
-    color-mix(in srgb, var(--accent-color) 75%, var(--text))
-  );
+  color: var(--clock-color, var(--accent-display, var(--accent-ink, var(--accent-color))));
 }
 
+/* Sized against the clock, not against the interface. At the fixed `--fs-xs`
+   it was 13px beside a 107px numeral - an 8:1 ratio, which stops reading as a
+   label attached to the time and starts reading as a stray glyph that landed
+   next to it. In `em` it is a fraction of whatever the clock currently is, so
+   it holds the same proportion from a small laptop to a 4K panel and through
+   every step of the interface-scale setting. */
 .clock-ampm {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(
-    --clock-color,
-    color-mix(in srgb, var(--accent-color) 75%, var(--text))
-  );
-  opacity: 1;
-  margin-left: 4px;
+  font-size: 0.24em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  /* The one other place in the clock the accent can go without touching a
+     digit: the period is a label, not data. */
+  color: var(--clock-color, var(--accent-display, var(--accent-ink, var(--accent-color))));
+  opacity: 0.95;
+  margin-left: 0.14em;
+  /* The baseline `align-items` on the row would drop the letters onto the
+     numeral's own baseline, hanging them off the bottom of a very large
+     figure. Nudged up to sit against the cap height instead, where a period
+     marker belongs. */
+  align-self: baseline;
+  transform: translateY(-0.35em);
   text-transform: uppercase;
 }
-
+ 
+/* Below the clock, and meant to be read rather than merely present: it is the
+   one line on the page addressed to a person. Large enough to carry that at a
+   glance, still clearly the second thing after the time. */
 .et-home-greeting {
-  font-size: clamp(24px, 2.5vw, 36px);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: clamp(21px, 2vw, 30px);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
   color: var(--text);
-  opacity: 0.95;
-  margin-bottom: var(--sp-2);
+  opacity: 1;
+  /* Deliberately the smallest gap in the block. The greeting is not a third
+     element under the clock, it is the clock's second line - one measure of
+     air keeps it legible without letting it drift. */
+  margin-top: calc(7px * var(--ui-scale));
   text-shadow: none;
+  text-wrap: balance;
 }
 
 body.wallpaper-mode .et-home-greeting {
-  color: #ffffff !important;
+  color: var(--wp-ink-mid, #ffffff) !important;
   opacity: 0.98;
   text-shadow:
     0 2px var(--wp-shadow-blur, 20px)
@@ -433,23 +1058,32 @@ body.wallpaper-mode .et-home-greeting {
         calc(var(--wp-shadow-opacity, 0.7) * 0.67)
       );
 }
-
-.et-home-date-row {
-  color: var(--text-dim);
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
+ 
+/* The date and the weather sit in the meta row under the clock. They were
+   absolutely-positioned page corners; they are inline parts of one line now,
+   so the only thing they still own is their own ink and hover. */
+.et-home-corner {
+  display: inline-flex;
+  align-items: center;
   gap: var(--sp-2);
-  margin-top: var(--sp-2);
-  font-size: var(--fs-sm);
-  font-weight: 500;
+  color: inherit;
   line-height: 1;
+  user-select: none;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+/* Both are opt-in, so an empty one has to take no space in the row rather
+   than leave a gap and a separator behind it. */
+.et-home-corner:empty,
+.et-home-corner.is-off {
+  display: none;
 }
 
 .et-home-date,
 .et-weather-inline {
-  font-size: clamp(18px, 1.6vw, 24px);
+  font-size: inherit;
   font-weight: 600;
+  letter-spacing: 0.005em;
   line-height: 1;
   vertical-align: baseline;
   display: inline;
@@ -458,50 +1092,106 @@ body.wallpaper-mode .et-home-greeting {
   padding: 0;
 }
 
+/* The weather is the one clickable thing in this row, and nothing said so.
+   A target with real edges and a plate under the pointer - the same plate the
+   toolbar icons use, so the page has one hover language. */
+.et-weather-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(6px * var(--ui-scale));
+  padding: calc(3px * var(--ui-scale)) calc(9px * var(--ui-scale));
+  margin: calc(-3px * var(--ui-scale)) calc(-9px * var(--ui-scale));
+  border-radius: var(--r-pill, 999px);
+}
+
+/* The glyph is drawn at a fixed 15px by the renderer, which was in proportion
+   to the old 15px row and is not to this one. Sized here instead so it tracks
+   both the row and the user's interface scale. */
+.et-weather-inline svg {
+  width: calc(18px * var(--ui-scale));
+  height: calc(18px * var(--ui-scale));
+  flex-shrink: 0;
+}
+
 .et-weather-inline {
   cursor: pointer;
   transition:
-    opacity var(--dur-1) var(--ease-out),
-    color var(--dur-1) var(--ease-out);
+    opacity var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
 }
 
 .et-weather-inline:hover {
   opacity: 1;
   color: var(--text);
-  text-decoration: underline;
+  background: color-mix(in srgb, var(--accent-ink, currentColor) 20%, transparent);
+  text-decoration: none;
 }
 
-body.wallpaper-mode .et-home-date-row,
+body.wallpaper-mode .et-weather-inline:hover {
+  color: var(--wp-ink, #fff);
+}
+
+.et-weather-inline:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
 body.wallpaper-mode .et-home-date,
-body.wallpaper-mode .et-weather-inline {
-  color: rgba(255, 255, 255, 0.92) !important;
+body.wallpaper-mode .et-weather-inline{
+  color: var(--wp-ink-low, #ffffff) !important;
   text-shadow:
     0 2px var(--wp-shadow-blur, 20px)
-      rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.7)),
+      rgba(var(--wp-halo-low, 0, 0, 0), var(--wp-shadow-opacity, 0.5)),
     0 1px calc(var(--wp-shadow-blur, 20px) * 0.15)
       rgba(
-        var(--wp-shadow-rgb, 0, 0, 0),
-        calc(var(--wp-shadow-opacity, 0.7) * 0.67)
+        var(--wp-halo-low, 0, 0, 0),
+        calc(var(--wp-shadow-opacity, 0.5) * 0.67)
       );
 }
 
-body.solid-mode.theme-light .et-home-greeting {
-  color: var(--text, #0f172a) !important;
+/* Solid mode: the accent reaches the whole home block, not just the clock.
+
+   Without a photograph there is nothing on the page but the interface, and
+   the accent is the only thing that makes it the user's. The topbar icons,
+   the view labels and the clock already took it; the greeting, the date row
+   and the shortcut labels stayed a flat white, so the accent read as
+   something applied to three controls rather than as the page's own colour -
+   which is not what the swatch in Settings promises.
+
+   A tint, not a swap. The clock is the one element painted in the accent
+   outright and it has to stay that way for the hierarchy to hold, so
+   everything below it takes a measured fraction of the accent mixed into the
+   theme's own ink. Enough to be recognisably the same colour family, little
+   enough that the text is still text - the mixes below keep every line above
+   APCA Lc 60 on the solid grounds these modes produce, because most of the
+   colour is still the ink that was chosen for legibility in the first place.
+
+   `--accent-ink` rather than the raw accent: the ink is the accent already
+   walked to a lightness that reads against this ground, so a very dark or
+   very pale accent tints instead of washing out. */
+body.solid-mode .et-home-greeting {
+  color: color-mix(in srgb, var(--accent-ink, var(--accent-color)) 30%, var(--text)) !important;
+}
+
+body.solid-mode .et-home-date,
+body.solid-mode .et-weather-inline {
+  color: color-mix(in srgb, var(--accent-ink, var(--accent-color)) 34%, var(--text-dim)) !important;
+}
+
+/* The section heading over the task list is the quietest label on the page and
+   the one most helped by carrying the colour - it is a caption, not content. */
+body.solid-mode .et-home-todos-label {
+  color: color-mix(in srgb, var(--accent-ink, var(--accent-color)) 55%, var(--text));
+}
+
+body.solid-mode .et-home-greeting,
+body.solid-mode .et-home-date,
+body.solid-mode .et-weather-inline {
   text-shadow: none !important;
 }
 
-body.solid-mode.theme-light .et-home-date-row,
-body.solid-mode.theme-light .et-home-date,
-body.solid-mode.theme-light .et-weather-inline {
-  color: var(--text-dim, #475569) !important;
-  text-shadow: none !important;
-}
-
-/* Clock placement.
-   `clock-pos-fixed` carries everything common to the four corners; each corner
-   then only sets its own inset and alignment. Vertical clearance for the topbar
-   is reserved via --clock-top so the two top corners cannot collide with the
-   topbar buttons. */
+ 
 body.clock-pos-center .et-home-clock {
   position: relative;
   inset: auto;
@@ -511,8 +1201,7 @@ body.clock-pos-center .et-home-clock {
 }
 
 body.clock-pos-center .et-home-greeting,
-body.clock-pos-center .et-home-time,
-body.clock-pos-center .et-home-date-row {
+body.clock-pos-center .et-home-time{
   text-align: center;
   justify-content: center;
 }
@@ -529,42 +1218,120 @@ body.clock-pos-fixed .et-home-clock {
   box-shadow: none;
 }
 
+/* A corner clock shares its edge with the toolbar and the page margin, so it
+   runs a step below the centred one rather than at the same size. It moves
+   with it, though - the ratio is what keeps a corner layout recognisably the
+   same design as a centred one. */
 body.clock-pos-fixed .et-home-time {
-  font-size: clamp(54px, 7vw, calc(96px * var(--ui-scale)));
+  font-size: clamp(60px, 7.9vw, calc(112px * var(--ui-scale)));
 }
 
+/* A corner clock over a wallpaper takes the measured ink; without one there is
+   no measurement, so it falls through to the accent like the centred clock. */
 body.clock-pos-fixed .clock-digits,
 body.clock-pos-fixed .clock-colon,
 body.clock-pos-fixed .clock-ampm {
-  color: var(--clock-color, var(--text));
+  color: var(--clock-color, var(--wp-ink-mid, var(--accent-display, var(--accent-ink, var(--text)))));
 }
 
 body.clock-pos-fixed .et-home-greeting {
-  font-size: clamp(22px, 2.2vw, 30px);
+  font-size: clamp(17px, 1.7vw, 23px);
   font-weight: 600;
   color: var(--text);
   opacity: 0.95;
   margin-bottom: var(--sp-1);
 }
 
-body.clock-pos-fixed .et-home-date-row {
+/* The clock block lives in `.app` rather than in the home view while it sits in
+   a corner (see `placeClockBlock`), so it is no longer hidden along with the
+   view when another page is showing. The clock is a Home widget; it says so
+   here, and `!important` because the corner rules set `display` too. */
+body:not(.view-home) .et-home-clock {
+  display: none !important;
+}
+
+/* Third line of the clock block: day, then weather, separated only by space -
+   the hairline dot between them read as a stray bullet. */
+/* The row sits *above* the clock in the block, so its job is to introduce the
+   time rather than trail after it: no space above, a small measured space
+   below. It used to carry a top margin and nothing underneath, which pushed
+   the whole block down the page and left the date floating a little clear of
+   the numeral it belongs to. Sized up as well - this is the line that tells
+   you the day and the weather, and at 15px it was the least readable thing on
+   a screen whose whole point is being readable from across a desk. */
+.et-home-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  /* The weather half carries a hover plate that overhangs its text by 9px a
+     side, so the flex gap is set to the space wanted *plus* that overhang -
+     otherwise the day and the temperature end up about 8px apart at 19px type
+     and read as one run-on line. */
+  gap: clamp(24px, 2.2vw, 34px);
+  margin-top: 0;
+  margin-bottom: calc(9px * var(--ui-scale));
   color: var(--text-dim);
+  font-size: clamp(16px, 1.35vw, 21px);
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+/* Both halves are optional, and `:empty` does not see a row whose only children
+   are switched-off spans - so the row kept its top margin and left a gap under
+   the clock with nothing in it. */
+.et-home-meta:empty,
+.et-home-meta:not(:has(.et-home-corner:not(.is-off):not(:empty))) {
+  display: none;
+}
+
+body.wallpaper-mode .et-home-meta {
+  color: var(--wp-ink-mid, #ffffff);
+  opacity: 0.9;
+  text-shadow:
+    0 1px 2px
+      rgba(var(--wp-shadow-rgb, 0, 0, 0), calc(var(--wp-shadow-opacity, 0.5) * 0.8)),
+    0 1px calc(var(--wp-shadow-blur, 20px) * 0.4)
+      rgba(var(--wp-shadow-rgb, 0, 0, 0), calc(var(--wp-shadow-opacity, 0.5) * 0.5));
+}
+
+/* The clock block aligns to its own edge in a corner, so the meta row follows
+   the same edge rather than staying centred under a left-aligned clock. */
+body.clock-pos-top-left .et-home-meta,
+body.clock-pos-bottom-left .et-home-meta {
+  justify-content: flex-start;
+}
+
+body.clock-pos-top-right .et-home-meta,
+body.clock-pos-bottom-right .et-home-meta {
+  justify-content: flex-end;
+}
+
+/* Optical alignment: the clock uses tabular figures, so each digit sits centred
+   in a fixed advance width and its left edge lands inside the greeting/date
+   edge. A small negative inset pulls the digits back onto the same margin. */
+body.clock-pos-top-left .et-home-time,
+body.clock-pos-bottom-left .et-home-time {
+  margin-left: -0.06em;
+}
+
+body.clock-pos-top-right .et-home-time,
+body.clock-pos-bottom-right .et-home-time {
+  margin-right: -0.06em;
 }
 
 /* Left-hand corners */
 body.clock-pos-top-left .et-home-clock,
 body.clock-pos-bottom-left .et-home-clock {
-  left: var(--sp-8);
+  left: var(--sp-4);
   align-items: flex-start;
   text-align: left;
 }
 
 body.clock-pos-top-left .et-home-greeting,
 body.clock-pos-top-left .et-home-time,
-body.clock-pos-top-left .et-home-date-row,
 body.clock-pos-bottom-left .et-home-greeting,
-body.clock-pos-bottom-left .et-home-time,
-body.clock-pos-bottom-left .et-home-date-row {
+body.clock-pos-bottom-left .et-home-time{
   text-align: left;
   justify-content: flex-start;
 }
@@ -572,64 +1339,100 @@ body.clock-pos-bottom-left .et-home-date-row {
 /* Right-hand corners */
 body.clock-pos-top-right .et-home-clock,
 body.clock-pos-bottom-right .et-home-clock {
-  right: var(--sp-8);
+  right: var(--sp-4);
   align-items: flex-end;
   text-align: right;
 }
 
 body.clock-pos-top-right .et-home-greeting,
 body.clock-pos-top-right .et-home-time,
-body.clock-pos-top-right .et-home-date-row,
 body.clock-pos-bottom-right .et-home-greeting,
-body.clock-pos-bottom-right .et-home-time,
-body.clock-pos-bottom-right .et-home-date-row {
+body.clock-pos-bottom-right .et-home-time{
   text-align: right;
   justify-content: flex-end;
 }
 
-/* When clock/text is placed in top corners, move corresponding top icon clusters to the bottom for a cleaner look */
+/* When the clock sits in a top corner it would collide with the icon cluster
+   already there, so that cluster drops to the bottom of the screen.
+   Deliberately scoped to Home: the clock only exists there, and on Boards and
+   Notes this used to strand the sessions/tasks/timer buttons at the bottom of
+   a page that has nothing to do with the clock. */
+/* A clock in either top corner owns the whole top strip, so *both* clusters
+   drop to the bottom - moving only the one it lands on would leave the clock
+   sharing a line with the other, which is the collision this avoids.
+   Scoped to Home, since the clock only exists there and Boards and Notes have
+   no reason to move their toolbar. */
+/* Everything the clock displaces lands on the same 15px frame the top bar and
+   the page corners already use, so a moved clock reads as the same layout
+   rearranged rather than as a second, looser one.
+
+   Only the cluster the clock actually lands on moves. With the nav centred,
+   a top-left clock collides with the utilities and nothing else, so evicting
+   the whole bar - as this used to - moved two things that were never in the
+   way. The nav stays on its centre line whatever the clock does.
+
+   Not scoped to Home: the bar used to snap back to the top the moment you
+   opened Boards or Notes, so the chrome moved under you on every view change,
+   which is the one thing a navigation bar must never do. */
 body.clock-pos-top-left .et-top-left {
   position: fixed;
-  bottom: var(--sp-6);
-  left: var(--sp-8);
+  bottom: 15px;
+  left: var(--sp-4);
   z-index: 500;
   padding: 0;
   margin: 0;
-}
-
-body.clock-pos-top-left .et-home-clock {
-  top: var(--sp-6);
-  left: var(--sp-8);
 }
 
 body.clock-pos-top-right .et-top-right {
   position: fixed;
-  bottom: var(--sp-6);
-  right: var(--sp-8);
+  bottom: 15px;
+  right: var(--sp-4);
   z-index: 500;
   padding: 0;
   margin: 0;
 }
 
+/* A cluster pinned to the bottom of every view means the views have to stop
+   short of it or their last row sits underneath it. */
+body.clock-pos-top-left .et-view,
+body.clock-pos-top-right .et-view {
+  padding-bottom: calc(15px + 44px);
+}
+
+/* The clock sits exactly where the bar it replaced did. It used to be inset a
+   further 24px from a 15px frame, which read as the clock having drifted away
+   from the corner rather than occupying it. */
+body.clock-pos-top-left .et-home-clock {
+  top: 15px;
+  left: var(--sp-4);
+}
+
 body.clock-pos-top-right .et-home-clock {
-  top: var(--sp-6);
-  right: var(--sp-8);
+  top: 15px;
+  right: var(--sp-4);
 }
 
 body.clock-pos-bottom-left .et-home-clock,
 body.clock-pos-bottom-right .et-home-clock {
-  bottom: var(--sp-8);
+  bottom: 15px;
 }
 
-/* Keep the centre column clear of a top-corner clock on short viewports. */
-body.clock-pos-top-left .et-view-home.active,
-body.clock-pos-top-right .et-view-home.active {
-  padding-top: var(--clock-clearance, 0px);
-}
-
-/* A bottom-right clock and the toast stack want the same space; move toasts up. */
+/* A bottom clock owns one bottom corner and its date/weather row owns the
+   other, so toasts clear the shorter of the two: they sit above the meta row,
+   which is a single line of small text and therefore a knowable height - not
+   above the clock, whose height changes with the viewport. (The old rule tried
+   the clock and guessed 132px against a block that reaches about 150px on a
+   wide screen. It was also scoped `body ... body ...`, which can never match,
+   so it had never once applied.) */
+body.clock-pos-bottom-left .et-toast-container,
 body.clock-pos-bottom-right .et-toast-container {
-  bottom: calc(var(--sp-6) + var(--clock-toast-offset, 132px));
+  bottom: calc(15px + 30px);
+}
+
+body.clock-pos-bottom-right .et-toast-container {
+  right: auto;
+  left: 15px;
+  align-items: flex-start;
 }
 
 /* Narrow viewports have no room for a corner clock beside the centre column,
@@ -658,9 +1461,9 @@ body.clock-pos-bottom-right .et-toast-container {
     margin: 0;
   }
 
-  body.clock-pos-top-left .et-view-home.active,
-  body.clock-pos-top-right .et-view-home.active {
-    padding-top: 0;
+  body.clock-pos-top-left .et-view,
+  body.clock-pos-top-right .et-view {
+    padding-bottom: 0;
   }
 
   body.clock-pos-bottom-right .et-toast-container {
@@ -668,15 +1471,103 @@ body.clock-pos-bottom-right .et-toast-container {
   }
 }
 
+/* The accent, made safe to put on a photograph.
+
+   `--accent-ink` is the accent walked until it is legible against the *page*
+   ground - #ffffff or near-black, depending on the light/dark setting. That is
+   the right answer for panels and menus, and the wrong one for anything drawn
+   straight onto a wallpaper, because the wallpaper is not the page ground. The
+   failure is not subtle: a pale accent in dark mode is left as-is (it already
+   clears near-black by a mile), and on a cream photograph it then measures
+   APCA Lc 2-8. Invisible, not merely faint.
+
+   `--wp-ink-mid` is the one colour known to read against *this* picture,
+   because it was measured from it. Mixing the accent most of the way but not
+   all of the way toward it keeps the hue clearly recognisable while putting a
+   floor under the worst case: the same pale-accent-on-cream pairing lands at
+   Lc 47-50 here, which a 100px numeral or a 7px dot carries comfortably.
+
+   Anything that paints the accent over the wallpaper as a *foreground* uses
+   this rather than the raw token. Backgrounds - hover plates and the like -
+   can still take the accent neat, since nothing is being read off them. */
+body.wallpaper-mode {
+  --accent-on-wp: color-mix(
+    in srgb,
+    var(--accent-ink, var(--accent-color)) 62%,
+    var(--wp-ink-mid, #fff)
+  );
+}
+
+/* A floor under the accent's *chroma*, applied after the mix above.
+
+   Two things conspire to leave that mix grey. When no accent has been chosen
+   the app derives one from the wallpaper, so the accent starts out close to a
+   photograph's average colour, which is nearly always desaturated. And the
+   mix toward the measured ink - the thing that makes the accent safe to put on
+   a picture - takes out most of whatever chroma survived that. The result is a
+   mark with fine contrast and no colour, on precisely the wallpapers where the
+   accent was meant to feel drawn from the image.
+
+   Flooring the chroma of the *result* rather than of the input is what makes
+   this work. Both lightness and hue pass through untouched, and APCA contrast
+   is very nearly all lightness, so the legibility the mix was there to
+   guarantee is preserved almost exactly while the colour comes back:
+
+     extracted slate   #cbcfdc (grey)  -> #aecaff   Lc -70 -> -67
+     user's blue       #bfcdff         -> #afc9ff   Lc -70 -> -66
+     gold on cream     #735937         -> #8c4d00   Lc  75 ->  75
+
+   `max()` means an accent already above the floor is left completely alone, so
+   a vivid colour someone picked on purpose is never touched.
+
+   Gated on `@supports`, since relative colour syntax is recent. Without it the
+   plain mix stands, which is correct - just quieter. */
+@supports (color: oklch(from red l max(c, 0.14) h)) {
+  body.wallpaper-mode {
+    --accent-on-wp: oklch(
+      from
+        color-mix(
+          in srgb,
+          var(--accent-ink, var(--accent-color)) 62%,
+          var(--wp-ink-mid, #fff)
+        )
+        l max(c, 0.14) h
+    );
+  }
+}
+
 body.wallpaper-mode #navSearchBar {
   max-width: min(calc(680px * var(--ui-scale)), 90vw);
 }
 
-body.wallpaper-mode .et-search-pill,
-body.wallpaper-mode .et-main-tabs {
-  background: var(--surface-topbar) !important;
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.24) !important;
+/* The view labels sit in the top band with the toolbar icons and take the same
+   ink, so a bright wallpaper darkens both together instead of leaving white
+   words over a white sky. */
+body.wallpaper-mode .et-main-tab,
+body.wallpaper-mode.theme-light .et-main-tab:not(.active),
+body.wallpaper-mode .et-main-tab:not(.active) {
+  color: var(--wp-ink, #fff) !important;
+  text-shadow:
+    0 1px 2px
+      rgba(var(--wp-halo, 0, 0, 0), calc(var(--wp-shadow-opacity, 0.4) * 0.7)),
+    0 1px calc(var(--wp-shadow-blur, 20px) * 0.5)
+      rgba(var(--wp-halo, 0, 0, 0), calc(var(--wp-shadow-opacity, 0.4) * 0.4));
+}
+
+body.solid-mode .et-main-tab,
+body.solid-mode .et-main-tab:not(.active) {
+  color: var(--accent-ink, var(--text)) !important;
+  text-shadow: none;
+}
+
+body.solid-mode .et-main-tab.active {
+  color: var(--accent-ink, var(--text)) !important;
+}
+
+body.wallpaper-mode .et-search-pill {
+  background: var(--surface-search) !important;
+  border: 1px solid rgba(var(--wp-ink-rgb-mid, 255, 255, 255), 0.2) !important;
+  box-shadow: 0 6px 20px rgba(var(--wp-halo-mid, 0, 0, 0), 0.2) !important;
 }
 
 body.wallpaper-mode:not(.theme-light) .et-search-engine {
@@ -709,23 +1600,10 @@ body.theme-light .et-search-engine {
   color: var(--text, #0f172a) !important;
 }
 
+/* Icon-only pins sit a little closer together over a photo, where the frosted
+   tiles already separate them. */
 body.wallpaper-mode .et-home-pinned {
-  gap: var(--sp-4);
-  margin-top: var(--sp-4);
-}
-
-body.wallpaper-mode .dock-pin-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #ffffff !important;
-  text-shadow:
-    0 2px var(--wp-shadow-blur, 20px)
-      rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.6)),
-    0 1px calc(var(--wp-shadow-blur, 20px) * 0.15)
-      rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.6));
-  background: rgba(0, 0, 0, 0.5);
-  padding: 2px 8px;
-  border-radius: var(--r-pill);
+  gap: calc(6px * var(--ui-scale));
 }
 
 .et-home-pinned {
@@ -733,10 +1611,13 @@ body.wallpaper-mode .dock-pin-label {
   flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
-  gap: var(--sp-4);
-  margin-top: var(--sp-4);
+  gap: calc(6px * var(--ui-scale));
   width: 100%;
   max-width: 90vw;
+  /* The shortcuts are the next section of the home block rather than a
+     continuation of the search bar, so they take a little more air above them
+     than the block rhythm gives - but not enough to float free of it. */
+  margin-top: clamp(2px, 1vh, 12px);
 }
 
 .et-home-pinned:empty {
@@ -747,71 +1628,246 @@ body.wallpaper-mode .dock-pin-label {
   display: none;
 }
 
-.dock-pin-wrap {
-  position: relative;
+.et-home-todos:empty {
+  display: none !important;
+}
+
+/* Momentum-style: plain text on the wallpaper, no card or pill chrome, so it
+   reads as part of the page rather than another UI widget stacked in. */
+/* The list sits below the pins with real air between them. It is the only part
+   of the column that is a *list* rather than a line, so letting it butt up
+   against the pins made the whole stack read as one undifferentiated run. The
+   gap scales with the viewport: on a tall screen it drops the list clear of the
+   centre group, on a short one it gets out of the way. */
+.et-home-todos {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Matching Chrome shortcut tile hover card width and padding */
-  width: calc(104px * var(--ui-scale));
-  padding: calc(12px * var(--ui-scale)) calc(6px * var(--ui-scale));
-  border-radius: var(--r-md, 12px);
-  background: transparent;
+  gap: calc(10px * var(--ui-scale));
+  width: 100%;
+  margin-top: clamp(14px, 5vh, 56px);
+}
+
+.et-home-todos-label {
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  margin-bottom: calc(2px * var(--ui-scale));
+}
+
+.et-home-todo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: calc(11px * var(--ui-scale));
+  /* The row is allowed the full width of the home column, the same measure the
+     clock and the search bar are set against, so a long task has somewhere to
+     go before it is cut. It was capped well short of that, which meant a task
+     faded out with empty column on either side of it. */
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+/* Ticked and waiting out its undo window: struck through, box checked. */
+.et-home-todo.is-striking .et-home-todo-text,
+.et-todo-m-row.is-striking .et-todo-m-text {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.et-home-todo-box {
+  position: relative;
+}
+
+.is-striking .et-home-todo-box {
+  opacity: 0.9;
+}
+
+.is-striking .et-home-todo-box::after {
+  content: "";
+  position: absolute;
+  left: 30%;
+  top: 8%;
+  width: 30%;
+  height: 58%;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.et-home-todo-open {
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--ui-scale));
+  /* Shrinkable, not greedy: the row stays centred as a group and the text only
+     takes the width it needs, up to the column. `min-width: 0` is what lets a
+     flex child shrink below its content width at all - without it the text
+     would push the row wider than the column instead of clipping. */
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.et-home-todo-box {
   flex-shrink: 0;
-  transition: background var(--dur-2) var(--ease-out);
+  /* Scaled with the text it sits beside. A fixed 18px box next to text sized
+     in `--ui-scale` drifted out of proportion on wide screens, and was
+     centred on the text's line box rather than on its letters. */
+  width: calc(17px * var(--ui-scale));
+  height: calc(17px * var(--ui-scale));
+  padding: 0;
+  border-radius: var(--r-sm);
+  border: 2px solid currentColor;
+  background: none;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out);
 }
 
-.dock-pin-wrap:hover {
-  background: rgba(255, 255, 255, 0.14);
+.et-home-todo-box:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 22%, transparent);
 }
 
-body.theme-light:not(.wallpaper-mode) .dock-pin-wrap:hover {
-  background: rgba(0, 0, 0, 0.08);
+.et-home-todo-box:focus-visible {
+  opacity: 0.95;
 }
 
-body.tiles-circle .dock-pin-wrap {
-  border-radius: var(--r-md, 12px);
+/* Long items fade out rather than stopping at an ellipsis. A task cut to
+   "doesnt open close pro..." reads as something broken; the same line dissolving
+   at the margin reads as a line that continues, which is what it does - the
+   whole note is one click away.
+
+   The fade is applied only when the line is actually too long for its box.
+   As an unconditional mask it dissolved the last three characters of *every*
+   task, including three-word ones with half the column still empty beside
+   them - so a short task looked truncated when nothing had been cut at all.
+   CSS cannot ask whether an element overflows, so the class is set from the
+   measurement in `renderTodos`. */
+.et-home-todo-text {
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  font-size: calc(19px * var(--ui-scale));
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: 0.85;
+  transition: opacity var(--dur-2) var(--ease-out);
 }
 
-body.radius-sharp .dock-pin-wrap {
-  border-radius: 0;
+.et-home-todo-text.is-clipped {
+  mask-image: linear-gradient(to right, #000 calc(100% - 3em), transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 calc(100% - 3em),
+    transparent 100%
+  );
+}
+
+.et-home-todo-open:hover .et-home-todo-text,
+.et-home-todo-open:focus-visible .et-home-todo-text {
+  opacity: 1;
+}
+
+.et-home-todo-due {
+  flex-shrink: 0;
+  padding: 2px calc(8px * var(--ui-scale));
+  border-radius: var(--r-pill, 999px);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: calc(11px * var(--ui-scale));
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.et-home-todo-due.is-overdue {
+  color: var(--danger-text, #f87171);
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  opacity: 0.95;
+}
+
+/* Pinned shortcuts: a dock of icons -------------------------------------
+
+   No captions. The name is in a tooltip and in the link's accessible name, so
+   the row reads as a set of icons at a glance, the way an app dock does.
+
+   One rule governs the motion: the *icon* grows under the pointer, never the
+   tile and never the cell. The cell is the hit box; keeping it still is what
+   stops a pointer resting on its edge from making it shiver, and what makes a
+   click near the edge land on the thing that reacted to the hover. */
+.dock-pin-wrap,
+.et-home-pinned > .dock-pin-add,
+.et-home-pinned > .dock-pin-boards {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(64px * var(--ui-scale));
+  height: calc(64px * var(--ui-scale));
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: var(--r-lg, 16px);
 }
 
 .dock-pin {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  place-items: center;
   width: 100%;
+  height: 100%;
   padding: 0;
   background: none;
   border: none;
-  cursor: pointer;
-  text-decoration: none;
+  border-radius: inherit;
   color: inherit;
   font: inherit;
+  text-decoration: none;
+  cursor: pointer;
 }
 
-/* The "Add pin" button is a bare .dock-pin appended straight into the flex
-   row (real pins are wrapped in .dock-pin-wrap). Give it the same fixed cell width as a wrap. */
-.et-home-pinned > .dock-pin-add {
-  width: calc(104px * var(--ui-scale));
-  padding: calc(12px * var(--ui-scale)) calc(6px * var(--ui-scale));
-  flex-shrink: 0;
+.dock-pin:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }
 
 .dock-pin-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: calc(48px * var(--ui-scale));
-  height: calc(48px * var(--ui-scale));
-  background: rgba(var(--board-rgb, 0, 0, 0), var(--board-opacity, 0));
-  border: none !important;
-  border-radius: var(--r-md, 12px);
-  box-shadow: none !important;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(52px * var(--ui-scale));
+  height: calc(52px * var(--ui-scale));
+  border-radius: var(--r-md, 14px);
+  /* Over a wallpaper: a frosted film in the direction the picture calls for -
+     light on a dark photo, dark on a bright one (see `--wp-ink-rgb`). */
+  background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.18);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
   transition:
-    transform var(--dur-2) var(--ease-out),
-    background var(--dur-2) var(--ease-out);
+    background var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out);
 }
 
 body.tiles-circle .dock-pin-icon,
@@ -828,115 +1884,106 @@ body.radius-sharp .dock-pin-menu-btn {
   border-radius: 0 !important;
 }
 
-.dock-pin:hover .dock-pin-icon,
-.dock-pin-wrap:hover .dock-pin-icon {
-  background: rgba(var(--board-rgb, 0, 0, 0), min(0.85, calc(var(--board-opacity, 0) + 0.15)));
-  border: none !important;
-}
-
-body.wallpaper-mode .dock-pin-icon {
-  background: rgba(0, 0, 0, var(--board-opacity, 0)) !important;
-  border: none !important;
-}
-
-body.wallpaper-mode .dock-pin:hover .dock-pin-icon {
-  background: rgba(0, 0, 0, min(0.85, calc(var(--board-opacity, 0) + 0.2))) !important;
-  border: none !important;
-}
-
-body.theme-light:not(.wallpaper-mode) .dock-pin-icon {
-  background: rgba(0, 0, 0, var(--board-opacity, 0)) !important;
-  border: none !important;
-}
-
-body.theme-light:not(.wallpaper-mode) .dock-pin:hover .dock-pin-icon {
-  background: rgba(0, 0, 0, min(0.35, calc(var(--board-opacity, 0) + 0.1))) !important;
-  border: none !important;
-}
-
 .dock-pin-fav {
   width: calc(26px * var(--ui-scale));
   height: calc(26px * var(--ui-scale));
   object-fit: contain;
+  transition: transform var(--dur-3) var(--ease-out);
 }
 
-.dock-pin-label {
-  font-size: calc(12px * var(--ui-scale));
-  font-weight: 500;
-  color: var(--text, #1e293b);
-  max-width: calc(92px * var(--ui-scale));
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: calc(8px * var(--ui-scale));
-  background: none !important;
-  border: none !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
-  box-shadow: none !important;
+.dock-pin-icon > svg {
+  transition: transform var(--dur-3) var(--ease-out);
 }
 
-body.wallpaper-mode .dock-pin-label,
-body:not(.solid-mode) .dock-pin-label {
-  color: #ffffff !important;
-  text-shadow:
-    0 1px 3px
-      rgba(
-        var(--wp-shadow-rgb, 0, 0, 0),
-        calc(var(--wp-shadow-opacity, 0.6) * 0.9)
-      ),
-    0 2px var(--wp-shadow-blur, 20px)
-      rgba(var(--wp-shadow-rgb, 0, 0, 0), var(--wp-shadow-opacity, 0.6)) !important;
+.dock-pin:hover .dock-pin-fav,
+.dock-pin:focus-visible .dock-pin-fav,
+.dock-pin-add:hover .dock-pin-icon > svg,
+.dock-pin-add:focus-visible .dock-pin-icon > svg {
+  transform: scale(1.22);
 }
 
-body.solid-mode .dock-pin-label {
-  color: var(--text) !important;
-  text-shadow: none !important;
+.dock-pin:active .dock-pin-fav {
+  transform: scale(1.06);
 }
 
+body.wallpaper-mode .dock-pin:hover .dock-pin-icon,
+body.wallpaper-mode .dock-pin:focus-visible .dock-pin-icon {
+  background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.28);
+}
+
+/* Solid mode: a white tile - greyish-black on a dark page, where a white disc
+   would be the brightest thing on screen - with the icon as an accent duotone
+   (see `applyIconTint`). The logo keeps its detail; only its colours change,
+   and the real ones come back under the pointer or on focus. */
+body.solid-mode .dock-pin-icon {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 18%, transparent);
+}
+
+body.solid-mode.theme-dark .dock-pin-icon {
+  background: #25262c;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+body.solid-mode .dock-pin:hover .dock-pin-icon,
+body.solid-mode .dock-pin:focus-visible .dock-pin-icon {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 40%, transparent);
+}
+
+body.solid-mode .dock-pin-fav:not(.is-fallback) {
+  filter: url("#et-icon-tint");
+}
+
+body.solid-mode .dock-pin:hover .dock-pin-fav,
+body.solid-mode .dock-pin:focus-visible .dock-pin-fav {
+  filter: none;
+}
+
+/* Options: a round chip on the cell's top-right corner, overlapping the
+   tile's edge. Three dots across rather than down, so they sit centred in a
+   circle - the vertical kebab it replaced was a loose glyph that never lined
+   up with anything. */
 .dock-pin-menu-btn {
   position: absolute;
-  top: calc(6px * var(--ui-scale));
-  right: calc(6px * var(--ui-scale));
-  width: calc(24px * var(--ui-scale));
-  height: calc(24px * var(--ui-scale));
+  top: 0;
+  right: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: calc(22px * var(--ui-scale));
+  height: calc(22px * var(--ui-scale));
   padding: 0;
+  border: 1px solid var(--menu-border) !important;
   border-radius: 50% !important;
-  border: none !important;
-  background: transparent;
-  color: var(--text-dim, rgba(255, 255, 255, 0.85));
-  font-size: 16px;
-  font-weight: bold;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: var(--menu-bg);
+  color: var(--text);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
   cursor: pointer;
   opacity: 0;
   transition:
     opacity var(--dur-1) var(--ease-out),
-    color var(--dur-1) var(--ease-out);
-  z-index: 2;
+    background var(--dur-1) var(--ease-out);
+}
+
+.dock-pin-menu-btn svg {
+  display: block;
+  width: calc(14px * var(--ui-scale));
+  height: calc(14px * var(--ui-scale));
 }
 
 .dock-pin-wrap:hover .dock-pin-menu-btn,
-.dock-pin-wrap:focus-within .dock-pin-menu-btn,
-.dock-pin-menu-btn:focus-visible {
+.dock-pin-wrap:focus-within .dock-pin-menu-btn {
   opacity: 1;
 }
 
 .dock-pin-menu-btn:hover {
-  background: transparent;
-  color: #ffffff;
-}
-
-body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
-  background: transparent;
-  color: var(--text);
+  background: color-mix(in srgb, var(--accent-color) 18%, var(--menu-bg));
 }
 
 .dock-pin-menu-btn:focus-visible {
+  opacity: 1;
   outline: 2px solid var(--accent-color);
   outline-offset: 1px;
 }
@@ -947,22 +1994,63 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
   }
 }
 
+/* Add pin is a shortcut-shaped hole, not a floating plus. It used to paint an
+   opaque *solid* plate mixed from the board surface colour, which made the one
+   cell in the row that is not a site the heaviest thing in it. The accent
+   stays - this is the only action in the row, and an action is exactly what an
+   accent should mark - but it now lives in a dashed edge on the same frosted
+   tile everything else uses, so the cell reads as an empty slot in the set
+   rather than a button parked beside it. */
 .dock-pin-add .dock-pin-icon {
-  background: rgba(var(--board-rgb, 0, 0, 0), min(0.95, calc(var(--board-opacity, 0.4) * 1.5 + 0.15))) !important;
-  border: none !important;
-  color: var(--accent-color) !important;
+  background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.12) !important;
+  border: 1.5px dashed
+    color-mix(
+      in srgb,
+      var(--accent-on-wp, var(--accent-ink, #fff)) 72%,
+      transparent
+    ) !important;
+  color: var(--accent-on-wp, var(--accent-ink, inherit)) !important;
+  opacity: 0.85;
   box-shadow: none !important;
+  transition:
+    transform var(--dur-3) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out);
 }
 
+/* The dashes close up into a solid ring on hover: the slot going from "empty"
+   to "ready", said with the same colour rather than a new one. */
 .dock-pin-add:hover .dock-pin-icon {
-  background: rgba(var(--board-rgb, 0, 0, 0), min(0.98, calc(var(--board-opacity, 0.4) * 1.8 + 0.25))) !important;
-  color: var(--accent-color) !important;
-  border: none !important;
+  background: color-mix(
+    in srgb,
+    var(--accent-ink, #fff) 20%,
+    rgba(var(--wp-ink-rgb, 255, 255, 255), 0.14)
+  ) !important;
+  border-style: solid !important;
+  border-color: var(
+    --accent-on-wp,
+    var(--accent-ink, rgba(255, 255, 255, 0.6))
+  ) !important;
+  color: var(--accent-on-wp, var(--accent-ink, inherit)) !important;
+  opacity: 1;
 }
 
-.dock-pin-add .dock-pin-label {
-  color: var(--accent-color) !important;
-  font-weight: 600;
+body.theme-light:not(.wallpaper-mode) .dock-pin-add .dock-pin-icon {
+  background: rgba(15, 23, 42, 0.05) !important;
+}
+
+body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
+  background: color-mix(
+    in srgb,
+    var(--accent-ink, #000) 14%,
+    rgba(15, 23, 42, 0.05)
+  ) !important;
+}
+
+.dock-pin-add .dock-pin-icon svg {
+  width: calc(22px * var(--ui-scale));
+  height: calc(22px * var(--ui-scale));
 }
 
 @media (max-width: 560px) {
@@ -971,61 +2059,74 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
     max-width: 96vw;
   }
   .dock-pin-wrap,
-  .dock-pin,
-  .et-home-pinned > .dock-pin-add {
-    width: 60px;
+  .et-home-pinned > .dock-pin-add,
+.et-home-pinned > .dock-pin-boards {
+    width: 56px;
+    height: 56px;
   }
   .dock-pin-icon {
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
   }
   .dock-pin-fav {
-    width: 28px;
-    height: 28px;
-  }
-  .dock-pin-label {
-    font-size: var(--fs-xs);
-    max-width: 60px;
+    width: 24px;
+    height: 24px;
   }
 }
 
-@media (max-height: 720px) {
-}
-
+/* Toasts ---------------------------------------------------------------------
+   A notice is a small card, not a coloured bar: a tinted status icon, the
+   headline in the page's own ink, an optional line saying what to do about it,
+   and a close button that is always there. The old solid-fill pills put white
+   text on a saturated ground - readable, but they read as an alert whether or
+   not anything had gone wrong, and they had nowhere to put a second line. The
+   status colour now lives in the icon and a faint wash behind the card, so
+   severity is still legible at a glance while the words stay on a surface that
+   works in both themes. */
 .et-toast-container {
   position: fixed;
-  bottom: var(--sp-6);
-  right: var(--sp-6);
+  bottom: 15px;
+  right: 15px;
   display: flex;
   flex-direction: column-reverse;
   align-items: flex-end;
   gap: var(--sp-2);
   z-index: 10000;
   pointer-events: none;
-  max-width: 320px;
+  max-width: min(380px, calc(100vw - var(--sp-8)));
 }
 
 .toast-msg {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 7px 10px;
-  border-radius: 6px;
-  width: fit-content;
-  max-width: 300px;
-  background: var(--accent-fill, var(--accent-color, #6366f1));
-  color: var(--accent-contrast, #ffffff);
-  border: none;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: none;
+  --toast-tone: var(--accent-color, #6366f1);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  /* The tone wash is laid over the panel rather than replacing it, so the card
+     keeps the same surface as every other floating thing in the app and only
+     picks up a hint of its status colour. */
+  background:
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--toast-tone) 12%, transparent),
+      transparent 62%
+    ),
+    var(--panel-solid, var(--panel));
+  border: 1px solid
+    color-mix(in srgb, var(--toast-tone) 22%, var(--panel-border));
+  color: var(--text);
+  font-size: var(--fs-sm);
+  box-shadow: var(--e2);
   pointer-events: auto;
-  transform: translateY(6px);
   opacity: 0;
-  animation: toastSlideIn 0.08s ease-out forwards;
+  transform: translateY(6px);
+  animation: toastSlideIn var(--dur-2) var(--ease-out) forwards;
   transition:
-    transform 0.08s ease-out,
-    opacity 0.08s ease-out;
+    transform var(--dur-2) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out);
 }
 
 .toast-msg.is-exiting {
@@ -1033,58 +2134,129 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
   opacity: 0 !important;
 }
 
-.toast-msg.default,
-.toast-msg.info {
-  background: var(--accent-fill, var(--accent-color, #6366f1));
-  color: var(--accent-contrast, #ffffff);
-  box-shadow: none;
-}
-
 .toast-msg.success {
-  background: #10b981;
-  color: #ffffff;
-  box-shadow: none;
+  --toast-tone: var(--success, #22c55e);
 }
-
 .toast-msg.error {
-  background: #ef4444;
-  color: #ffffff;
-  box-shadow: none;
+  --toast-tone: var(--danger, #ef4444);
 }
-
 .toast-msg.warning {
-  background: #f59e0b;
-  color: #ffffff;
-  box-shadow: none;
+  --toast-tone: var(--warning, #f59e0b);
+}
+.toast-msg.info,
+.toast-msg.loading {
+  --toast-tone: var(--accent-color, #6366f1);
 }
 
-.toast-msg.loading {
-  background: var(--surface-card, #1e293b);
-  color: var(--text, #ffffff);
-  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.15));
-  box-shadow: none;
+.toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: var(--r-pill);
+  background: var(--toast-tone);
+  color: #fff;
+}
+
+.toast-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.toast-msg.loading .toast-icon svg {
+  animation: et-toast-spin 900ms linear infinite;
+}
+
+@keyframes et-toast-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
 .toast-msg .toast-text {
-  flex: 1;
+  font-weight: var(--fw-semi);
   line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.toast-detail {
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Recovery options read as links under the message, the way they do in the
+   platform patterns people already know - not as a button competing with the
+   headline for the same line. */
+.toast-actions {
+  display: flex;
+  gap: var(--sp-3);
+  margin-top: 3px;
+}
+
+.toast-msg .toast-action-btn,
+.toast-msg .toast-dismiss-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+  border-radius: var(--r-xs, 4px);
+  transition: color var(--dur-1) var(--ease-out);
 }
 
 .toast-msg .toast-action-btn {
-  margin-left: var(--sp-2);
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.18);
-  color: inherit;
-  border: 1px solid currentColor;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  transition: background 0.1s ease;
+  color: var(--toast-tone);
 }
 
-.toast-msg .toast-action-btn:hover {
-  background: rgba(255, 255, 255, 0.28);
+.toast-msg .toast-dismiss-btn {
+  color: var(--text-dim);
+}
+
+.toast-msg .toast-action-btn:hover,
+.toast-msg .toast-dismiss-btn:hover {
+  color: var(--text);
+}
+
+.toast-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.toast-close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.toast-close:hover {
+  color: var(--text);
+  background: var(--surface-2);
 }
 
 @keyframes toastSlideIn {
@@ -1123,8 +2295,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
   .et-topbar {
     padding: var(--sp-2) var(--sp-4);
   }
-  .et-pop-workspace,
-  .et-pop-todo {
+  .et-pop-workspace {
     max-width: calc(100vw - 32px);
   }
 }
@@ -1143,15 +2314,10 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
     padding: 4px 12px 8px;
   }
 
-  .et-top-left,
+  .et-main-tabs,
   .et-top-right {
     padding: 0;
     gap: 8px;
-  }
-
-  .et-top-left {
-    grid-column: 1;
-    grid-row: 1;
   }
   .et-top-right {
     grid-column: 2;
@@ -1200,9 +2366,16 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
     min-height: 100%;
   }
 
-  .et-notes-notepad-col,
+  /* Stacked, the two panels used to be given the same height, so half the
+     screen went to a snippet list that is usually empty. The editor keeps the
+     tall box; the clipboard gets only what its contents need and scrolls. */
+  .et-notes-notepad-col {
+    min-height: min(560px, max(280px, calc(100dvh - 220px)));
+  }
+
   .et-notes-clipboard-col {
-    min-height: min(520px, max(240px, calc(100dvh - 150px)));
+    min-height: 0;
+    max-height: min(300px, 40dvh);
   }
 }
 
@@ -1212,11 +2385,6 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
     grid-template-rows: auto;
     row-gap: 0;
     padding: 4px 12px 8px;
-  }
-  .et-top-left {
-    grid-column: 1;
-    grid-row: 1;
-    justify-self: start;
   }
   .et-top-right {
     grid-column: 3;
@@ -1250,24 +2418,44 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
   .et-search-pill {
     max-width: 100%;
   }
-  .et-search-engine-name,
-  .search-btn-label {
-    display: none;
-  }
 }
 
+/* Short windows.
+
+   The target is that a *fully populated* Home - date, weather, clock,
+   greeting, search, five pins and three tasks - still fits without scrolling,
+   because Home is a single screen and a new tab that slides under the pointer
+   is worse than a slightly tighter one. Everything trimmed here is spacing,
+   not content: nothing is hidden and nothing changes size except the clock,
+   which is measured against the viewport anyway. */
 @media (max-height: 720px) {
   .app {
-    padding-top: 8px;
+    padding: 8px 0;
   }
   .et-view-home.active {
-    padding-bottom: clamp(20px, 6vh, 40px);
+    /* This padding exists to lift the block optically off the bottom edge; on
+       a short screen it was the single largest piece of empty space on the
+       page and the last thing standing between a full Home and fitting. */
+    padding-bottom: clamp(12px, 4vh, 32px);
   }
   .et-home-center {
     gap: 14px;
   }
   .et-home-time {
     font-size: clamp(2.8rem, 12vh, 5rem);
+  }
+  /* The task list keeps a clear break from the pins above it, just a smaller
+     one - it is a separate section, so the gap cannot go to nothing. */
+  .et-home-todos {
+    margin-top: clamp(10px, 2.5vh, 24px);
+  }
+  .et-home-pinned {
+    margin-top: 2px;
+  }
+  .dock-pin-wrap,
+  .et-home-pinned > .dock-pin-add,
+.et-home-pinned > .dock-pin-boards {
+    height: calc(58px * var(--ui-scale));
   }
   .et-workspace-grid {
     max-height: 320px;
@@ -1302,16 +2490,9 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
       max(8px, env(safe-area-inset-left));
   }
 
-  .et-top-left,
+  .et-main-tabs,
   .et-top-right {
     gap: 4px;
-  }
-
-  .et-top-left {
-    justify-self: start;
-  }
-  .et-top-right {
-    justify-self: end;
   }
 
   .et-topbar-btn {
@@ -1327,13 +2508,16 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
   .et-main-tabs,
   .et-main-tabs.et-main-tabs {
     width: min(100%, 310px);
-    min-height: 42px;
-    padding: 3px;
+    min-height: 44px;
+    padding: 0;
   }
 
+  /* The narrow breakpoint is the touch case, so this is where the 44px floor
+     matters most - it was the one place still sitting under it at 36px, left
+     over from the pill layout these rules were written for. */
   .et-main-tab {
     flex: 1;
-    min-height: 36px;
+    min-height: 44px;
     padding: 6px 8px;
     text-align: center;
   }
@@ -1378,9 +2562,13 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
   .et-view-notes.active {
     padding: 8px;
   }
-  .et-notes-notepad-col,
+  .et-notes-notepad-col {
+    min-height: min(480px, calc(100dvh - 200px));
+  }
+
   .et-notes-clipboard-col {
-    min-height: min(440px, calc(100dvh - 124px));
+    min-height: 0;
+    max-height: min(260px, 38dvh);
   }
 }
 
@@ -1398,4 +2586,346 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-menu-btn:hover {
   .et-home-greeting {
     font-size: var(--fs-sm);
   }
+}
+
+/* Settings stays at the end of the right-hand cluster, where the convention
+   puts it, marked out by a hairline divider and a plain outline rather than by
+   an accent glow. The glow made it the brightest object in the bar - a coloured
+   halo reads as "this needs attention", which settings never does - and it also
+   ignored the corner-radius setting by sitting outside the button's own edge.
+   A 1px border on the element itself takes the shape system with it. */
+.et-top-right #topSettingsBtn {
+  /* The same box as everything else in the strip. It used to be sized apart
+     from its neighbours as well as divided from them, which is two signals for
+     one idea and left the right-hand cluster reading as two icons plus an odd
+     one out. The hairline already says "this one is different"; matching the
+     size says "and it is still part of the same set". */
+  width: calc(44px * var(--ui-scale));
+  height: calc(44px * var(--ui-scale));
+  margin-left: calc(var(--sp-3) * var(--ui-scale));
+  border: none;
+  box-shadow: none;
+  position: relative;
+}
+
+.et-top-right #topSettingsBtn::before {
+  content: "";
+  position: absolute;
+  left: calc((var(--sp-3) * var(--ui-scale) / 2) * -1 - 0.5px);
+  top: 50%;
+  width: 1px;
+  height: calc(20px * var(--ui-scale));
+  transform: translateY(-50%);
+  border-radius: 1px;
+  background: var(--border-soft);
+}
+
+.et-top-right #topSettingsBtn svg {
+  width: calc(27px * var(--ui-scale));
+  height: calc(27px * var(--ui-scale));
+}
+
+body.wallpaper-mode .et-top-right #topSettingsBtn::before {
+  background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.22);
+}
+
+.et-view-home.active > .et-home-center {
+  margin-block: auto;
+}
+
+/* Clock and greeting spacing, measured.
+
+   A text box is taller than its letters by bands that belong to the font -
+   above the digits, below them, and above the greeting's capitals - and on a
+   wide screen those bands, not the margins, made most of the gap between the
+   clock and the greeting. `fitClockSpacing` (home-widgets.js) measures them in
+   the font actually in use and hands them over, and each box is pulled in by
+   exactly that much. The numbers below are therefore the gaps on screen, for
+   every font, size and browser. (`text-box` was tried first; it could not
+   shrink a box that also carried a minimum height, and Firefox lacks it.) */
+#clockWidget .et-home-meta {
+  margin-bottom: calc(18px * var(--ui-scale));
+}
+
+#clockWidget .et-home-time {
+  margin-bottom: calc(var(--clock-ink-bottom, 0px) * -1);
+}
+
+/* Only the centred clock gives up the band above its digits. A corner clock
+   is placed against the toolbar's edge, and pulling it up by that band put
+   the digits in among the toolbar buttons. */
+body.clock-pos-center #clockWidget .et-home-time {
+  margin-top: calc(var(--clock-ink-top, 0px) * -1);
+}
+
+#clockWidget .et-home-greeting {
+  margin-top: calc(14px * var(--ui-scale) - var(--greeting-ink-top, 0px));
+}
+
+/* Home task list: one shared left edge, centred as a block. `max-content`
+   sizes the block to its longest row, so short lists stay compact in the
+   middle; `max-width` hands a long row back to the fade instead. */
+.et-home-todo-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(10px * var(--ui-scale));
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.et-home-todos-more {
+  padding: calc(4px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  border: none;
+  border-radius: var(--r-pill, 999px);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: calc(12.5px * var(--ui-scale));
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
+  cursor: pointer;
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out);
+}
+
+.et-home-todos-more:hover,
+.et-home-todos-more:focus-visible {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.et-home-todos-more:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.et-home-todos-more.is-quiet {
+  opacity: 0;
+}
+
+.et-home-todos:hover .et-home-todos-more.is-quiet,
+.et-home-todos-more.is-quiet:focus-visible {
+  opacity: 0.8;
+}
+
+@media (hover: none) {
+  .et-home-todos-more.is-quiet {
+    opacity: 0.8;
+  }
+}
+
+/* Tasks dialog ------------------------------------------------------------ */
+.et-todo-modal-hint {
+  margin: 0 0 10px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.et-todo-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: min(56vh, 420px);
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 2px 4px;
+}
+
+.et-todo-m-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 4px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  color: var(--text);
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+
+.et-todo-m-row:hover {
+  background: var(--menu-hover);
+}
+
+.et-todo-m-row:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.et-todo-m-row.is-dragging {
+  opacity: 0.45;
+}
+
+.et-todo-m-row.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent-color);
+}
+
+.et-todo-m-row.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent-color);
+}
+
+.et-todo-m-row.is-done {
+  opacity: 0;
+}
+
+.et-todo-m-grip {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  color: var(--text-faint);
+  cursor: grab;
+}
+
+.et-todo-m-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+.et-todo-m-note {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.et-todo-m-move {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.et-todo-m-move:hover:not(:disabled) {
+  background: var(--menu-hover);
+  color: var(--text);
+}
+
+.et-todo-m-move:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.et-todo-m-move:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.et-todo-m-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 2px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.et-todo-m-divider::before,
+.et-todo-m-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
+}
+
+.et-todo-m-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+/* Pinned links beside or below the centre column ------------------------
+   Placed against the Home view rather than the window, so they share its
+   scroll and never sit over the toolbar. The rise-in animation is left off
+   here: it animates `transform`, which these layouts use to centre the row. */
+body.pins-pos-left #homePinned,
+body.pins-pos-right #homePinned,
+body.pins-pos-bottom #homePinned {
+  position: absolute;
+  z-index: 5;
+  width: auto;
+  margin: 0;
+  flex-wrap: nowrap;
+  gap: calc(8px * var(--ui-scale));
+  animation: none !important;
+}
+
+body.pins-pos-left #homePinned,
+body.pins-pos-right #homePinned {
+  top: 50%;
+  flex-direction: column;
+  max-width: none;
+  max-height: calc(100% - 48px);
+  transform: translateY(-50%);
+}
+
+body.pins-pos-left #homePinned {
+  left: calc(20px * var(--ui-scale));
+}
+
+body.pins-pos-right #homePinned {
+  right: calc(20px * var(--ui-scale));
+}
+
+body.pins-pos-bottom #homePinned {
+  left: 50%;
+  bottom: calc(22px * var(--ui-scale));
+  max-width: calc(100% - 180px);
+  transform: translateX(-50%);
+}
+
+/* Weather glyph: filled and a size up from the text, with a soft shadow so a
+   white cloud still reads over a bright photo. */
+.et-weather-inline svg.et-wx {
+  width: calc(22px * var(--ui-scale));
+  height: calc(22px * var(--ui-scale));
+  overflow: visible;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.28));
+}
+
+/* Pinned boards, the last cell of the pinned links: a board glyph on the same
+   tile the links use, in the accent so it reads as an action. */
+.dock-pin-boards .dock-pin-icon {
+  color: var(--accent-on-wp, var(--accent-ink, var(--text)));
+}
+
+body.solid-mode .dock-pin-boards .dock-pin-icon {
+  color: var(--accent-ink, var(--accent-color));
+}
+
+.dock-pin-boards .dock-pin-icon > svg {
+  transition: transform var(--dur-3) var(--ease-out);
+}
+
+.dock-pin-boards:hover .dock-pin-icon > svg,
+.dock-pin-boards:focus-visible .dock-pin-icon > svg,
+.dock-pin-boards[aria-expanded="true"] .dock-pin-icon > svg {
+  transform: scale(1.18);
+}
+
+body.wallpaper-mode .dock-pin-boards:hover .dock-pin-icon,
+body.wallpaper-mode .dock-pin-boards[aria-expanded="true"] .dock-pin-icon {
+  background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.28);
+}
+
+.dock-pin-boards:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }

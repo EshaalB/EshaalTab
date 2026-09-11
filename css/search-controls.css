@@ -1,19 +1,56 @@
+/* Search bar ---------------------------------------------------------------
+   Read left to right: a quiet magnifier saying what the field is, the field
+   itself, then the two things that modify a search - which engine, and go.
+   The engine chooser used to lead, which put a menu control and a long
+   provider name where the eye expects the thing you type into, and made the
+   whole bar read as a settings row with a text box attached. */
 .et-search-pill {
   display: flex;
   align-items: center;
+  gap: var(--sp-1);
   width: 100%;
-  max-width: min(calc(680px * var(--ui-scale)), 90vw);
-  min-height: 48px;
-  height: calc(48px * var(--ui-scale));
-  padding: 0 var(--sp-2) 0 var(--sp-2);
+  max-width: min(calc(560px * var(--ui-scale)), 84vw);
+  min-height: 42px;
+  height: calc(42px * var(--ui-scale));
+  padding: 0 var(--sp-2) 0 var(--sp-3);
   border-radius: var(--r-md, 12px);
   pointer-events: all;
   position: relative;
   margin: 0 auto;
 
-  background: var(--surface-topbar);
+  /* The same frosted treatment the pinned tiles wear, so the centre column
+     reads as one material instead of a glass row under a flat bar. The fill
+     is still `--surface-search`, which is what the per-surface strength slider
+     drives - the blur sits behind that fill rather than replacing it, so
+     turning the strength down makes the bar more transparent exactly as before
+     and the frost is simply what shows through. */
+  background: var(--surface-search);
   border: 1px solid var(--border-soft);
-  transition: border-color var(--dur-2) var(--ease-out);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  transition:
+    border-color var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out);
+}
+
+/* Blur costs a compositor layer per element; performance mode drops it. */
+body.performance-mode .et-search-pill {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.et-search-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-dim);
+  pointer-events: none;
+  transition: color var(--dur-2) var(--ease-out);
+}
+
+.et-search-pill:focus-within .et-search-glyph {
+  color: var(--text);
 }
 
 body.radius-round .et-search-pill,
@@ -30,22 +67,30 @@ body.radius-sharp .et-search-submit {
   border-radius: 0 !important;
 }
 
-.et-search-pill:hover,
+.et-search-pill:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 45%, var(--border-soft));
+}
+
+/* One ring, drawn tight to the border, rather than two coloured glows bleeding
+   several pixels into the wallpaper behind it. */
 .et-search-pill:focus-within {
   border-color: var(--accent-color);
-  box-shadow:
-    0 0 14px -3px color-mix(in srgb, var(--accent-color) 25%, transparent),
-    0 0 22px -5px color-mix(in srgb, var(--accent-2, var(--accent-color)) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 18%, transparent);
 }
 
 .et-search-input {
   flex: 1;
+  /* A text input's default min-content width is roughly 20 characters, and a
+     flex item won't shrink below that unless told to. Without this, a narrow
+     window didn't shrink the input - it pushed the submit button straight
+     past the edge of the pill, and the pill past the edge of the page. */
+  min-width: 0;
   height: 100%;
   padding: 0 var(--sp-3);
   background: none;
   border: none;
   outline: none;
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
   font-weight: 500;
   font-family: inherit;
   caret-color: var(--accent-ink, var(--accent-color));
@@ -56,25 +101,34 @@ body.radius-sharp .et-search-submit {
   color: var(--text-dim);
 }
 
+/* The engine is a modifier on the search, not the subject of the bar, so it
+   sits after the field at the weight of a secondary label. */
 .et-search-engine {
+  order: 1;
   flex-shrink: 0;
-  height: calc(32px * var(--ui-scale));
-  padding: 0 var(--sp-3);
+  height: calc(30px * var(--ui-scale));
+  max-width: 40%;
+  padding: 0 var(--sp-2);
   border-radius: var(--r-sm, 8px);
   border: none;
   display: flex;
   align-items: center;
-  gap: var(--sp-1);
+  gap: 2px;
   cursor: pointer;
   background: transparent;
   color: var(--text-dim);
   font-family: inherit;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-weight: var(--fw-medium);
   white-space: nowrap;
+  overflow: hidden;
   transition:
     background var(--dur-1) var(--ease-out),
     color var(--dur-1) var(--ease-out);
+}
+
+.et-search-submit {
+  order: 2;
 }
 
 .et-search-engine:hover {
@@ -94,16 +148,34 @@ body.radius-sharp .et-search-submit {
   opacity: 1;
 }
 
+/* Anchored to the right edge, following its trigger. */
 .nsb-eng-menu {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  right: 0;
   z-index: 9999999 !important;
-  background: var(--panel, #121620) !important;
-  border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.2)) !important;
-  border-radius: var(--r-md);
+  background: var(--menu-bg) !important;
+  border: 1px solid var(--menu-border) !important;
+  border-radius: var(--menu-radius);
   padding: 6px;
-  display: flex;
+  /* `none`, not a hidden `flex`.
+
+     Closed, this menu is still a 340px box hanging below the search pill, and
+     `visibility: hidden` does not take a box out of layout - it only stops it
+     being painted. Inside the Home view, which is a scroll container, that box
+     counted toward scrollable overflow: on a laptop-height window Home became
+     scrollable by exactly the amount the *closed* menu hung past the bottom,
+     so the page slid around under a menu nobody had opened.
+
+     `@starting-style` supplies the value the fade-rise-scale starts from, so
+     the entry animation is unchanged. `display` itself is deliberately *not*
+     in the transition list: transitioning it with `allow-discrete` would hold
+     the box in layout until the exit animation finished, and this page cannot
+     promise that it will - a new tab that is not being painted does not
+     advance transitions, and the menu would be left displayed with the
+     overflow back. Closing is therefore instant, which is what a dropdown
+     does anyway, and the layout is correct without depending on a frame. */
+  display: none;
   flex-direction: column;
   gap: 3px;
   min-width: 190px;
@@ -113,10 +185,12 @@ body.radius-sharp .et-search-submit {
   opacity: 0;
   visibility: hidden;
   transform: translateY(-6px) scale(0.98);
+  /* Same recipe as .et-select-menu below - same shape of component (a
+     dropdown that fades, rises and scales in), so it should move the same. */
   transition:
-    opacity 0.15s ease-out,
-    transform 0.15s ease-out,
-    visibility 0.15s;
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out),
+    visibility var(--dur-2);
   pointer-events: none;
 }
 
@@ -130,10 +204,21 @@ body.radius-sharp .et-search-submit {
 }
 
 .nsb-eng-menu.open {
+  display: flex;
   opacity: 1;
   visibility: visible;
   transform: translateY(0) scale(1);
   pointer-events: auto;
+}
+
+/* Where the menu animates *from* on the frame it first becomes displayed.
+   Without this the browser has no earlier value to interpolate from, so an
+   element arriving from `display: none` would simply appear. */
+@starting-style {
+  .nsb-eng-menu.open {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
 }
 
 .et-search-opt {
@@ -154,13 +239,12 @@ body.radius-sharp .et-search-submit {
 }
 
 .et-search-opt:hover {
-  background: var(--surface-3, rgba(255, 255, 255, 0.12));
-  transform: translateX(2px);
+  background: var(--menu-hover);
 }
 
 .et-search-opt.active {
-  background: var(--accent-color, #6366f1);
-  color: var(--accent-contrast, #ffffff);
+  background: var(--menu-active-bg);
+  color: var(--menu-active-ink);
   font-weight: 600;
 }
 
@@ -244,12 +328,15 @@ body.radius-sharp .et-search-submit {
   right: 0;
   min-width: 100%;
   z-index: 999999 !important;
-  background: var(--surface-base, #161b22);
-  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.2));
-  border-radius: min(var(--r-sm, 8px), 12px);
+  background: var(--menu-bg);
+  border: 1px solid var(--menu-border);
+  border-radius: var(--menu-radius);
   padding: 4px;
   box-shadow: var(--e3);
-  max-height: 200px;
+  /* Deep enough to show seven rows. At 200px, minus the search field, the list
+     was four rows tall - so an eight-item menu arrived pre-scrolled and you had
+     to drag to see what was in it. */
+  max-height: min(320px, 52vh);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -268,8 +355,8 @@ body.radius-sharp .et-search-submit {
   top: 0;
   z-index: 5;
   padding: 2px 2px 4px 2px;
-  background: var(--surface-base, #161b22);
-  border-bottom: 1px solid var(--border-soft, rgba(255, 255, 255, 0.1));
+  background: var(--menu-bg);
+  border-bottom: 1px solid var(--menu-border);
   margin-bottom: 4px;
   flex-shrink: 0;
 }
@@ -278,7 +365,7 @@ body.radius-sharp .et-search-submit {
   width: 100%;
   height: 28px;
   padding: 0 8px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.15));
   background: var(--field, rgba(255, 255, 255, 0.05));
   color: var(--text, #ffffff);
@@ -291,10 +378,27 @@ body.radius-sharp .et-search-submit {
 }
 
 .et-select-options-list {
-  max-height: 160px;
+  max-height: min(272px, 44vh);
   overflow-y: auto;
   overflow-x: hidden !important;
   flex: 1;
+  /* A thin, themed bar rather than the platform's default, which arrived as a
+     wide pale slab down the side of a small dark menu. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.et-select-options-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.et-select-options-list::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--r-pill);
+}
+
+.et-select-options-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .et-custom-select.open .et-select-menu {
@@ -311,7 +415,7 @@ body.radius-sharp .et-search-submit {
 }
 
 .et-select-option {
-  padding: 8px 10px;
+  padding: 9px 11px;
   border-radius: calc(var(--r-sm, 8px) - 2px);
   color: var(--text-dim, rgba(255, 255, 255, 0.8));
   font-size: var(--fs-sm, 13px);
@@ -336,14 +440,31 @@ body.radius-sharp .et-search-submit {
 }
 
 .et-select-option:hover {
-  background: var(--surface-3, rgba(255, 255, 255, 0.15));
-  color: var(--text, #fff);
+  background: var(--menu-hover);
+  color: var(--text);
 }
 
+/* A wash plus accent ink, not a solid accent fill. The fill could be a
+   gradient once two-tone is on, which put a moving colour ramp behind one row
+   of a list; and it forced white text that had never been checked against the
+   accent underneath it. */
 .et-select-option.selected {
-  background: var(--accent-fill, var(--accent-color));
-  color: var(--accent-contrast, #fff);
+  background: var(--menu-active-bg);
+  color: var(--menu-active-ink);
   font-weight: 600;
+}
+
+/* A tick rather than more colour. The row is already tinted; the mark is what
+   says "this is the one" without turning a list into a stack of blocks. */
+.et-select-option.selected::after {
+  content: "";
+  width: 6px;
+  height: 10px;
+  margin-left: var(--sp-2);
+  flex-shrink: 0;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
 }
 
 .et-search-btn {
@@ -377,53 +498,274 @@ body.radius-sharp .et-search-submit {
   stroke-width: 2px;
 }
 
+/* An arrow, not the word "Search". The bar already says what it does twice -
+   in the leading magnifier and in the placeholder - so a third statement in a
+   filled accent slab was the loudest thing on an otherwise quiet page. The
+   arrow is the same "commit this" glyph used in every search field people
+   already use, and it only takes the accent once there is something to
+   submit. */
 .et-search-submit {
-  width: auto !important;
-  height: 32px;
+  width: 30px !important;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0 14px;
-  background: var(--accent-color, #6366f1) !important;
-  color: var(--accent-contrast, #ffffff) !important;
+  padding: 0;
+  background: var(--surface-2) !important;
+  color: var(--text-dim) !important;
   opacity: 1;
   border-radius: var(--r-sm, 8px);
-  white-space: nowrap;
-  font-size: 12px;
-  font-weight: 600;
   cursor: pointer;
   border: none;
   transition:
-    transform 0.15s var(--ease-out),
-    filter 0.15s var(--ease-out),
-    background 0.15s var(--ease-out);
+    transform var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
+}
+
+.et-search-pill:focus-within .et-search-submit {
+  background: var(--accent-fill) !important;
+  color: var(--accent-contrast, #ffffff) !important;
 }
 
 .et-search-submit:hover {
-  background: var(--accent-color, #6366f1) !important;
+  background: var(--accent-fill) !important;
   color: var(--accent-contrast, #ffffff) !important;
-  filter: brightness(1.15) !important;
   opacity: 1 !important;
 }
 
 .et-search-submit:active {
-  transform: scale(0.95) !important;
-  filter: brightness(0.92) !important;
-}
-
-.et-search-submit .search-btn-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent-contrast, #ffffff) !important;
-  white-space: nowrap;
-  opacity: 1;
-  display: inline;
+  transform: scale(0.94) !important;
 }
 
 .et-search-submit svg {
-  stroke: var(--accent-contrast, #ffffff) !important;
+  stroke: currentColor;
   width: 15px;
   height: 15px;
   flex-shrink: 0;
+}
+
+/* Engine icons -----------------------------------------------------------
+
+   The engine in the bar is its icon, not its name; the menu shows both. The
+   favicon and a lettermark share one cell, and the lettermark only shows when
+   `wireFavicons` has run out of places to find a real icon. */
+.et-search-engine {
+  gap: 4px;
+  padding: 0 6px 0 8px;
+}
+
+.et-search-engine-icon {
+  display: inline-grid;
+  place-items: center;
+}
+
+.et-eng-slot {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.et-eng-ico {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: var(--eng-size, 18px);
+  height: var(--eng-size, 18px);
+}
+
+.et-eng-ico > * {
+  grid-area: 1 / 1;
+}
+
+.et-eng-fav {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.et-eng-letter {
+  display: none;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--accent-color) 24%, transparent);
+  color: var(--text);
+  font-size: calc(var(--eng-size, 18px) * 0.58);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.et-eng-ico.is-fallback .et-eng-fav {
+  display: none;
+}
+
+.et-eng-ico.is-fallback .et-eng-letter {
+  display: grid;
+}
+
+.et-eng-ico.is-browser svg {
+  width: 100%;
+  height: 100%;
+}
+
+.et-search-opt:focus-visible {
+  outline: none;
+  background: var(--menu-hover);
+  box-shadow: inset 0 0 0 2px var(--accent-color);
+}
+
+.et-search-opt.active:focus-visible {
+  background: var(--menu-active-bg);
+}
+
+/* Weather city picker ---------------------------------------------------- */
+.et-city-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.dialog-field .et-city-wrap,
+.dialog-field .et-city-wrap .dialog-input {
+  display: block;
+  width: 100%;
+}
+
+.et-city-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: max(100%, 260px);
+  max-height: 264px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--menu-bg);
+  border: 1px solid var(--menu-border);
+  border-radius: var(--menu-radius);
+  box-shadow: var(--e3);
+  text-align: left;
+}
+
+.et-city-list[hidden] {
+  display: none;
+}
+
+.et-city-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.et-city-opt.is-active {
+  background: var(--menu-hover);
+}
+
+.et-city-name {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.et-city-meta {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.et-city-empty {
+  padding: 8px 10px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* Engine menu: sections of grids ------------------------------------------
+   As wide as the search bar it hangs from, so three columns fit. */
+.nsb-eng-menu {
+  left: 0;
+  right: 0;
+  min-width: min(100%, 340px);
+  max-height: min(440px, 62vh);
+  padding: 8px;
+  gap: 0;
+}
+
+.nsb-eng-section + .nsb-eng-section {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--menu-border);
+}
+
+.nsb-eng-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  padding: 0 8px 6px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.nsb-eng-edit {
+  padding: 2px 9px;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.nsb-eng-edit:hover {
+  background: var(--menu-hover);
+}
+
+.nsb-eng-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.nsb-eng-grid .et-search-opt {
+  min-width: 0;
+  padding: 8px 10px;
+  gap: 10px;
+}
+
+.et-search-opt-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .nsb-eng-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Inside a dialog the city list takes its own room. The dialog card scrolls
+   its overflow, so a list floating over its edge was cut off there. */
+.dialog-field .et-city-list {
+  position: static;
+  width: 100%;
+  max-height: 220px;
+  margin-top: 6px;
+  box-shadow: none;
 }

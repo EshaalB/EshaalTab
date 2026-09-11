@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap");
-
 @font-face {
   font-family: "Inter";
   src: url("../fonts/inter-latin.woff2") format("woff2");
@@ -105,7 +103,7 @@ body {
 }
 
 body.font-handwriting {
-  --font-app: "Patrick Hand", "Comic Neue", cursive, sans-serif;
+  --font-app: "Caveat", ui-rounded, cursive, sans-serif;
   --fs-xs: 13px;
   --fs-sm: 15px;
   --fs-base: 16px;
@@ -192,8 +190,7 @@ textarea::placeholder {
   --accent-gradient: linear-gradient(135deg, var(--accent-color), var(--accent-2, var(--accent-color)));
   --accent-gradient-h: linear-gradient(90deg, var(--accent-color), var(--accent-2, var(--accent-color)));
 
-  /* Flat by default. applyAccent2() overwrites this with the gradient for
-     themes that opted in. */
+ 
   --accent-fill: var(--accent-color);
 
   --board-rgb: 255, 255, 255;
@@ -218,8 +215,12 @@ textarea::placeholder {
 
   --topbar-opacity: var(--board-opacity, 0.08);
   --notes-opacity: var(--board-opacity, 0.08);
+  /* The search bar had no surface of its own and borrowed the tab strip's,
+     so the two could never be set apart - one slider moved both. */
+  --search-opacity: var(--topbar-opacity);
   --surface-topbar: rgba(var(--board-rgb), var(--topbar-opacity));
   --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
+  --surface-search: rgba(var(--board-rgb), var(--search-opacity));
 
   --widget-bg-alpha: 0.95;
   --text: rgba(255, 255, 255, 0.95);
@@ -241,11 +242,37 @@ textarea::placeholder {
   --surface-panel-2: rgba(255, 255, 255, 0.065);
   --border-tactile: 1px solid var(--border-soft);
   --border-tactile-accent: 1px solid var(--accent-color);
-
-  /* Deep slate obsidian base — premium dark tone */
-  --panel: #111318;
+ 
+  --panel-rgb: 17, 19, 24;
+  --panel-opacity: 1;
+  --panel: rgba(var(--panel-rgb), var(--panel-opacity));
+  --panel-solid: rgb(var(--panel-rgb));
   --panel-border: rgba(255, 255, 255, 0.1);
   --panel-hover: rgba(255, 255, 255, 0.06);
+
+  /* Every menu that opens over the page - board options, the search-engine
+     list, every custom select - paints from these. They were three separate
+     sets of hardcoded fallbacks before, so the same dropdown pattern arrived in
+     three different greys with three different borders and three different
+     corner radii depending on which control opened it. */
+  /* Solid, not `--panel`. Panels follow the interface-strength slider, and a
+     menu that floats over the very content it is covering has to be readable
+     whatever that slider says - otherwise the option you are choosing is
+     printed on top of the setting you are choosing it for. */
+  --menu-bg: var(--panel-solid);
+  --menu-border: var(--panel-border);
+  --menu-radius: var(--r-md);
+  --menu-hover: var(--panel-hover);
+
+  /* The moving part of a switch or slider: it has to read against the track,
+     which is itself drawn from the panel, so it flips with the theme. */
+  --knob: #ffffff;
+
+  /* Code and other fixed-width text. Was referenced with a bare `monospace`
+     fallback in three places and defined in none of them. */
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --menu-active-bg: color-mix(in srgb, var(--accent-color) 18%, transparent);
+  --menu-active-ink: var(--accent-ink, var(--accent-color));
 
   --glass-fill: rgba(14, 16, 22, 0.65);
   --glass-border: rgba(255, 255, 255, 0.12);
@@ -255,6 +282,9 @@ textarea::placeholder {
   --page-bg: #090a0f;
 
   --paper: rgba(255, 255, 255, 0.035);
+  /* The amber wash behind an active/starred control. Same warning role as
+     --warning, mixed dark so it can sit under amber text without competing. */
+  --warning-wash: rgba(120, 78, 0, 0.52);
   --danger: #ef4444;
   --danger-text: #f87171;
   --danger-fill: rgba(239, 68, 68, 0.12);
@@ -270,16 +300,29 @@ textarea::placeholder {
   --fs-lg: calc(20px * var(--ui-scale));
   --fs-2xl: calc(24px * var(--ui-scale));
   --fs-xl: calc(28px * var(--ui-scale));
-  --fs-display: clamp(44px, 5.4vw, calc(76px * var(--ui-scale)));
+  /* Bigger, and carried at a lighter weight further down. A large light clock
+     reads as calm; the same size in semibold reads as dense, which is what
+     made the page feel busier than it is.
+
+     Grown again now that everything around it went up: the clock has to stay
+     unmistakably the largest thing on the page, and holding it at 104px while
+     the navigation, the date row and the shortcuts all gained size quietly
+     narrowed the gap that makes the hierarchy readable. The vw term does the
+     real work on a laptop - 7.4vw is 107px on a 1440-wide window - and the
+     ceiling only bites on very wide monitors, where `--ui-scale` is already
+     lifting everything else too. */
+  --fs-display: clamp(64px, 7.4vw, calc(124px * var(--ui-scale)));
 
   --fw-body: 400;
   --fw-medium: 500;
   --fw-semi: 600;
   --fw-bold: 700;
 
+  --r-xs: 6px;
   --r-sm: 8px;
   --r-md: 14px;
   --r-lg: 20px;
+  --r-xl: 20px;
   --r-pill: 999px;
 
   --sp-1: 4px;
@@ -296,10 +339,16 @@ textarea::placeholder {
   --lh-body: 1.6;
   --lh-ui: 1.1;
 
-  --dur-1: 100ms;
-  --dur-2: 200ms;
-  --dur-3: 300ms;
-  --dur-4: 400ms;
+  /* Tightened across the board. The old scale topped out at 400ms, which is
+     long enough that a panel opening or a view changing read as something you
+     wait for rather than something that just happened. These lengths still
+     show the motion - a change you cannot see at all is disorienting - but
+     land close enough to the click that the interface feels immediate.
+     `--dur-3` in particular drives the board open/close slide. */
+  --dur-1: 70ms;
+  --dur-2: 120ms;
+  --dur-3: 180ms;
+  --dur-4: 240ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -373,6 +422,7 @@ body.theme-light {
   --surface-3: rgba(0, 0, 0, 0.1);
   --surface-topbar: rgba(var(--board-rgb), var(--topbar-opacity));
   --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
+  --surface-search: rgba(var(--board-rgb), var(--search-opacity));
   --surface-base: #f4f6f8;
   --surface-card: rgba(var(--board-rgb), var(--board-opacity, 0.08));
   --surface-chip: rgba(0, 0, 0, 0.05);
@@ -388,15 +438,29 @@ body.theme-light {
   --border-strong: rgba(0, 0, 0, 0.2);
   --track: rgba(0, 0, 0, 0.2);
 
-  --panel: #ffffff;
+  --panel-rgb: 255, 255, 255;
+  --panel-opacity: 1;
+  --panel: rgba(var(--panel-rgb), var(--panel-opacity));
+  --panel-solid: rgb(var(--panel-rgb));
   --panel-border: rgba(0, 0, 0, 0.12);
   --panel-hover: rgba(0, 0, 0, 0.04);
+  /* Re-declared, not inherited. `:root` defines these as aliases of the panel
+     tokens, and an alias is resolved where it is declared - so the root copy
+     had already become the dark panel colour before this block changed the
+     panel, and every dropdown on a light page opened black. */
+  --menu-bg: var(--panel-solid);
+  --menu-border: var(--panel-border);
+  --menu-hover: var(--panel-hover);
+  --knob: #ffffff;
 
   --glass-fill: rgba(255, 255, 255, 0.62);
   --glass-border: rgba(255, 255, 255, 0.75);
   --scrim: rgba(0, 0, 0, 0.35);
 
-  --page-bg: #f4f6f8;
+  /* No `--page-bg` here. The theme code sets it on :root for whichever mode and
+     background is live, and a declaration on `body` would sit closer to the
+     page than that one and quietly win - which is how a chosen base colour
+     came back as stock grey the moment you switched to light. */
   --paper: #fffdf6;
   --danger-text: #b91c1c;
   --danger-fill: rgba(239, 68, 68, 0.08);

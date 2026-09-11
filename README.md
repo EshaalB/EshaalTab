@@ -14,18 +14,22 @@ telemetry.
 There is no account, no backend of ours, and no analytics. We receive no data
 about you.
 
-**Out of the box, the new tab page makes zero network requests.** Fonts are
-bundled with the extension rather than pulled from Google Fonts, so opening a tab
-does not tell anyone, us included, that you opened it.
+**Nothing is ever sent to us.** Fonts are bundled with the extension rather than
+pulled from Google Fonts. The one thing a fresh new tab fetches is the icons for
+your pinned links: Chrome serves those from its own local icon cache, while
+Firefox, which has no such cache, asks DuckDuckGo or Google. Turn off remote
+favicons (below) and a new tab makes no network requests at all.
 
-Optional network features are off by default:
+Network features:
 
-- **Weather** - sends the city you type, and the coordinates returned for it, to
-  [Open-Meteo](https://open-meteo.com/). EshaalTab adds no account or advertising
-  identifier; Open-Meteo receives normal connection information for the request.
-- **Remote favicons** — fetches icons from Google/DuckDuckGo, which reveals your
-  bookmarked domains to them. Left off, icons come from your browser's own local
-  cache via the `favicon` permission.
+- **Weather** (off until you set a city) - sends the city you type, and the
+  coordinates returned for it, to [Open-Meteo](https://open-meteo.com/).
+  EshaalTab adds no account or advertising identifier; Open-Meteo receives normal
+  connection information for the request.
+- **Remote favicons** (on by default) — fetches link and search-engine icons from
+  Google/DuckDuckGo, which reveals those domains to them. Turn off "Load icons
+  from the web" under Settings → Privacy and icons come from your browser's own
+  local cache via the `favicon` permission instead.
 - **A wallpaper set from a URL** - contacts the address you provide and stores
   the image locally when possible. The host can see the request. Remote videos
   and images that cannot be stored may be requested again on later new tabs.
@@ -45,19 +49,23 @@ Full detail: **[PRIVACY.md](PRIVACY.md)**
 **Boards** — Organise links into drag-and-drop boards with custom colours and
 layouts. Right-click any link to pin it to Home.
 
-**Home as a launcher** — Up to 5 pinned links, one click each. No folders, no
-hover menus. Fresh installs start with a Quick Links board containing YouTube
-and Gmail.
+**Home as a launcher** — Up to 5 pinned links, one click each, under the search
+bar or down either side. Pin whole boards too: they open
+from a board button at the end of your pinned links. Fresh installs start with an AI Tools board -
+ChatGPT, Claude, Gemini, Perplexity, Grok, DeepSeek and more.
 
 **Command palette (`Ctrl+K`)** — Search open tabs, bookmarks and history in one
-list, or type `/` for commands: `/focus`, `/mode`, `/new`, `/notes`, `/stash`,
-`/wall`, `/import`, `/widgets`, `/settings`.
+list. Type `@` to search your boards, or `/` for commands: `/focus`, `/mode`,
+`/new`, `/notes`, `/stash`, `/snapshot`, `/tasks`, `/pinned`, `/engines`, `/wall`, `/import`,
+`/widgets`, `/settings`.
 
 **One-click save** — Toolbar button, `Alt+Shift+S`, or right-click → "Save to
 EshaalTab". Lands in your Inbox board.
 
-**Multi-engine search** — Google, DuckDuckGo, YouTube, Perplexity, Brave
-Research, plus ChatGPT, Claude and Gemini.
+**Multi-engine search** — your browser's own engine by default, or one search
+at a time in Google, DuckDuckGo, Yandex, Yahoo, ChatGPT, Claude, Gemini,
+Perplexity, Brave Research, YouTube, Reddit, Pinterest or
+Quora. Pick which ones the menu offers under Settings → Search engines.
 
 **Pomodoro timer** — Dark flip-clock focus timer with presets, an iPhone-style
 duration wheel, hour/minute or minute/second entry, and session tracking.
@@ -105,7 +113,7 @@ Each one is requested for a single, specific feature:
 | `history` (optional) | Searching history from the command palette. Matched locally. |
 | `favicon` | Site icons from the browser's local cache, avoiding third-party requests. |
 | `contextMenus` | The "Save to EshaalTab" right-click item. |
-| `search` | Sending Default searches through Chrome's configured search provider. |
+| `search` | Sending searches to the provider you have already chosen in your browser, rather than picking one for you. |
 
 ---
 

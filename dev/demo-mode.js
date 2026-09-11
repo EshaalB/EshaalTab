@@ -110,16 +110,6 @@ window.EshaalTabDemo = (function () {
     '- Keyboard shortcut for "open all links"'
   ].join('\n');
 
-  function demoTodos() {
-    return [
-      { id: uid(), text: 'Review pull requests', done: false, pinned: true },
-      { id: uid(), text: 'Draft the release notes', done: false },
-      { id: uid(), text: 'Reply to design feedback 14:30', done: false },
-      { id: uid(), text: 'Update the changelog', done: true },
-      { id: uid(), text: 'Back up bookmarks', done: true }
-    ];
-  }
-
   function demoSettings(base) {
     /* Balanced, neutral, and deliberately NOT a pastel preset: screenshots want
        a theme where the accent reads clearly at thumbnail size. */
@@ -134,13 +124,13 @@ window.EshaalTabDemo = (function () {
       accentOverride: undefined,
       displayName: '',
       weatherCity: '',
-      widgets: { clock: true, navSearch: true, weather: false, todo: true, workspace: true },
+      widgets: { clock: true, navSearch: true, weather: false, workspace: true },
       hidePinnedOnHome: false,
       activeTab: 'home',
-      searchEngine: 'default',
+      searchEngine: 'google',
       remoteFavicons: false,
-      cornerRadius: 'default',
-      fontFamily: 'default'
+      cornerRadius: '16px',
+      fontFamily: 'inter'
     });
   }
 
@@ -183,7 +173,6 @@ window.EshaalTabDemo = (function () {
     BoardRenderer.renderBoards();
     HomeRenderer.renderPinned();
     if (typeof HomeRenderer.render === 'function') HomeRenderer.render();
-    TodoWidget.render();
     ViewController.show('home');
   }
 
@@ -201,7 +190,6 @@ window.EshaalTabDemo = (function () {
 
     data.boards = demoBoards();
     data.notes = DEMO_NOTES;
-    data.todos = demoTodos();
     data.tags = ['mail', 'planning', 'files', 'media', 'travel', 'code', 'docs', 'design', 'type', 'colour', 'photos', 'news', 'reference', 'papers', 'books', 'read-later'];
     data.pinsMigrated = true;
 

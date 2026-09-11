@@ -30,10 +30,28 @@ colors:
     canonical: "#f59e0b"
   scrollbar-thumb:
     canonical: "rgba(150,150,150,0.3)"
+  palette-light-ink:
+    canonical: "#0f172a"
+  palette-light-ink-dim:
+    canonical: "#64748b"
+  palette-light-ink-meta:
+    canonical: "#475569"
+  palette-light-line:
+    canonical: "#cbd5e1"
+  palette-light-hover:
+    canonical: "#f1f5f9"
+  flip-leaf-top:
+    canonical: "#151618"
+  flip-seam:
+    canonical: "#292a2d"
+  flip-seam-inset:
+    canonical: "#25262a"
+  panel-solid:
+    canonical: "#121620"
 typography:
   display:
     fontFamily: "Orbitron, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    fontSize: "clamp(44px, 5.4vw, 76px)"
+    fontSize: "clamp(56px, 6.4vw, 104px)"
     fontWeight: 700
     lineHeight: 1.2
   body:
@@ -50,6 +68,11 @@ typography:
     fontFamily: "Caveat, cursive"
     fontSize: "20px"
     fontWeight: 700
+    lineHeight: 1.1
+  mono:
+    fontFamily: "ui-monospace, 'JetBrains Mono', Consolas, monospace"
+    fontSize: "12px"
+    fontWeight: 400
     lineHeight: 1.1
 rounded:
   sm: "8px"
@@ -72,12 +95,12 @@ components:
     padding: "10px 16px"
   search-pill:
     backgroundColor: "var(--surface-2)"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.md}"
     padding: "0 8px"
-    height: "44px"
+    height: "40px"
   board-card:
     backgroundColor: "var(--surface-card)"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.lg}"
 ---
 
 # Design System: EshaalTab
@@ -88,7 +111,7 @@ components:
 
 EshaalTab's chassis is deliberately neutral so the user's own choices are what
 gives each installation its character. The structure — glass panels, layered
-elevation, one accent color, a pill-shaped search bar — stays constant across
+elevation, one accent color, a softly-cornered search bar — stays constant across
 every install; what changes per user is the wallpaper, the accent color, and
 the clock typeface. The system's job is to stay legible and out of the way no
 matter what the user paints onto it, the way an instrument panel's layout
@@ -130,10 +153,24 @@ The palette is intentionally near-monochrome at rest: one neutral surface family
 ### Utility
 - **Scrollbar Thumb** (`rgba(150,150,150,0.3)`, `0.5` on hover): theme-neutral gray, deliberately outside the accent/text token families since a scrollbar must stay visible and unobtrusive regardless of the active theme or accent color.
 
+### Command Palette — light theme (scoped exception)
+The Ctrl+K palette is the one surface that does **not** use the global light-theme neutrals. It carries its own cool-slate set, because the palette floats above an arbitrary page as a modal sheet and needs a colder, higher-contrast ink than the alpha-on-white neutrals give it at small sizes over a white card.
+- **Palette Ink** (`#0f172a`): result titles.
+- **Palette Ink Meta** (`#475569`), **Palette Ink Dim** (`#64748b`): hints, secondary lines, subtitles.
+- **Palette Line** (`#cbd5e1`), **Palette Hover** (`#f1f5f9`): the escape-hint border and the hovered/keyboard-active row.
+
+This set is scoped to `body.theme-light` inside the palette only. It is a documented exception, not licence for a second neutral family anywhere else.
+
+### Focus Timer — local world (scoped exception)
+The Pomodoro overlay is a full-screen blackout that deliberately ignores the active theme and accent: it redeclares `--text`, `--accent-color` and its own flip-clock surfaces locally, so a focus session looks identical on every install and nothing the user has themed can reduce the contrast of a countdown. It is the one surface allowed its own palette.
+- **Void Black** (`#000000`): the overlay ground.
+- **Flip Face** (`var(--flip-face)`) with **Flip Leaf Top** (`#151618`) and **Flip Seam** (`#292a2d`, hairline `#25262a`): the split-flap card. The three sit a few points apart on purpose — that separation is what reads as a physical fold rather than a flat rectangle.
+- **Flip Ink** (`var(--flip-ink)`): the digits.
+
 ### Status
 - **Danger** (`#ef4444` / text `#f87171` on dark): destructive actions, delete confirmations.
 - **Success** (`#22c55e` / text `#4ade80`): save confirmations, completed states.
-- **Warning** (`#f59e0b` / text `#fbbf24`): non-blocking cautions (e.g. duplicate-save notices).
+- **Warning** (`#f59e0b` / text `#fbbf24` / wash `--warning-wash`): non-blocking cautions (e.g. duplicate-save notices) and the amber fill behind an active starred control.
 
 ### Named Rules
 **The One Signal Rule.** The accent color appears on focus states, hover borders, primary actions, and active toggles — never as a page background, a card fill, or body text. If a screen has more than one or two accent-colored elements visible at once, something has drifted from the system.
@@ -143,6 +180,7 @@ The palette is intentionally near-monochrome at rest: one neutral surface family
 **Body Font:** Inter (with `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif` fallback)
 **Display/Clock Font:** Orbitron (700/800) by default, user-selectable among a small set of clock-only font stacks — this is the one typographic choice exposed to the user, and it stays scoped to the clock.
 **Accent/Handwritten Font:** Caveat (700) — reserved for decorative, non-critical text only (e.g. greeting flourishes), never body copy.
+**Mono Font:** `ui-monospace, "JetBrains Mono", Consolas, monospace` — used only where characters must line up or read as literal input: keyboard-shortcut chips in the Ctrl+K palette (`.sr-kbd`), and JetBrains Mono as one of the selectable clock faces. Never for prose.
 
 **Character:** Inter carries all functional UI text — dense, neutral, highly legible at small sizes. Orbitron exists only for the clock, where its geometric, slightly technical character reinforces the "instrument panel" idea without leaking into the rest of the interface.
 
@@ -153,6 +191,8 @@ The palette is intentionally near-monochrome at rest: one neutral surface family
 - **Body** (400, 15px `--fs-base`): Default UI text, search input.
 - **Small** (400–500, 14px `--fs-sm`): Secondary body text, buttons.
 - **Label** (500, 12px `--fs-xs`): Meta text, timestamps, field labels — the floor of the new-tab page's scale.
+- **Mono** (400, 12px): Keyboard-shortcut chips only. Tabular by nature; never used for running text.
+- **Countdown** (`clamp(48px, 25vw, 340px)`, and `clamp(42px, 19vw, 250px)` in the hour:minute mode): the focus timer's flip clock only. It is sized against the viewport rather than the type ramp because it has to be readable across a room, and it is the sole reason the ramp has a step above Display.
 - **Micro** (400–600, 10–11px): Secondary hint text inside compact popovers and the toolbar popup only (e.g. the "hover to star" hint, todo time-tags, clipboard snippet titles, the toolbar popup's whole type scale). Never used for primary content or on the main new-tab page — this is a deliberately smaller register for the popup's fixed 320px shell and dense inline hints elsewhere.
 
 ### Named Rules
@@ -188,7 +228,9 @@ reserved for surfaces that genuinely float over the wallpaper/page background.
 
 ## Shapes
 
-Three-step radius scale, no sharp corners anywhere: `--r-sm` (8px, inputs, buttons, small chips), `--r-md` (14px, board cards, larger panels), `--r-lg` (20px, modals/large surfaces), `--r-pill` (999px, the search bar, pomodoro presets, tag chips). Borders are hairline (`--hair`, 1px) and low-contrast at rest (`--border-soft`), strengthening only on hover/focus/accent states (`--border-strong`, or the accent color itself).
+Three-step radius scale, no sharp corners anywhere: `--r-sm` (8px, inputs, buttons, small chips), `--r-md` (14px, the search bar and larger panels), `--r-lg` (20px, board cards, modals and large surfaces), `--r-pill` (999px, pomodoro presets and tag chips). Borders are hairline (`--hair`, 1px) and low-contrast at rest (`--border-soft`), strengthening only on hover/focus/accent states (`--border-strong`, or the accent color itself).
+
+The focus timer is the other documented exception: its flip cards use a viewport-relative corner (`1.2vw`) so the split-flap keeps its proportions at any size, and its internal seams and chips use sub-`--r-sm` radii (2px, 7px) that exist nowhere else. Both are scoped to the overlay.
 
 The toolbar popup (`popup.html`) is its own fixed-size shell, not a new-tab surface, and carries one documented exception: its outer window corner is 12px, between `--r-sm` and `--r-md`, sized specifically for the browser's fixed 320px action-popup frame rather than any in-page component. Elements inside the popup otherwise follow the same `--r-sm`/`calc(radius - 2px)` pattern as the rest of the system.
 
@@ -201,11 +243,11 @@ The toolbar popup (`popup.html`) is its own fixed-size shell, not a new-tab surf
 - **Secondary/Ghost:** Transparent background, soft border, dim text; border and text both promote to full-strength on hover.
 
 ### Search Pill
-- **Style:** Pill radius, glass background (`--surface-2` + `--glass-lg` blur/saturate), hairline soft border.
+- **Style:** `--r-md` (14px) corners at a 40px height, glass background (`--surface-2` + `--glass-lg` blur/saturate), hairline soft border. It sits below the clock and greeting, so it is deliberately narrower and shorter than the full-width bar it replaced — the eye should reach the clock first.
 - **State:** Border promotes to the accent color on hover or focus-within — the search bar is the one element expected to draw the eye first on a new tab, so it's the primary place the user's accent color does structural work.
 
 ### Board Cards
-- **Corner Style:** `--r-md` (14px).
+- **Corner Style:** `--r-lg` (20px).
 - **Background:** `--surface-card`, a low-opacity tint of the board's own color (`--board-rgb`/`--board-opacity`), so each board can read as a distinct "place" without needing a second brand color.
 - **Shadow Strategy:** `e1` at rest, promotes on hover — see Elevation.
 - **Border:** Soft at rest, defined by the board's own tint rather than the global accent.
