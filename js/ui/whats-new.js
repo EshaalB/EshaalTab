@@ -21,6 +21,9 @@
   // Newest first. Keep it to the handful of lines a user actually cares about;
   // versions with no entry here update silently.
   const CHANGELOG = {
+    "2.0.158": [
+      "Fixed: dragging a board sideways onto a tall board no longer drops it underneath. It goes above, unless you let go near the bottom edge.",
+    ],
     "2.0.157": [
       "The timer button no longer shows a count for your first session.",
       "Pinned icons are easier to recognise on pastel themes, and the pinned boards icon is bolder.",

@@ -406,7 +406,7 @@ const DragDropEngine = (() => {
     // and then at most once per frame, which keeps it correct while the page
     // auto-scrolls.
     let hoverBoard = null;
-    let hoverMid = 0;
+    let hoverEdge = 0;
     let hoverAfter = null;
     let hoverCol = null;
     let hoverTile = null;
@@ -422,7 +422,11 @@ const DragDropEngine = (() => {
     function measureHover() {
       if (!hoverBoard || !hoverBoard.isConnected) return;
       const rect = hoverBoard.getBoundingClientRect();
-      hoverMid = rect.top + rect.height / 2;
+      // "Below this board" is the bottom strip of the card, not its lower
+      // half. Dragged sideways, the pointer almost always crosses the lower
+      // half of a tall board, and splitting at the middle put the dropped
+      // board underneath it - moved left, and a long way down.
+      hoverEdge = rect.bottom - Math.min(60, rect.height * 0.35);
     }
 
     container.addEventListener("dragstart", (e) => {
@@ -546,7 +550,7 @@ const DragDropEngine = (() => {
         });
       }
 
-      const after = e.clientY >= hoverMid;
+      const after = e.clientY >= hoverEdge;
       if (after === hoverAfter) return;
       hoverAfter = after;
       board.classList.toggle("drop-before", !after);

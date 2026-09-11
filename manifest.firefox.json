@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EshaalTab - New Tab & Bookmark Boards",
-  "version": "2.0.157",
+  "version": "2.0.158",
   "description": "A personal new tab: bookmark boards, quick notes, a focus timer, and your own wallpaper.",
   "icons": {
     "16": "icons/icon16.png",
