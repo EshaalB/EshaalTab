@@ -1,18 +1,5 @@
 "use strict";
 
-/**
- * Saved windows of tabs.
- *
- * This grew out of the toolbar popup's "stash all tabs" button, which could
- * only dump a window and reopen it into whatever window happened to be
- * focused. Sessions keep the same one-click capture but add the parts that
- * make it a replacement for a dedicated session manager: names, reopening
- * into a fresh window, and per-tab control so one dead link doesn't force you
- * to restore all forty.
- *
- * Everything lives in `data.sessions`, so sessions are included in backups -
- * the old top-level `tabStashes` key never was.
- */
 const SessionManager = (() => {
   const list = () => {
     const d = StorageManager.getData();
@@ -26,7 +13,6 @@ const SessionManager = (() => {
     return list().find((s) => s.id === id) || null;
   }
 
-  /** Newest first, which is the order the UI always wants. */
   function getAll() {
     return [...list()].sort((a, b) => b.ts - a.ts);
   }
@@ -35,11 +21,6 @@ const SessionManager = (() => {
     return list().reduce((n, s) => n + (s.tabs?.length || 0), 0);
   }
 
-  /**
-   * Captures the current window.
-   * @param {{name?:string, closeAfter?:boolean}} opts
-   * @returns {Promise<{session:Object, closed:number}|null>}
-   */
   async function saveCurrentWindow({ name = "", closeAfter = true } = {}) {
     if (!(HAS_EXT && EXT.tabs)) {
       ToastSystem.error("Saving sessions needs the installed extension.");
@@ -56,8 +37,6 @@ const SessionManager = (() => {
       return null;
     }
 
-    // The new tab page itself is not worth saving, and closing it would shut
-    // the page the user is looking at.
     const saveable = tabs.filter((t) => t.url !== location.href);
     if (!saveable.length) {
       ToastSystem.info("No open web pages to save.");
@@ -91,12 +70,6 @@ const SessionManager = (() => {
     return { session, closed };
   }
 
-  /**
-   * Reopens a session.
-   * @param {string} id
-   * @param {{newWindow?:boolean}} opts Opening into a new window keeps the
-   *   restored set separate from whatever the user is already doing.
-   */
   async function restore(id, { newWindow = false } = {}) {
     const s = find(id);
     if (!s) return false;
@@ -114,7 +87,6 @@ const SessionManager = (() => {
         await EXT.windows.create({ url: urls });
         return true;
       } catch {
-        // Falls through to per-tab opening below.
       }
     }
 
@@ -154,7 +126,6 @@ const SessionManager = (() => {
     return true;
   }
 
-  /** Drops one tab, deleting the whole session once the last one goes. */
   function removeTab(id, url) {
     const s = find(id);
     if (!s) return false;
@@ -164,7 +135,6 @@ const SessionManager = (() => {
     return true;
   }
 
-  /** Saves every link in a session into a board, for anything worth keeping. */
   function toBoard(id) {
     const s = find(id);
     if (!s) return null;
@@ -219,14 +189,6 @@ const SessionManager = (() => {
   };
 })();
 
-/**
- * The reading queue.
- *
- * Sessions save a whole window; this saves one page. It exists because the
- * tabs people will not close are almost never a window's worth of work - they
- * are the four articles they mean to get to. Those need somewhere to go that
- * is not a bookmark folder they will never reopen.
- */
 const ReadLaterManager = (() => {
   const isWeb = (u) => typeof u === "string" && /^https?:\/\//i.test(u);
 
@@ -236,7 +198,6 @@ const ReadLaterManager = (() => {
     return d.readLater;
   };
 
-  /** Newest first, with anything already read sinking below the unread. */
   function getAll() {
     return [...list()].sort((a, b) => {
       if (a.read !== b.read) return a.read ? 1 : -1;
@@ -246,7 +207,6 @@ const ReadLaterManager = (() => {
 
   const unreadCount = () => list().filter((i) => !i.read).length;
 
-  /** Accepts what someone actually pastes: "example.com" as well as a URL. */
   function normalizeUrl(raw) {
     const t = String(raw || "").trim();
     if (!t) return "";
@@ -259,11 +219,6 @@ const ReadLaterManager = (() => {
     }
   }
 
-  /**
-   * Saves a page. Re-saving something already queued moves it back to the top
-   * and marks it unread again, rather than adding a duplicate.
-   * @returns {Object|null} The entry, or null when the URL is unusable.
-   */
   function add(url, title = "") {
     const clean = normalizeUrl(url);
     if (!isWeb(clean)) return null;
@@ -309,7 +264,6 @@ const ReadLaterManager = (() => {
     return true;
   }
 
-  /** Clears the read pile, which is the only bulk delete worth offering. */
   function clearRead() {
     const d = StorageManager.getData();
     const before = list().length;
@@ -319,10 +273,6 @@ const ReadLaterManager = (() => {
     return removed;
   }
 
-  /**
-   * Opens an item and marks it read. Opening *is* the act of reading it, so
-   * making that a second, separate click would just be bookkeeping.
-   */
   async function open(id) {
     const item = list().find((i) => i.id === id);
     if (!item) return;
@@ -336,7 +286,6 @@ const ReadLaterManager = (() => {
     window.open(safeHref(item.url), "_blank");
   }
 
-  /** Moves every unread page into a board, for a queue worth keeping. */
   function toBoard() {
     const unread = list().filter((i) => !i.read);
     if (!unread.length) return null;
@@ -372,15 +321,6 @@ const ReadLaterManager = (() => {
   };
 })();
 
-/**
- * Workspace snapshots.
- *
- * A session is a window you are clearing away: saving it closes the tabs. A
- * workspace is a moment of work you mean to come back to - "BSCS Assignment",
- * "EshaalTab v3" - so taking one leaves every tab open, it has a name from the
- * start, it can be tied to a board, and it can be refreshed in place when the
- * work moves on instead of piling up near-duplicates.
- */
 const WorkspaceManager = (() => {
   const list = () => {
     const d = StorageManager.getData();
@@ -399,14 +339,6 @@ const WorkspaceManager = (() => {
     return list().find((w) => w.id === id) || null;
   }
 
-  /**
-   * Titles and URLs of other tabs need the optional `tabs` permission.
-   *
-   * `request` is called directly, with no `await` in front of it: Firefox only
-   * honours a permission request made synchronously inside the user's click,
-   * and an earlier `contains()` check would have spent that. For a permission
-   * that is already granted, `request` resolves true without prompting.
-   */
   async function ensureTabsAccess() {
     if (!(HAS_EXT && EXT.tabs)) {
       ToastSystem.error("Workspace snapshots need the installed extension.");
@@ -433,7 +365,6 @@ const WorkspaceManager = (() => {
       .map((t) => ({ title: String(t.title || t.url).slice(0, 300), url: t.url }));
   }
 
-  /** @param {{name?:string}} opts */
   async function snapshot({ name = "" } = {}) {
     if (!(await ensureTabsAccess())) return null;
     const tabs = await captureWindow();
@@ -461,7 +392,6 @@ const WorkspaceManager = (() => {
     return ws;
   }
 
-  /** Replaces a workspace's tabs with what is open now. */
   async function recapture(id) {
     const ws = find(id);
     if (!ws) return null;
@@ -477,7 +407,6 @@ const WorkspaceManager = (() => {
     return ws;
   }
 
-  /** Opening tabs needs no permission, so restoring works either way. */
   async function restore(id, { newWindow = true } = {}) {
     const ws = find(id);
     if (!ws) return false;
@@ -492,7 +421,6 @@ const WorkspaceManager = (() => {
         await EXT.windows.create({ url: urls, focused: true });
         return true;
       } catch {
-        // Falls through to opening the tabs here.
       }
     }
     for (const url of urls) {
@@ -503,7 +431,6 @@ const WorkspaceManager = (() => {
     return true;
   }
 
-  /** A new board holding these tabs as links. */
   function makeBoard(name, tabs) {
     const board = BoardManager.addBoard(String(name || "Saved tabs").slice(0, 60));
     tabs.forEach((t) => BookmarkManager.add(board.id, t.title, t.url, ["workspace"]));
@@ -511,7 +438,6 @@ const WorkspaceManager = (() => {
     return board;
   }
 
-  /** Saves the tabs open now straight to a new board, without a snapshot. */
   async function saveAsBoard(name = "") {
     if (!(await ensureTabsAccess())) return null;
     const tabs = await captureWindow();
@@ -560,7 +486,6 @@ const WorkspaceManager = (() => {
       ? new Intl.RelativeTimeFormat(undefined, { numeric: "auto" })
       : null;
 
-  /** "2 hours ago", in the browser's own language where it can. */
   function ago(ts) {
     const diff = (ts - Date.now()) / 1000;
     if (Math.abs(diff) < 60) return "just now";
@@ -613,17 +538,11 @@ const WorkspaceManager = (() => {
   };
 })();
 
-/**
- * The Sessions popover, anchored to its topbar button the same way as the
- * task and app-launcher popovers.
- */
 const SessionsRenderer = (() => {
   let bound = false;
-  // Which sessions are showing their tab list. Kept in memory rather than in
-  // storage: it is view state, not something worth persisting or syncing.
+
   const expanded = new Set();
 
-  /** @param {string} [paneName] Open straight onto a pane. */
   function open(paneName) {
     const pop = $("sessionsPopover");
     const btn = $("sessionsBtn");
@@ -695,8 +614,6 @@ const SessionsRenderer = (() => {
       </div>`;
   }
 
-  // Which pane of the popover is showing. View state, so it lives in memory
-  // like `expanded` above rather than in storage.
   let pane = "sessions";
 
   const PANES = { sessions: "sessionsPane", readLater: "readLaterPane", workspaces: "workspacesPane" };
@@ -707,7 +624,7 @@ const SessionsRenderer = (() => {
       const on = t.dataset.pane === pane;
       t.classList.toggle("is-active", on);
       t.setAttribute("aria-selected", String(on));
-      // Roving tabindex: the tab strip is one stop, arrows move within it.
+
       t.tabIndex = on ? 0 : -1;
     });
     Object.entries(PANES).forEach(([key, id]) => {
@@ -717,7 +634,6 @@ const SessionsRenderer = (() => {
     render();
   }
 
-  // ------------------------------------------------------------- workspaces
   const openWorkspaces = new Set();
 
   const WS_ICONS = {
@@ -813,7 +729,6 @@ const SessionsRenderer = (() => {
       }
     });
 
-    // The secondary route: the same tabs, kept as a board of links instead.
     $("workspaceToBoard")?.addEventListener("click", async (e) => {
       const btn = e.currentTarget;
       const nameEl = $("workspaceName");
@@ -937,8 +852,6 @@ const SessionsRenderer = (() => {
       if (nameEl) renameWorkspace(nameEl.closest(".et-ws")?.dataset.wsId);
     });
 
-    // Keyboard equivalents for the pointer-only parts: a tab row opens with
-    // Enter or Space, and F2 renames - the double-click has no key of its own.
     listEl?.addEventListener("keydown", (e) => {
       const tabRow = e.target.closest?.(".et-session-tab");
       if (tabRow && (e.key === "Enter" || e.key === " ")) {
@@ -954,7 +867,6 @@ const SessionsRenderer = (() => {
       }
     });
   }
-
 
   function readLaterHtml(item) {
     const when = new Date(item.addedAt).toLocaleDateString(undefined, {
@@ -1028,7 +940,6 @@ const SessionsRenderer = (() => {
       ToastSystem.success(`Saved to board ${board.name}`);
     });
 
-    // Delegated, so re-rendering the list never strands a listener.
     $("readLaterList")?.addEventListener("click", (e) => {
       const row = e.target.closest(".et-readlater-item");
       if (!row) return;
@@ -1084,8 +995,6 @@ const SessionsRenderer = (() => {
     );
     wireFavicons(listEl);
 
-    // Both panes repaint together: the Read later badge has to stay truthful
-    // while the Sessions pane is the one on screen.
     renderReadLater();
     renderWorkspaces();
   }
@@ -1098,8 +1007,6 @@ const SessionsRenderer = (() => {
 
     btn.addEventListener("click", () => toggle());
 
-    // One delegated handler for the whole list, so re-rendering never leaves
-    // stale listeners behind.
     $("sessionsPopList")?.addEventListener("click", async (e) => {
       const row = e.target.closest(".et-session");
       if (!row) return;
@@ -1127,7 +1034,6 @@ const SessionsRenderer = (() => {
         return;
       }
 
-      // Clicking a tab row (but not its delete button) opens that one tab.
       const tabRow = e.target.closest(".et-session-tab");
       if (tabRow && !act) {
         SessionManager.openTab(tabRow.dataset.url);
@@ -1149,8 +1055,7 @@ const SessionsRenderer = (() => {
           });
           ToastSystem.success(`Reopened ${many} tab${many === 1 ? "" : "s"}`);
         };
-        // Reopening dozens of tabs at once is slow and hard to undo, so it is
-        // worth one confirmation.
+
         if (many > 10) {
           showConfirm(
             "Reopen this session?",
@@ -1203,7 +1108,6 @@ const SessionsRenderer = (() => {
     bindReadLater();
     bindWorkspaces();
 
-    // The tab strip behaves like one: arrows and Home/End move between panes.
     $("sessionsPopover")
       ?.querySelector(".et-pop-tabs")
       ?.addEventListener("keydown", (e) => {

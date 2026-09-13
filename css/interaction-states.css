@@ -10,7 +10,7 @@
   left: 6px;
   right: 6px;
   height: 3px;
-  background: var(--accent-color);
+  background: var(--accent-fill, var(--accent-color));
   border-radius: var(--r-pill);
   z-index: 10;
   pointer-events: none;
@@ -29,15 +29,37 @@ body.dragging-board .et-board-card {
   outline-offset: 4px;
 }
 
-/* An empty column taking a board: the column itself is the target. */
 .et-board-col.drop-end {
   border-radius: var(--r-md);
   outline: 2px dashed color-mix(in srgb, var(--accent-color) 60%, transparent);
   outline-offset: -2px;
 }
 
-/* A link on its way to a board: the board it joins, and the tile it will sit
-   in front of. */
+.et-board-card.is-swap-target {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 3px;
+  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+}
+
+.et-board-card.is-swap-target::after {
+  content: "\0021c4";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 11;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent-fill, var(--accent-color));
+  color: var(--accent-contrast);
+  font-size: 18px;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .et-board-card.is-drop-target {
   outline: 2px solid color-mix(in srgb, var(--accent-color) 55%, transparent);
   outline-offset: 3px;
@@ -63,9 +85,12 @@ body.dragging-board .et-board-card {
     opacity var(--dur-1) var(--ease-out);
 }
 
-.search-result-item:hover,
+.search-result-item:hover {
+  background: var(--menu-hover);
+}
+
 .search-result-item.kb-active {
-  background: transparent;
+  background: color-mix(in srgb, var(--text) 11%, transparent);
 }
 
 .search-result-item.command-item {
@@ -149,32 +174,28 @@ body.dragging-board .et-board-card {
 
 .search-hint strong,
 .search-hint .cmd-chip {
-  color: var(--accent-contrast, #ffffff) !important;
-  background: var(--accent-color, #6366f1) !important;
+  color: var(--accent-contrast, #ffffff);
+  background: var(--accent-color, #6366f1);
   padding: 3px 8px;
   border-radius: var(--r-xs);
   font-weight: 600;
   font-size: 12px;
   margin: 0 2px;
   display: inline-block;
-  box-shadow: none !important;
-  text-shadow: none !important;
-  filter: none !important;
+  box-shadow: none;
+  text-shadow: none;
+  filter: none;
 }
 
-/* The command palette in light mode. Every value here used to be a literal
-   slate hex, which meant the palette was the one surface in the app that did
-   not follow the user's accent tint, panel opacity or contrast settings - and
-   the one that had to be edited by hand whenever the light palette moved. */
 body.theme-light .et-search-modal {
-  background: var(--panel) !important;
-  border: 1px solid var(--panel-border) !important;
-  box-shadow: var(--e3) !important;
-  color: var(--text) !important;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--e3);
+  color: var(--text);
 }
 
 body.theme-light .et-search-input-wrap input {
-  color: var(--text) !important;
+  color: var(--text);
 }
 
 body.theme-light .et-search-input-wrap input::placeholder {
@@ -183,13 +204,13 @@ body.theme-light .et-search-input-wrap input::placeholder {
 }
 
 body.theme-light .et-search-esc-hint {
-  color: var(--text-dim) !important;
-  background: var(--surface-2) !important;
-  border-color: var(--border-soft) !important;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border-color: var(--border-soft);
 }
 
 body.theme-light .search-hint {
-  color: var(--text-dim) !important;
+  color: var(--text-dim);
 }
 
 body.theme-light .search-result-item .sr-title {
@@ -259,15 +280,9 @@ body.theme-light .search-result-item.kb-active {
   margin-top: var(--sp-2);
 }
 
-/* A hover label, not a call to action. This used to be a filled block of the
-   accent colour, which on a quiet wallpaper page made the name of a toolbar
-   icon the single most saturated thing on screen - louder than the clock, and
-   sitting in the corner where the utilities are meant to read lightest. It is
-   the same frosted glass the pin tiles and popovers use now: dark enough to
-   carry small text over any picture, quiet enough to stay a caption. */
 .et-custom-tooltip {
   position: fixed;
-  z-index: 99999;
+  z-index: var(--z-tooltip);
   pointer-events: none;
   padding: calc(5px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border-radius: var(--r-sm);
@@ -287,8 +302,7 @@ body.theme-light .search-result-item.kb-active {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
   opacity: 0;
   visibility: hidden;
-  /* Rises the last couple of pixels into place rather than blinking on, which
-     is what makes a label read as attached to the thing under it. */
+
   transform: translateY(3px);
   transition:
     opacity var(--dur-2) var(--ease-out),
@@ -333,50 +347,11 @@ body.performance-mode .et-custom-tooltip {
 .et-board-tile:focus-visible,
 .et-board-chevron:focus-visible,
 .dock-pin:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
   border-radius: var(--r-sm);
 }
 
-/* Focus rings over a wallpaper -----------------------------------------------
-   A focus ring is the one piece of interface a keyboard user cannot do without,
-   and `--accent-color` alone cannot promise to be visible on a photograph: it
-   is chosen against the page ground, and the page ground is not what is behind
-   the ring here. A wallpaper that happens to sit near the accent - which is the
-   common case, because the accent is often *extracted from* the wallpaper -
-   leaves the ring drawn in almost exactly the colour behind it.
-
-   Two rings solve it without giving up the accent. The inner one is the
-   accent outline, floored the same way every other accent-on-wallpaper mark
-   is. Around it sits a ring in `--wp-ink-rgb` - the tone measured from this
-   picture as the one that reads against it, which is the same token the pin
-   tiles and the settings divider use. Whichever of the two the wallpaper
-   swallows, the other is still there.
-
-   Note the ink and not `--wp-halo`: the halo is the glow that goes *behind*
-   dark ink to lift it, so on a bright wallpaper it is white - a white ring on
-   a cream photograph is precisely the failure this rule exists to prevent. */
 body.wallpaper-mode :focus-visible {
-  outline-color: var(--accent-on-wp, var(--accent-color)) !important;
-  /* `!important` because several components zero their own `box-shadow` with
-     it as a decorative reset - the pin tiles do, to stay flat over a
-     wallpaper - and a decorative reset must not be able to delete the only
-     thing telling a keyboard user where they are. */
-  box-shadow: 0 0 0 4px rgba(var(--wp-ink-rgb, 255, 255, 255), 0.5) !important;
-}
-
-/* Elements whose own design already carries a shadow keep it: doubling a ring
-   onto a floating panel or a search pill reads as a rendering fault rather
-   than as focus. Those are all large, chrome-bearing surfaces with plenty of
-   edge of their own, so the outline alone is enough. */
-body.wallpaper-mode .et-search-pill:focus-visible,
-body.wallpaper-mode .et-search-pill *:focus-visible,
-body.wallpaper-mode .et-pop-sessions :focus-visible,
-body.wallpaper-mode .et-pop-workspace :focus-visible,
-body.wallpaper-mode .et-set-overlay :focus-visible,
-body.wallpaper-mode .toast-msg :focus-visible,
-body.wallpaper-mode .board-menu :focus-visible {
-  box-shadow: none !important;
+  outline-color: var(--accent-on-wp, var(--accent-color));
 }
 .et-board-card-header {
   cursor: grab;
@@ -410,8 +385,6 @@ body.wallpaper-mode .board-menu :focus-visible {
 .mynt-seg-btn:focus-visible,
 .et-clip-copy-btn:focus-visible,
 .et-clip-del-btn:focus-visible{
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
   z-index: 1;
   position: relative;
 }
@@ -430,9 +403,6 @@ body.wallpaper-mode .board-menu :focus-visible {
   line-height: var(--lh-tight);
 }
 
-/* The clock is set solid. At 150px even a 1.2 line box puts thirty pixels of
-   empty leading under the digits, which read as a gap between the time and
-   the greeting that no amount of margin-trimming could close. */
 .et-home-time {
   line-height: 0.92;
 }
@@ -507,14 +477,10 @@ body.wallpaper-mode .board-menu :focus-visible {
   }
   .et-notes-area {
     padding: var(--sp-4);
-    /* iOS zooms the page in on any input smaller than 16px, so that is the
-       floor here - but a reader who asked for larger text still gets it. */
+
     font-size: max(16px, var(--notes-font-size, var(--fs-md)));
   }
 
-  /* At this width the toolbar wraps to three rows and eats a third of the
-     editor, which is the opposite of the point. So it becomes one swipeable
-     row instead: the groups stay together, and the height stays fixed. */
   .et-notes-toolbar {
     padding: var(--sp-2) var(--sp-4);
     gap: var(--sp-2);
@@ -552,8 +518,8 @@ body.wallpaper-mode .board-menu :focus-visible {
   }
 
   .et-pomo-preset-row {
-    top: max(12px, env(safe-area-inset-top));
-    max-width: calc(100vw - 96px);
+    top: max(66px, calc(env(safe-area-inset-top) + 56px));
+    max-width: calc(100vw - 24px);
   }
   .et-pomo-preset-btn,
   .et-pomo-custom-btn {
@@ -570,7 +536,7 @@ body.wallpaper-mode .board-menu :focus-visible {
     min-height: 34px;
   }
   .et-pomo-wheel-picker {
-    top: max(64px, calc(env(safe-area-inset-top) + 56px));
+    top: max(122px, calc(env(safe-area-inset-top) + 112px));
   }
   .et-pomo-close-btn {
     top: 14px;
@@ -624,11 +590,6 @@ img.is-fallback {
   margin-top: 0;
 }
 
-.et-set-panel {
-  border: var(--border-tactile);
-  background: var(--surface-card);
-}
- 
 .et-board-card {
   border: var(--border-tactile);
 }
@@ -649,24 +610,27 @@ img.is-fallback {
 
 .et-search-opt {
   border-radius: var(--r-sm);
-  transition:
-    transform var(--dur-2) var(--ease-out),
-    background var(--dur-2) var(--ease-out);
 }
 
+button,
 .et-topbar-btn,
 .et-main-tab,
 .et-board-tile,
+.et-board-card,
 .et-search-engine,
-.et-search-btn{
+.et-search-btn,
+.et-search-opt,
+.et-search-pill,
+.dock-pin-icon,
+.dock-pin-fav {
   transition:
-    transform var(--dur-2) var(--ease-out),
-    border-color var(--dur-2) var(--ease-out),
-    background var(--dur-2) var(--ease-out);
-}
-
-.et-topbar-btn:hover,
-.et-main-tab:hover {
+    color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out),
+    opacity var(--dur-1) var(--ease-out),
+    filter var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
 }
 
 .et-topbar-btn:active,
@@ -676,55 +640,41 @@ img.is-fallback {
 }
 .dock-pin,
 .search-result-item {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dock-pin:hover {
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
-  outline: none !important;
 }
 
-.dock-pin:hover,
-.search-result-item:hover {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-/* Space held for the clock and greeting before their text arrives, so the
-   page does not jump on the first tick. One line each, exactly: a minimum
-   taller than the line left an empty band under the digits that grew with
-   the screen and read as a gap before the greeting. */
 .et-home-time,
 .et-home-greeting {
   min-height: 1lh;
 }
 
-/* A smaller plate with a bigger label on it. The tile is the least important
-   thing in a column of boards, so it should not be the largest empty rectangle
-   on the page - but the words are what you aim at, so those grow as the box
-   shrinks. */
 .et-add-board-tile {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
   padding: 8px 14px;
-  border-radius: var(--r-md, 12px);
+  border-radius: var(--r-md, 14px);
 
   border: none;
-  /* Visible without being loud: a dashed edge says "space for another one"
-     the way a filled slab does not, and it holds its own over a wallpaper
-     where a 4%-white fill disappears completely. */
+
   background: color-mix(in srgb, currentColor 8%, transparent);
-  border: 1px dashed color-mix(in srgb, currentColor 28%, transparent) !important;
+  border: 1px dashed color-mix(in srgb, currentColor 28%, transparent);
   color: var(--text);
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
   margin-top: 4px;
   min-height: 44px;
-  /* Full column width, like the boards it sits under - it is the next item in
-     that column, not a footnote to it. Shrinking it to fit the label made it
-     small enough to miss entirely. */
+
   width: 100%;
   transition:
     border-color 0.15s ease,
@@ -733,10 +683,7 @@ img.is-fallback {
     transform 0.15s ease;
   user-select: none;
 }
-/* The label takes the accent; the plate stays put. Hover used to swap the
-   surface for a 12%-accent wash over transparent, which is lighter than the
-   surface it replaced - so the tile appeared to vanish at the moment you
-   pointed at it, which is the opposite of what hover is for. */
+
 .et-add-board-plus {
   font-size: calc(var(--fs-lg) * 0.95);
   font-weight: 400;
@@ -752,33 +699,7 @@ img.is-fallback {
 .et-add-board-tile:active {
   background: var(--surface-2, rgba(255, 255, 255, 0.06));
 }
- 
-.et-view.active {
-  animation: et-view-in var(--dur-3, 0.3s) var(--ease-out) both;
-}
 
-@keyframes et-view-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
- 
-.et-view.active .et-board-card-body {
-  animation: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .et-view.active {
-    animation: none;
-  }
-}
-
-/* A board result is marked by its own colour, the way the board itself is. */
 .sr-board-dot {
   flex-shrink: 0;
   width: 12px;
@@ -787,7 +708,6 @@ img.is-fallback {
   border-radius: 50%;
 }
 
-/* Palette actions - open a typed address, search the web. */
 .sr-action-icon {
   display: grid;
   place-items: center;
@@ -795,4 +715,9 @@ img.is-fallback {
   width: 20px;
   height: 20px;
   color: var(--accent-ink, var(--accent-color));
+}
+
+html.is-lite .et-custom-tooltip {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }

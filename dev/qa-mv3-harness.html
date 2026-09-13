@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>EshaalTab — MV3 harness</title>
+    <style>
+      body { font: 13px/1.5 ui-monospace, monospace; padding: 16px; background: #0d1117; color: #c9d1d9; }
+      h2 { font-size: 13px; margin: 18px 0 6px; color: #58a6ff; }
+      .pass { color: #3fb950; }
+      .fail { color: #f85149; font-weight: 700; }
+      #out { white-space: pre-wrap; }
+      #summary { margin-top: 16px; padding: 8px 10px; border-radius: 6px; background: #161b22; }
+</style>
+  </head>
+  <body>
+
+    <h1 style="font-size: 15px">MV3 harness</h1>
+    <div id="out"></div>
+    <div id="summary">running…</div>
+
+    <script>
+      const results = [];
+      const out = document.getElementById("out");
+      function group(name) {
+        out.insertAdjacentHTML("beforeend", `<h2>${name}</h2>`);
+      }
+      function check(name, pass, detail) {
+        results.push({ name, pass: !!pass, detail: detail || "" });
+        out.insertAdjacentHTML(
+          "beforeend",
+          `<div class="${pass ? "pass" : "fail"}">${pass ? "PASS" : "FAIL"} ${name}` +
+            `${detail ? ` <span style="color:#8b949e">— ${detail}</span>` : ""}</div>`,
+        );
+      }
+
+      function makeMockChrome() {
+        const localStore = {};
+        const syncStore = {};
+        const changedListeners = [];
+        const listeners = {};
+        const log = { badge: [], syncWrites: 0, syncFails: 0, reloads: 0 };
+        let syncFailure = null;
+
+        const clone = (v) => JSON.parse(JSON.stringify(v));
+        const pick = (store, keys) => {
+          if (keys == null) return clone(store);
+          const list = Array.isArray(keys) ? keys : [keys];
+          const bag = {};
+          list.forEach((k) => {
+            if (k in store) bag[k] = clone(store[k]);
+          });
+          return bag;
+        };
+
+        const api = {
+          runtime: {
+            id: "mock-extension-id",
+            lastError: null,
+            reload: () => {
+              log.reloads++;
+              log.reloadOrder = log.badge.length + "|" + ("updatePending" in localStore);
+            },
+            getURL: (p) => "chrome-extension://mock-extension-id/" + p,
+            onUpdateAvailable: { addListener: (fn) => (listeners.onUpdateAvailable = fn) },
+            onInstalled: { addListener: (fn) => (listeners.onInstalled = fn) },
+            onStartup: { addListener: (fn) => (listeners.onStartup = fn) },
+          },
+          storage: {
+            local: {
+              get: async (keys) => pick(localStore, keys),
+              set: async (bag) => {
+                Object.entries(bag).forEach(([k, v]) => (localStore[k] = clone(v)));
+              },
+              remove: async (keys) => {
+                (Array.isArray(keys) ? keys : [keys]).forEach((k) => delete localStore[k]);
+              },
+              getBytesInUse: async () => JSON.stringify(localStore).length,
+            },
+            sync: {
+              get: async (keys) => pick(syncStore, keys),
+              set: async (bag) => {
+                if (syncFailure) {
+                  log.syncFails++;
+                  throw syncFailure;
+                }
+                log.syncWrites++;
+                Object.entries(bag).forEach(([k, v]) => (syncStore[k] = clone(v)));
+              },
+            },
+            onChanged: {
+              addListener: (fn) => changedListeners.push(fn),
+            },
+          },
+          action: {
+            setBadgeText: async ({ text }) => log.badge.push(text),
+            setBadgeBackgroundColor: async () => {},
+          },
+          contextMenus: {
+            removeAll: async () => {},
+            create: () => {},
+            onClicked: { addListener: (fn) => (listeners.onClicked = fn) },
+          },
+          commands: { onCommand: { addListener: (fn) => (listeners.onCommand = fn) } },
+          tabs: {
+            query: async () => [{ id: 1, url: "https://example.com/a", title: "Example A" }],
+            create: async () => {},
+            remove: async () => {},
+          },
+          permissions: { contains: async () => false },
+        };
+
+        return {
+          api,
+          localStore,
+          syncStore,
+          log,
+          listeners,
+          setSyncFailure: (e) => (syncFailure = e),
+        };
+      }
+
+      async function loadSource(path) {
+        const res = await fetch(path, { cache: "no-store" });
+        if (!res.ok) throw new Error(path + " -> " + res.status);
+        return res.text();
+      }
+
+      async function bootUnderTest(mock) {
+        const [platform, storage, data] = await Promise.all([
+          loadSource("../js/core/platform.js"),
+          loadSource("../js/core/storage.js"),
+          loadSource("../js/core/data.js"),
+        ]);
+
+        const GUARD = "if (!IS_EXT_PROTOCOL) return null;";
+        if (!platform.includes(GUARD)) {
+          throw new Error(
+            "platform.js no longer contains the EXT protocol guard this harness patches — " +
+              "the mock would silently be inert, so refusing to run.",
+          );
+        }
+        const patched = platform.replace(GUARD, "/* patched by qa-mv3-harness */");
+
+        const body = `
+          "use strict";
+          const chrome = __mockChrome;
+          const ToastSystem = __toast;
+          ${patched}
+          ${storage}
+          ${data}
+          // deepClone is private to the StorageManager closure, not a global.
+          return { StorageManager, BoardManager, BookmarkManager, EXT, HAS_EXT,
+                   setSafeHTML, safeHref, escapeHtml };
+        `;
+        const toastCalls = [];
+        const toast = new Proxy(
+          {},
+          {
+            get: (_, k) => (...args) => {
+              toastCalls.push({ level: String(k), args });
+              return { dismiss() {} };
+            },
+          },
+        );
+
+        const scope = new Function("__mockChrome", "__toast", body)(mock.api, toast);
+        scope.__toastCalls = toastCalls;
+        return scope;
+      }
+
+      async function bootWorkerUnderTest(mock) {
+        const src = await loadSource("../js/extension/background.js");
+        const body = `
+          const chrome = __mockChrome;
+          const self = { crypto: window.crypto };
+          ${src}
+          return { doSaveUrl, saveUrl, saveActiveTab, flashBadge, clearBadge,
+                   INBOX_QUEUE_KEY, UPDATE_PENDING_KEY };
+        `;
+
+        return new Function("__mockChrome", body)(mock.api);
+      }
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      (async () => {
+        try {
+          group("Harness sanity — the mock must actually be live");
+          const m0 = makeMockChrome();
+          const app = await bootUnderTest(m0);
+          check("EXT resolves to the mock", app.EXT === m0.api);
+          check("HAS_EXT is true under test", app.HAS_EXT === true);
+          check(
+            "storage.local is the mock",
+            app.EXT.storage.local.get === m0.api.storage.local.get,
+          );
+
+          group("#1 — worker never writes `data` (lost-update race)");
+          const m1 = makeMockChrome();
+          const worker1 = await bootWorkerUnderTest(m1);
+          m1.localStore.data = { boards: [{ id: "keep", name: "Precious", bookmarks: [] }] };
+          const dataBefore = JSON.stringify(m1.localStore.data);
+
+          await worker1.saveUrl("https://saved.example/one", "One");
+          check(
+            "`data` untouched by a save",
+            JSON.stringify(m1.localStore.data) === dataBefore,
+            "worker no longer read-modify-writes the shared blob",
+          );
+          check(
+            "save landed in its own queue key",
+            Array.isArray(m1.localStore.inboxQueue) && m1.localStore.inboxQueue.length === 1,
+            "entries=" + (m1.localStore.inboxQueue || []).length,
+          );
+
+          await worker1.saveUrl("https://saved.example/one", "One again");
+          check(
+            "same url twice does not double-queue",
+            m1.localStore.inboxQueue.length === 1,
+            "entries=" + m1.localStore.inboxQueue.length,
+          );
+          await worker1.saveUrl("javascript:alert(1)", "bad");
+          check(
+            "non-http url refused by the worker",
+            m1.localStore.inboxQueue.length === 1 &&
+              !m1.localStore.inboxQueue.some((e) => /javascript:/i.test(e.url)),
+          );
+
+          group("#1 — page drains the queue into Inbox");
+          const m2 = makeMockChrome();
+          const app2 = await bootUnderTest(m2);
+          m2.localStore.inboxQueue = [
+            { id: "q1", title: "Alpha", url: "https://alpha.example/", ts: 1 },
+            { id: "q2", title: "Beta", url: "https://beta.example/", ts: 2 },
+            { id: "q3", title: "Dupe", url: "https://alpha.example/", ts: 3 },
+            { id: "q4", title: "Evil", url: "javascript:alert(1)", ts: 4 },
+          ];
+          await app2.StorageManager.load();
+          const added = await app2.StorageManager.drainInboxQueue();
+          const inbox = app2.StorageManager
+            .getData()
+            .boards.find((b) => b.name === "Inbox");
+          check("drain reports what it added", added === 2, "added=" + added);
+          check("Inbox board created", !!inbox);
+          check(
+            "both distinct urls present",
+            !!inbox &&
+              inbox.bookmarks.some((b) => b.url === "https://alpha.example/") &&
+              inbox.bookmarks.some((b) => b.url === "https://beta.example/"),
+          );
+          check(
+            "duplicate url skipped",
+            !!inbox && inbox.bookmarks.filter((b) => b.url === "https://alpha.example/").length === 1,
+          );
+          check(
+            "javascript: entry rejected by normalizeBookmark",
+            !!inbox && !inbox.bookmarks.some((b) => /javascript:/i.test(b.url)),
+          );
+          check(
+            "queue key cleared after draining",
+            !("inboxQueue" in m2.localStore),
+          );
+          const secondDrain = await app2.StorageManager.drainInboxQueue();
+          check("draining again is a no-op", secondDrain === 0, "added=" + secondDrain);
+
+          const m3 = makeMockChrome();
+          const tabA = await bootUnderTest(m3);
+          m3.localStore.inboxQueue = [
+            { id: "r1", title: "Solo", url: "https://solo.example/", ts: 1 },
+          ];
+          await tabA.StorageManager.load();
+          const [dA, dB] = await Promise.all([
+            tabA.StorageManager.drainInboxQueue(),
+            tabA.StorageManager.drainInboxQueue(),
+          ]);
+          const soloInbox = tabA.StorageManager
+            .getData()
+            .boards.find((b) => b.name === "Inbox");
+          check(
+            "concurrent drains add the link exactly once",
+            (soloInbox ? soloInbox.bookmarks.filter((b) => b.url === "https://solo.example/").length : -1) === 1,
+            "drains returned " + dA + "/" + dB,
+          );
+
+          group("#2 — badge does not depend on a timer surviving the worker");
+          const m4 = makeMockChrome();
+          const worker4 = await bootWorkerUnderTest(m4);
+          await worker4.saveUrl("https://badge.example/one", "One");
+          const afterFirst = m4.log.badge.slice();
+          check(
+            "badge set to a tick on save",
+            afterFirst[afterFirst.length - 1] === "✓",
+            "sequence=[" + afterFirst.join(",") + "]",
+          );
+          await sleep(1800);
+          check(
+            "no self-clearing timer is relied on",
+            m4.log.badge[m4.log.badge.length - 1] === "✓",
+            "still [" + m4.log.badge.join(",") + "] after 1.8s",
+          );
+          await worker4.saveUrl("https://badge.example/two", "Two");
+          const idxCleared = m4.log.badge.indexOf("", afterFirst.length - 1);
+          check(
+            "next action clears the stale badge first",
+            idxCleared !== -1 &&
+              m4.log.badge[m4.log.badge.length - 1] === "✓",
+            "sequence=[" + m4.log.badge.map((t) => t || "''").join(",") + "]",
+          );
+
+          group("#9 — update handshake flushes before reloading");
+          const m5 = makeMockChrome();
+          await bootWorkerUnderTest(m5);
+          check(
+            "worker registered an onUpdateAvailable listener",
+            typeof m5.listeners.onUpdateAvailable === "function",
+          );
+          let pendingSeenBeforeReload = null;
+          const realReload = m5.api.runtime.reload;
+          m5.api.runtime.reload = () => {
+            pendingSeenBeforeReload = "updatePending" in m5.localStore;
+            realReload();
+          };
+          await m5.listeners.onUpdateAvailable();
+          check(
+            "updatePending was written",
+            typeof m5.localStore.updatePending === "number",
+          );
+          check(
+            "it was written BEFORE reload, not after",
+            pendingSeenBeforeReload === true,
+          );
+          check("the reload still happens", m5.log.reloads === 1, "reloads=" + m5.log.reloads);
+
+          const m6 = makeMockChrome();
+          const app6 = await bootUnderTest(m6);
+          check(
+            "page exports the key it listens for",
+            app6.StorageManager.UPDATE_PENDING_KEY === "updatePending",
+          );
+          check(
+            "page exports flushSync for the teardown path",
+            typeof app6.StorageManager.flushSync === "function",
+          );
+
+          group("#3 — a failed sync write is retried, not cached as success");
+          const m7 = makeMockChrome();
+          const app7 = await bootUnderTest(m7);
+          await app7.StorageManager.load();
+
+          m7.setSyncFailure(new Error("QUOTA_BYTES_PER_ITEM quota exceeded"));
+          app7.StorageManager.getSettings().accentColor = "#111111";
+          app7.StorageManager.saveSettings();
+          await sleep(200);
+          app7.StorageManager.flushSync();
+          await sleep(50);
+          check(
+            "quota: attempt made and failed",
+            m7.log.syncFails === 1 && m7.log.syncWrites === 0,
+            "fails=" + m7.log.syncFails + " writes=" + m7.log.syncWrites,
+          );
+          check(
+            "quota: surfaced to the user once",
+            app7.__toastCalls.filter((c) => /warning/i.test(c.level)).length === 1,
+            JSON.stringify(app7.__toastCalls.map((c) => c.level)),
+          );
+
+          m7.setSyncFailure(null);
+          app7.StorageManager.getSettings().accentColor = "#222222";
+          app7.StorageManager.saveSettings();
+          await sleep(200);
+          app7.StorageManager.flushSync();
+          await sleep(50);
+          check(
+            "recovery: a later change is not swallowed by the stale cache",
+            m7.log.syncWrites === 1,
+            "writes=" + m7.log.syncWrites + " (0 here is the rollback bug)",
+          );
+          check(
+            "recovery: the write actually stored",
+            !!m7.syncStore.settings && m7.syncStore.settings.accentColor === "#222222",
+          );
+
+          const mT = makeMockChrome();
+          const appT = await bootUnderTest(mT);
+          await appT.StorageManager.load();
+          const realSetTimeoutT = window.setTimeout;
+          const armed = [];
+          window.setTimeout = (fn, ms) => {
+            if (ms >= 30000) {
+              armed.push(ms);
+
+              return realSetTimeoutT(fn, 150);
+            }
+            return realSetTimeoutT(fn, ms);
+          };
+          try {
+            mT.setSyncFailure(new Error("MAX_WRITE_OPERATIONS_PER_MINUTE exceeded"));
+            appT.StorageManager.getSettings().accentColor = "#333333";
+            appT.StorageManager.saveSettings();
+            await sleep(200);
+            appT.StorageManager.flushSync();
+            await sleep(50);
+            check(
+              "transient: first attempt failed",
+              mT.log.syncFails === 1,
+              "fails=" + mT.log.syncFails,
+            );
+            check(
+              "transient: a retry was armed with backoff",
+              armed.length >= 1,
+              "delays=" + armed.join(",") + "ms",
+            );
+
+            mT.setSyncFailure(null);
+            await sleep(300);
+            check(
+              "transient: recovers with no further user edit",
+              mT.log.syncWrites === 1,
+              "writes=" + mT.log.syncWrites + " fails=" + mT.log.syncFails,
+            );
+            check(
+              "transient: stops after the attempt ceiling",
+              armed.length <= 3,
+              "armed=" + armed.length + " (ceiling is 3)",
+            );
+          } finally {
+            window.setTimeout = realSetTimeoutT;
+          }
+
+          group("#4 — sync is throttled, not debounced, and flushes on teardown");
+          const m8 = makeMockChrome();
+          const app8 = await bootUnderTest(m8);
+          await app8.StorageManager.load();
+
+          const realNow = Date.now;
+          let fakeNow = realNow();
+          Date.now = () => fakeNow;
+          try {
+            for (let i = 0; i < 12; i++) {
+              app8.StorageManager.getSettings().accentColor =
+                "#" + String(100000 + i);
+              app8.StorageManager.saveSettings();
+
+              app8.StorageManager.flush();
+              fakeNow += 4000;
+              await sleep(0);
+            }
+            await sleep(60);
+            check(
+              "continuous activity no longer starves the write",
+              m8.log.syncWrites >= 1,
+              "writes=" + m8.log.syncWrites + " (0 here would be the old debounce)",
+            );
+          } finally {
+            Date.now = realNow;
+          }
+
+          const m9 = makeMockChrome();
+          const app9 = await bootUnderTest(m9);
+          await app9.StorageManager.load();
+          app9.StorageManager.getSettings().accentColor = "#abcdef";
+          app9.StorageManager.saveSettings();
+          await sleep(150);
+          check(
+            "nothing synced yet inside the window",
+            m9.log.syncWrites === 0,
+            "writes=" + m9.log.syncWrites,
+          );
+          app9.StorageManager.flushSync();
+          await sleep(80);
+          check(
+            "flushSync forces the pending write out (tab close)",
+            m9.log.syncWrites === 1,
+            "writes=" + m9.log.syncWrites,
+          );
+          app9.StorageManager.flushSync();
+          await sleep(50);
+          check(
+            "flushSync with nothing pending writes nothing",
+            m9.log.syncWrites === 1,
+            "writes=" + m9.log.syncWrites,
+          );
+        } catch (err) {
+          check("harness ran to completion", false, String(err && err.message));
+          console.error(err);
+        }
+
+        const failed = results.filter((r) => !r.pass);
+        document.getElementById("summary").innerHTML =
+          `<b>${results.length - failed.length}/${results.length} passed</b>` +
+          (failed.length
+            ? `<div class="fail">FAILED: ${failed.map((f) => f.name).join(" · ")}</div>`
+            : `<div class="pass">all green</div>`);
+        window.__QA = { results, failed: failed.length };
+      })();
+</script>
+  </body>
+</html>

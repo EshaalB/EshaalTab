@@ -1,14 +1,5 @@
 "use strict";
 
-/**
- * Settings: Search engines.
- *
- * Its own page because it is a list rather than a switch: which engines the
- * search bar's menu offers, grouped and iconed the way that menu shows them.
- * The browser default cannot be switched off - it is what a search falls back
- * to, and it is the one route that leaves the choice of provider with the
- * browser, where the Web Store requires it to stay.
- */
 (() => {
   const S = window.SettingsShared;
 
@@ -24,7 +15,6 @@
     const engines = WidgetsRenderer.getEngines();
     const enabled =
       settings.enabledEngines || StorageManager.DEFAULT_SETTINGS.enabledEngines;
-    const current = engines[settings.searchEngine] ? settings.searchEngine : "default";
     const barHidden = settings.widgets?.navSearch === false;
 
     const groups = GROUPS.map(([group, label]) => {
@@ -56,37 +46,13 @@
       <div class="st-container">
         <div class="st-accordion is-expanded" data-page="search">
           <button class="st-accordion-header" type="button">
-            <span class="st-group-title">Search engine</span>
-            ${chevron}
-          </button>
-          <div class="st-accordion-body">
-            <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
-              ${barHidden ? `<div class="st-hint">The search bar is hidden. Turn it on in Home page settings.</div>` : ""}
-              <div class="st-row">
-                <label class="st-label" for="stSearchEngine">Search with</label>
-                ${CustomSelect.render({
-                  id: "stSearchEngine",
-                  value: current,
-                  options: Object.entries(engines).map(([key, eng]) => ({
-                    value: key,
-                    label: eng.name,
-                  })),
-                  style: "width:200px;",
-                })}
-              </div>
-              <div class="st-hint">Default (Browser) uses your browser's own search engine. Other choices only change searches made from this page.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="st-accordion is-expanded" data-page="search">
-          <button class="st-accordion-header" type="button">
             <span class="st-group-title">Engines in the menu</span>
             ${chevron}
           </button>
           <div class="st-accordion-body">
             <div class="st-card" id="stEngineList" style="display:flex; flex-direction:column; gap:14px;">
-              <div class="st-hint">Pick the engines you want in the search bar menu.</div>
+              ${barHidden ? `<div class="st-hint">The search bar is hidden. Turn it on in Home page settings.</div>` : ""}
+              <div class="st-hint">Pick the engines you want in the search bar menu. Choose which one to use from the search bar itself.</div>
               ${groups}
             </div>
           </div>
@@ -105,35 +71,16 @@
       StorageManager.saveSettings();
     };
 
-    $("stSearchEngine")?.addEventListener("change", (e) => {
-      const key = e.target.dataset?.value ?? e.target.value;
-      const s = live();
-      s.searchEngine = key;
-      // Choosing an engine puts it in the menu, so the bar can show what it is
-      // set to.
-      const box = checkboxes().find((c) => c.dataset.engKey === key);
-      if (box && !box.checked) {
-        box.checked = true;
-        box.closest(".st-eng-row")?.classList.add("is-on");
-        applyEnabled(checkboxes().filter((c) => c.checked).map((c) => c.dataset.engKey));
-      }
-      StorageManager.saveSettings();
-      WidgetsRenderer.initNavSearch();
-      ToastSystem.success(`Searching with ${WidgetsRenderer.getEngines()[key]?.name || "your browser"}`);
-    });
-
     checkboxes().forEach((chk) => {
       chk.addEventListener("change", () => {
         chk.closest(".st-eng-row")?.classList.toggle("is-on", chk.checked);
         const keys = checkboxes().filter((c) => c.checked).map((c) => c.dataset.engKey);
         applyEnabled(keys);
-        // An engine taken out of the menu cannot stay the one in use.
+
         const s = live();
         if (!s.enabledEngines.includes(s.searchEngine)) {
           s.searchEngine = "default";
           StorageManager.saveSettings();
-          const select = $("stSearchEngine");
-          if (select) CustomSelect.setValue(select, "default", false);
         }
         WidgetsRenderer.initNavSearch();
       });

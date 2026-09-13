@@ -11,12 +11,12 @@
   stroke: var(--text);
 }
 body.theme-light .et-topbar-btn.is-active {
-  color: var(--accent-ink, var(--accent-color, #000));
+  color: var(--accent-ink, var(--accent-color, #6366f1));
   opacity: 1;
 }
 
 body.theme-light .et-topbar-btn.is-active svg {
-  stroke: var(--accent-ink, var(--accent-color, #000));
+  stroke: var(--accent-ink, var(--accent-color, #6366f1));
 }
 
 .et-notes-export-btn,
@@ -26,45 +26,12 @@ body.theme-light .et-topbar-btn.is-active svg {
   border-color: var(--accent-color);
 }
 
-.et-main-tab.active{
-  background: var(--accent-fill);
-  color: var(--accent-contrast);
-  border-color: var(--accent-color);
-  box-shadow: none;
-}
-button,
-.et-main-tab,
-.et-topbar-btn{
-  transition:
-    filter var(--dur-1) var(--ease-out),
-    background var(--dur-1) var(--ease-out),
-    color var(--dur-1) var(--ease-out),
-    box-shadow var(--dur-1) var(--ease-out),
-    border-color var(--dur-1) var(--ease-out);
-}
-/* Press feedback that does not move the target.
-
-   This used to be `transform: scale(0.95)` on every button in the app. A
-   button that shrinks the moment it is pressed pulls its edges in from under
-   the pointer, and a press that starts near an edge is then *released*
-   outside the button - which the browser does not count as a click. So a
-   control would visibly react and then do nothing, and it took several
-   clicks, each a little nearer the middle, to get one to register.
-   Brightness gives the same "it went in" signal and leaves the hit box
-   exactly where it was. */
 button:active,
 .et-main-tab:active,
 .et-topbar-btn:active {
   filter: brightness(0.9);
 }
 
-/* Reduced motion removes movement, not feedback.
-   Killing every transition to 0.001ms took the state changes with it: a board
-   opening, a view switching and a toast arriving all became instantaneous
-   pops, so the one group of users who most need a clear "something just
-   changed" signal got the least. Travel, scaling and looping animation stop;
-   colour and opacity still cross-fade, fast enough to never feel like motion
-   but slow enough to be perceived. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -79,9 +46,6 @@ button:active,
   }
 }
 
-/* The toolbar icons carry the same ink as Boards and Notes, with no plate
-   behind them - one row of controls in one colour, rather than words on the
-   left and filled chips on the right. */
 body.solid-mode .et-topbar .et-topbar-btn {
   color: var(--accent-ink, var(--accent-color));
   background: none;
@@ -115,14 +79,9 @@ body.performance-mode::after {
   display: none !important;
 }
 
-/* The frosted pin tiles are a real compositing cost on a weak GPU. */
 body.performance-mode.wallpaper-mode .dock-pin-icon {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  /* No blur to hide behind, so the flat fill has to carry the tile on its own -
-     which makes getting its direction right matter more here, not less. Same
-     measured ink the blurred version uses. */
-  background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.22) !important;
 }
 
 body.performance-mode *,
@@ -134,42 +93,34 @@ body.performance-mode *::after {
 }
 
 body.performance-mode .et-home-time,
-body.performance-mode .clock-colon,
 body.performance-mode .et-home-greeting,
 body.performance-mode .et-weather-inline {
   text-shadow: none !important;
 }
 
-/* Over a wallpaper the icons take the same ink the view labels do, so the whole
-   bar reads as one row rather than two treatments. Both the ink and the halo
-   come from the measured brightness of the strip of picture directly behind the
-   bar, so a pale sky gets dark icons with a light halo and a night scene gets
-   the reverse - the same call, in both directions, rather than white with a
-   permanent black smudge under it. */
 body.wallpaper-mode .et-topbar-btn,
 body.wallpaper-mode .et-topbar-btn svg {
   color: var(--wp-ink, #fff);
   stroke: var(--wp-ink, #fff);
 }
 
-/* Two layers, both weaker than the single hard drop shadow they replace: a
-   1px contact edge that keeps the stroke crisp against detail, and a wide
-   faint one that separates it from the picture. Their weight scales with the
-   halo the wallpaper analysis derived, so a flat wallpaper barely shows one. */
 body.wallpaper-mode .et-topbar-btn svg {
   filter: drop-shadow(
       0 1px 1.5px
-        rgba(var(--wp-halo, 0, 0, 0), calc(var(--wp-shadow-opacity, 0.4) * 0.6))
+        rgba(var(--wp-halo, 0, 0, 0), calc(var(--wp-shadow-opacity, 0.6) * 0.6))
     )
     drop-shadow(
       0 1px calc(var(--wp-shadow-blur, 20px) * 0.4)
-        rgba(var(--wp-halo, 0, 0, 0), calc(var(--wp-shadow-opacity, 0.4) * 0.35))
+        rgba(var(--wp-halo, 0, 0, 0), calc(var(--wp-shadow-opacity, 0.6) * 0.35))
     );
 }
 
-/* The active icon was pinned to white regardless of what it sat on, which was
-   the one place a bright wallpaper lost the icon entirely. */
 body.wallpaper-mode .et-topbar-btn.is-active svg,
 body.wallpaper-mode .et-topbar-btn.active svg {
   stroke: var(--wp-ink, #fff);
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-msg .toast-progress {
+    animation-duration: var(--toast-life, 3000ms) !important;
+  }
 }

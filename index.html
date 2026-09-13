@@ -8,9 +8,6 @@
       html {
         background: #0a0b0e;
       }
-      html.boot-has-preview body {
-        background: transparent !important;
-      }
       html.boot-pending .app {
         visibility: hidden !important;
       }
@@ -20,7 +17,7 @@
         transition: none !important;
         animation: none !important;
       }
-    </style>
+</style>
     <meta name="theme-color" content="#0a0b0e" />
     <meta name="msapplication-navbutton-color" content="#0a0b0e" />
     <meta
@@ -39,8 +36,6 @@
       href="icons/icon128.png"
     />
 
-    <!-- The default UI face, discovered only once tokens.css parses. Without the
-         preload every new tab paints in the fallback and re-flows on swap. -->
     <link
       rel="preload"
       href="fonts/inter-latin.woff2"
@@ -69,12 +64,9 @@
 
     <div class="app">
       <div class="et-topbar">
-        <!-- Three clusters, not two: optional utilities on the left, the views
-             in the middle, the things you open on the right. The nav is
-             centred by the grid rather than by the two clusters happening to
-             weigh the same, so it stays put when a utility is switched off. -->
+
         <div class="et-top-left" id="topLeft">
-          <button class="et-topbar-btn" id="sessionsBtn" data-popover-trigger="sessions" title="Saved sessions">
+          <button class="et-topbar-btn" id="sessionsBtn" data-popover-trigger="sessions" title="Library" aria-label="Library: sessions, read later and workspaces">
           <svg
           width="24"
           height="24"
@@ -105,11 +97,7 @@
           stroke-linecap="round"
           stroke-linejoin="round"
           >
-          <!-- A stopwatch with a filled crown and stem, rather than an
-          outlined circle with hands: at 25px the old one read as a
-          plain clock, which is the icon people expect to *tell* the
-          time rather than start a session. The progress arc says
-          "this counts down", which is what the button does. -->
+
           <path d="M9 2.5h6" stroke-width="2.4" />
           <path d="M12 2.5v2.6" stroke-width="2.4" />
           <path d="M19.1 6.9l-1.6 1.6" stroke-width="2.2" />
@@ -168,12 +156,7 @@
           stroke-linecap="round"
           stroke-linejoin="round"
           >
-          <!-- A search field with a caret in it, not the Mac command loop.
-               The loop is a keyboard legend: it says "there is a shortcut for
-               this", which is only meaningful if you already know what the
-               shortcut opens - and it means nothing at all on Windows or
-               Linux, where the key is Ctrl. A box with a magnifier says what
-               the button actually does. -->
+
           <rect x="2.6" y="4.6" width="18.8" height="14.8" rx="3" />
           <circle cx="10.6" cy="12" r="2.9" />
           <path d="m12.8 14.2 2.6 2.6" />
@@ -217,9 +200,6 @@
         </div>
       </div>
 
-      <!-- First run: one question, over the wallpaper, before the app itself
-           is shown. Hidden by default and revealed by WelcomeScreen only when
-           there is no name stored and the screen has not been completed. -->
       <div class="et-welcome" id="welcomeScreen" hidden>
         <div class="et-welcome-inner">
           <img
@@ -267,13 +247,7 @@
       <section class="et-view et-view-home" id="homeView">
         <div class="et-home-center">
           <div class="et-home-widgets" id="homeWidgets">
-            <!-- One block, read top to bottom: the day and the weather, then
-                 the time, then the greeting. Small, large, small - the number
-                 you actually came for sits in the middle at the largest size,
-                 with a line of context above it and a line of warmth below.
-                 The date and weather used to be pinned to opposite page
-                 corners, which made three separate things to find instead of
-                 one to scan. -->
+
             <div class="et-home-clock" id="clockWidget">
               <div class="et-home-meta" id="clockMeta">
                 <span class="et-home-corner et-home-corner-left" id="homeCornerLeft">
@@ -379,7 +353,6 @@
               aria-label="Note actions"
             >
               <div class="et-notes-tool-group" role="group" aria-label="Text style">
-                <span class="et-notes-tool-caption" aria-hidden="true">Text</span>
                 <div class="et-notes-tool-row">
                   <button type="button" class="et-notes-tool" data-note-cmd="bold" title="Bold (Ctrl+B)" aria-label="Bold" aria-pressed="false" data-no-tooltip><b>B</b></button>
                   <button type="button" class="et-notes-tool" data-note-cmd="italic" title="Italic (Ctrl+I)" aria-label="Italic" aria-pressed="false" data-no-tooltip><i>I</i></button>
@@ -390,7 +363,6 @@
               </div>
 
               <div class="et-notes-tool-group" role="group" aria-label="Colour">
-                <span class="et-notes-tool-caption" aria-hidden="true">Colour</span>
                 <div class="et-notes-tool-row">
                   <button type="button" class="et-notes-tool et-note-swatch-btn" data-note-cmd="textColor" id="notesTextColorBtn" title="Text colour" aria-label="Text colour" aria-haspopup="true" aria-expanded="false" data-no-tooltip>
                     <span class="et-note-swatch-glyph" aria-hidden="true">A</span>
@@ -404,7 +376,6 @@
               </div>
 
               <div class="et-notes-tool-group" role="group" aria-label="Lists">
-                <span class="et-notes-tool-caption" aria-hidden="true">Lists</span>
                 <div class="et-notes-tool-row">
                   <button type="button" class="et-notes-tool" data-note-cmd="bullet" title="Bullet list" aria-label="Bullet list" aria-pressed="false" data-no-tooltip>&bull;</button>
                   <button type="button" class="et-notes-tool" data-note-cmd="numbered" title="Numbered list" aria-label="Numbered list" aria-pressed="false" data-no-tooltip>1.</button>
@@ -412,18 +383,7 @@
                 </div>
               </div>
 
-              <div class="et-notes-tool-group" role="group" aria-label="Clipboard">
-                <span class="et-notes-tool-caption" aria-hidden="true">Clipboard</span>
-                <div class="et-notes-tool-row">
-                  <button type="button" class="et-notes-tool" data-note-cmd="cut" title="Cut selection" aria-label="Cut" data-no-tooltip>Cut</button>
-                  <button type="button" class="et-notes-tool" data-note-cmd="copy" title="Copy selection, or the whole note when nothing is selected" aria-label="Copy" data-no-tooltip>Copy</button>
-                  <button type="button" class="et-notes-tool" data-note-cmd="paste" title="Paste from clipboard" aria-label="Paste" data-no-tooltip>Paste</button>
-                  <button type="button" class="et-notes-tool" data-note-cmd="selectAll" title="Select all (Ctrl+A)" aria-label="Select all" data-no-tooltip>All</button>
-                </div>
-              </div>
-
-              <div class="et-notes-tool-group et-notes-tool-group-end" role="group" aria-label="View">
-                <span class="et-notes-tool-caption" aria-hidden="true">View</span>
+              <div class="et-notes-tool-group et-notes-tool-group-end" role="group" aria-label="More">
                 <div class="et-notes-tool-row">
                 <button
                   type="button"
@@ -446,8 +406,13 @@
                       <button type="button" class="et-notes-tool" data-note-cmd="fontUp" title="Larger text" aria-label="Larger text" data-no-tooltip>A+</button>
                     </div>
                   </div>
+                  <div class="et-notes-more-sep" role="separator"></div>
+                  <button type="button" class="et-notes-menu-item" role="menuitem" data-note-cmd="cut" data-no-tooltip>Cut<kbd>Ctrl+X</kbd></button>
+                  <button type="button" class="et-notes-menu-item" role="menuitem" data-note-cmd="copy" data-no-tooltip>Copy<kbd>Ctrl+C</kbd></button>
+                  <button type="button" class="et-notes-menu-item" role="menuitem" data-note-cmd="paste" data-no-tooltip>Paste<kbd>Ctrl+V</kbd></button>
+                  <button type="button" class="et-notes-menu-item" role="menuitem" data-note-cmd="selectAll" data-no-tooltip>Select all<kbd>Ctrl+A</kbd></button>
+                  <div class="et-notes-more-sep" role="separator"></div>
                   <div class="et-notes-more-row">
-                    <span class="et-notes-more-label"></span>
                     <span class="et-notes-stats" id="notesStatsBadge">0 words</span>
                   </div>
                 </div>
@@ -511,7 +476,7 @@
 
     <div class="et-pop-sessions" id="sessionsPopover">
       <div class="et-pop-header">
-        <div class="et-pop-tabs" role="tablist" aria-label="Saved tabs">
+        <div class="et-pop-tabs" role="tablist" aria-label="Library">
           <button
             type="button"
             class="et-pop-tab is-active"
@@ -571,9 +536,6 @@
         <div class="et-pop-list" id="readLaterList"></div>
       </div>
 
-      <!-- A workspace is a moment of work: the tabs you have open right now,
-           under a name, optionally tied to a board. Unlike a session it does
-           not close anything, and it can be updated in place. -->
       <div class="et-pop-pane" id="workspacesPane" role="tabpanel" aria-labelledby="workspacesPaneTab" hidden>
         <form class="et-ws-form" id="workspaceForm">
           <input
@@ -694,12 +656,7 @@
             ×
           </button>
         </div>
-        <!-- Sidebar and page, side by side. The five tabs used to be a strip
-             of one-word buttons across the top, which meant every section was
-             two guesses away: which word hides it, then where in that page it
-             sits. The sidebar names every section outright and groups the ones
-             that belong together, so the answer is on screen instead of behind
-             a tab. -->
+
         <div class="et-set-main">
           <div class="et-set-sidebar">
             <div class="et-set-search-wrap">

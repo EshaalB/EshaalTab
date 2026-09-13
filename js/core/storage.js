@@ -12,10 +12,6 @@ function uuid() {
   });
 }
 
-/* Weather glyphs are stroke-only and take `currentColor`, so the row reads as
-   one line of text with a small picture in it rather than a coloured badge
-   sitting next to grey words - and it stays legible on any wallpaper, since it
-   inherits whatever ink the wallpaper analysis picked. */
 const ICONS = {
   edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>',
   trash:
@@ -24,13 +20,12 @@ const ICONS = {
   link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
   incognito:
     '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
-  /* A pushpin seen head-on: round head, straight shaft, point. The previous
-     glyph was a thumbtack drawn in outline, which at 12px collapsed into an
-     unreadable smudge - the shape only survives at that size when it is
-     solid and the silhouette is simple. */
+
   pinFilled:
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M14.3 2.3a1 1 0 0 1 1.4 0l6 6a1 1 0 0 1-.7 1.7 4 4 0 0 0-2.9 1.2l-2.6 2.6a5.5 5.5 0 0 1-.9 4.6 1 1 0 0 1-1.5.1l-3.4-3.4-4.4 4.4a1 1 0 0 1-1.4-1.4l4.4-4.4-3.4-3.4a1 1 0 0 1 .1-1.5 5.5 5.5 0 0 1 4.6-.9l2.6-2.6a4 4 0 0 0 1.2-2.9 1 1 0 0 1 .3-.7z"/></svg>',
   pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+
+  more: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
   grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
   check: '<polyline points="20 6 9 17 4 12"/>',
   search:
@@ -57,17 +52,6 @@ function icon(name, size = 16) {
 }
 
 const StorageManager = (() => {
-  /* A fresh install starts with an AI Tools board.
-
-     It used to be a "Quick Links" board holding YouTube and Gmail - two sites
-     everyone already has one keystroke away, which made the first thing a new
-     user saw an example of something they did not need. The assistants people
-     actually switch between all day are a better first board: they are
-     spread across a dozen domains, new ones arrive constantly, and nobody
-     remembers every URL. The first five are pinned to Home, which is the pin
-     limit, so Home opens as a working launcher rather than an empty row.
-
-     Existing profiles never see this - it only runs when there is no data. */
   function seedBoards() {
     const tools = [
       ["ChatGPT", "https://chatgpt.com"],
@@ -83,6 +67,20 @@ const StorageManager = (() => {
       ["AI Studio", "https://aistudio.google.com"],
       ["HuggingChat", "https://huggingface.co/chat"],
     ];
+    const social = [
+      ["YouTube", "https://www.youtube.com"],
+      ["Instagram", "https://www.instagram.com"],
+      ["X", "https://x.com"],
+      ["Facebook", "https://www.facebook.com"],
+      ["Reddit", "https://www.reddit.com"],
+      ["TikTok", "https://www.tiktok.com"],
+      ["LinkedIn", "https://www.linkedin.com"],
+      ["Threads", "https://www.threads.net"],
+      ["Pinterest", "https://www.pinterest.com"],
+      ["Discord", "https://discord.com/app"],
+      ["WhatsApp", "https://web.whatsapp.com"],
+      ["Telegram", "https://web.telegram.org"],
+    ];
     return [
       {
         id: uuid(),
@@ -90,8 +88,7 @@ const StorageManager = (() => {
         color: "#a855f7",
         col: 0,
         order: 0,
-        // Pinned from the start, so the board button on a fresh Home opens
-        // straight onto it.
+
         pinnedToHome: true,
         bookmarks: tools.map(([title, url], i) => ({
           id: uuid(),
@@ -99,6 +96,20 @@ const StorageManager = (() => {
           url,
           tags: ["ai"],
           ...(i < 5 ? { pinnedToHome: true } : {}),
+        })),
+      },
+      {
+        id: uuid(),
+        name: "Social Media",
+        color: "#ec4899",
+        col: 1,
+        order: 0,
+        pinnedToHome: false,
+        bookmarks: social.map(([title, url]) => ({
+          id: uuid(),
+          title,
+          url,
+          tags: ["social"],
         })),
       },
     ];
@@ -119,25 +130,22 @@ const StorageManager = (() => {
     noteTabs: [],
     activeNoteId: "",
     notesHistory: [],
-  
+
     sessions: [],
     workspaces: [],
     tabStashes: [],
-   
+
     readLater: [],
     todos: [],
-    tags: ["ai"],
+    tags: ["ai", "social"],
     wallpapers: [],
     focus: {},
 
     pinsMigrated: true,
   };
 
-  // The interface surfaces that can carry their own background strength.
-  const SURFACE_KEYS = ["boards", "topbar", "search", "notes", "widgets", "panels"];
+  const SURFACE_KEYS = ["boards", "topbar", "search", "notes", "widgets", "pins"];
 
-  /* Settings sheet pages, for validating the remembered one. Kept here rather
-     than imported from the settings module because storage is loaded first. */
   const SETTINGS_PAGES = [
     "appearance",
     "themes",
@@ -189,7 +197,6 @@ const StorageManager = (() => {
     ],
     lastSettingsPage: "appearance",
     collapsedSettingsAccordions: {
-     
       theme: [
         "themes",
         "theme and colours",
@@ -204,7 +211,7 @@ const StorageManager = (() => {
       ],
       data: ["privacy", "data management"],
     },
-  
+
     expandedSettingsAccordions: {},
     settingsLayoutVersion: 13,
     settingsScrollPositions: {},
@@ -219,14 +226,14 @@ const StorageManager = (() => {
     widgets: {
       clock: true,
       navSearch: true,
- 
+
       date: false,
       weather: false,
       workspace: true,
-      // The open checklist lines Home lifts out of the notepad. On by default
-      // because it is the only thing on the page surfacing work the user has
-      // already written down - but it is also the one Home widget that shows
-      // content rather than chrome, so it has to be switchable off.
+      library: true,
+      focusTimer: true,
+      palette: true,
+
       notesTodos: true,
       greeting: true,
     },
@@ -254,17 +261,14 @@ const StorageManager = (() => {
     wallpaperBlurAmount: 40,
     wallpaperVignette: false,
     wallpaperVignetteAmount: 45,
-  
+
     remoteFavicons: true,
-    
+
     remoteFaviconsDefaultVersion: 1,
     onboardingSeen: false,
-    /* Whether the packaged wallpaper has had its one chance to be applied.
-       Set on the first run whatever the outcome, so a user who deletes the
-       shipped wallpaper - or replaces it with their own - is never handed it
-       back on the next launch. */
+
     packagedWallpaperTried: false,
-  
+
     welcomeSeen: false,
     aiAutoSend: false,
     workspaceFavorites: [
@@ -290,9 +294,22 @@ const StorageManager = (() => {
     saveTimeout = null;
   const chromeAvailable = HAS_EXT;
 
+  const MAX_IMPORT_MEDIA = 5;
+  const MAX_IMPORT_MEDIA_BYTES = 50 * 1024 * 1024;
+
   const MEDIA_PREFIX = "wpmedia:";
   const MEDIA_INDEX_KEY = "wpmediaIndex";
+
+  const MEDIA_CACHE_MAX = 2;
   const mediaCache = new Map();
+
+  function cacheMedia(id, value) {
+    if (mediaCache.has(id)) mediaCache.delete(id);
+    mediaCache.set(id, value);
+    while (mediaCache.size > MEDIA_CACHE_MAX) {
+      mediaCache.delete(mediaCache.keys().next().value);
+    }
+  }
 
   const isMediaRef = (v) => typeof v === "string" && v.startsWith("ref:");
   const refId = (v) => String(v).slice(4);
@@ -333,7 +350,7 @@ const StorageManager = (() => {
   }
 
   async function putMedia(id, dataUrl) {
-    mediaCache.set(id, dataUrl);
+    cacheMedia(id, dataUrl);
     const key = MEDIA_PREFIX + id;
     if (isExtValid()) await EXT.storage.local.set({ [key]: dataUrl });
     else localStorage.setItem(key, dataUrl);
@@ -343,7 +360,11 @@ const StorageManager = (() => {
   }
 
   async function getMedia(id) {
-    if (mediaCache.has(id)) return mediaCache.get(id);
+    if (mediaCache.has(id)) {
+      const hit = mediaCache.get(id);
+      cacheMedia(id, hit);
+      return hit;
+    }
     const key = MEDIA_PREFIX + id;
     let val = "";
     try {
@@ -352,7 +373,7 @@ const StorageManager = (() => {
     } catch (e) {
       handleStorageError("media read:", e);
     }
-    if (val) mediaCache.set(id, val);
+    if (val) cacheMedia(id, val);
     return val;
   }
 
@@ -392,6 +413,54 @@ const StorageManager = (() => {
     }
   }
 
+  const INBOX_QUEUE_KEY = "inboxQueue";
+
+  const UPDATE_PENDING_KEY = "updatePending";
+
+  async function drainInboxQueue() {
+    if (!isExtValid()) return 0;
+    let queued = [];
+    try {
+      const bag = await EXT.storage.local.get(INBOX_QUEUE_KEY);
+      queued = Array.isArray(bag[INBOX_QUEUE_KEY]) ? bag[INBOX_QUEUE_KEY] : [];
+      if (!queued.length) return 0;
+      await EXT.storage.local.remove(INBOX_QUEUE_KEY);
+    } catch (e) {
+      handleStorageError("inbox drain:", e);
+      return 0;
+    }
+
+    if (!Array.isArray(data.boards)) data.boards = [];
+    let inbox = data.boards.find((b) => b.name === "Inbox");
+    if (!inbox) {
+      inbox = {
+        id: uuid(),
+        name: "Inbox",
+        color: null,
+        col: null,
+        order: data.boards.length,
+        pinnedToHome: false,
+        bookmarks: [],
+      };
+      data.boards.push(inbox);
+    }
+    if (!Array.isArray(inbox.bookmarks)) inbox.bookmarks = [];
+
+    let added = 0;
+    for (const entry of queued) {
+      const bm = normalizeBookmark(entry);
+      if (!bm) continue;
+
+      if (inbox.bookmarks.some((b) => b.url === bm.url || b.id === bm.id))
+        continue;
+      bm.order = inbox.bookmarks.length;
+      inbox.bookmarks.push(bm);
+      added++;
+    }
+    if (added) saveImmediate();
+    return added;
+  }
+
   function trimForSync(s) {
     const c = { ...s };
     if (
@@ -408,10 +477,17 @@ const StorageManager = (() => {
     return c;
   }
 
+  const SAFE_BOOKMARK_URL = /^https?:\/\//i;
+  const MAX_URL_LEN = 2000;
+
   function normalizeBookmark(bm) {
     if (!bm || typeof bm !== "object") return null;
-    const url = typeof bm.url === "string" ? bm.url.trim() : "";
+    let url = typeof bm.url === "string" ? bm.url.trim() : "";
     if (!url) return null;
+
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = "https://" + url;
+    if (!SAFE_BOOKMARK_URL.test(url)) return null;
+    url = url.slice(0, MAX_URL_LEN);
     return {
       id: bm.id || uuid(),
       title: String(bm.title || url)
@@ -441,7 +517,8 @@ const StorageManager = (() => {
     const normBms = rawBms.map(normalizeBookmark).filter(Boolean);
     const out = {
       id: b.id || uuid(),
-      name: String(b.name || "Bookmarks").trim(),
+
+      name: String(b.name || "Bookmarks").trim().slice(0, 80),
       color: b.color || null,
       col: b.col ?? null,
       order: typeof b.order === "number" ? b.order : 0,
@@ -496,19 +573,12 @@ const StorageManager = (() => {
     "bottom-right",
   ];
 
-  /**
-   * Maps any stored clock position onto the current set, including the two
-   * legacy values: "corner" was always bottom-left, "auto" meant centred.
-   * Returns undefined for unrecognised input so the caller keeps its default.
-   */
   function normalizeClockPosition(value) {
     if (value === "auto") return "center";
     if (value === "corner") return "bottom-left";
     return CLOCK_POSITIONS.includes(value) ? value : undefined;
   }
 
-  // Brings any historical shape up to the tabbed-notes model: a legacy single
-  // `notes` string becomes the first tab, and the mirror is re-synced.
   function normalizeNoteTabs(d) {
     if (!d || typeof d !== "object") return d;
 
@@ -546,9 +616,6 @@ const StorageManager = (() => {
     return d;
   }
 
-  // Set when the one-time task migration below actually moved something, so
-  // `load` can flush the result. Without the flush the tasks would sit in
-  // memory only and be migrated again - and duplicated - on the next load.
   let todosDrained = false;
 
   const escapeNoteText = (s) =>
@@ -557,13 +624,6 @@ const StorageManager = (() => {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-  /**
-   * The standalone task list is gone; the notepad's checklist replaced it.
-   * Anyone who already had tasks keeps them: they become a checklist in a
-   * "Tasks" note, ticked boxes included, and `todos` is emptied so this runs
-   * exactly once. Old backups still carry `todos`, so this lives on the load
-   * path rather than in a one-shot version bump.
-   */
   function drainTodosIntoNotes(d, tabs) {
     const todos = Array.isArray(d.todos) ? d.todos.filter((t) => t && t.text) : [];
     if (!Array.isArray(d.todos) || !d.todos.length) return;
@@ -581,8 +641,6 @@ const StorageManager = (() => {
       .join("");
     const block = `<ul class="et-note-checklist">${items}</ul>`;
 
-    // With every tab slot taken there is nowhere to put a new note, so the
-    // tasks go to the end of the first one rather than being dropped.
     const target =
       tabs.length < MAX_NOTE_TABS
         ? (tabs.push({
@@ -600,13 +658,6 @@ const StorageManager = (() => {
     target.updatedAt = Date.now();
   }
 
-  /**
-   * Rebuilds `data.sessions` from anything that survives validation, folding in
-   * the two pre-sessions shapes: a top-level `tabStashes` storage key written
-   * by the toolbar popup, and an older `data.tabStashes` array.
-   *
-   * @param {Array} [extraStashes] Contents of the top-level key, if present.
-   */
   function normalizeSessions(d, extraStashes) {
     if (!d || typeof d !== "object") return d;
 
@@ -626,8 +677,7 @@ const StorageManager = (() => {
       if (!tabs.length) return null;
       return {
         id: typeof s.id === "string" && s.id ? s.id : uuid(),
-        // Untitled sessions keep showing their timestamp in the UI; an empty
-        // name is the signal for that, not a placeholder string.
+
         name: typeof s.name === "string" ? s.name.trim().slice(0, 60) : "",
         ts: typeof s.ts === "number" ? s.ts : Date.now() - i,
         tabs,
@@ -651,15 +701,10 @@ const StorageManager = (() => {
 
     out.sort((a, b) => b.ts - a.ts);
     d.sessions = out.slice(0, MAX_SESSIONS);
-    d.tabStashes = []; // superseded; kept as a key so old readers see nothing
+    d.tabStashes = [];
     return d;
   }
 
-  /**
-   * Validates `data.readLater`. Same shape of defence as sessions: anything
-   * that is not an http(s) entry is dropped rather than trusted, since this
-   * list is rendered as links and can arrive from an imported backup.
-   */
   function normalizeReadLater(d) {
     if (!d || typeof d !== "object") return d;
     const seen = new Set();
@@ -670,8 +715,7 @@ const StorageManager = (() => {
       if (typeof raw.url !== "string" || !/^https?:\/\//i.test(raw.url))
         continue;
       const url = raw.url.slice(0, 2000);
-      // One entry per URL: saving the same page twice should refresh it, not
-      // grow the list.
+
       if (seen.has(url)) continue;
       seen.add(url);
       out.push({
@@ -688,14 +732,6 @@ const StorageManager = (() => {
     return d;
   }
 
-  /**
-   * Validates `data.workspaces` - named snapshots of a window's tabs.
-   *
-   * Same defence as sessions: this list is rendered as links and restored into
-   * real tabs, and it can arrive from an imported backup, so anything that is
-   * not an http(s) page is dropped rather than trusted. A board link that no
-   * longer points at a board is cleared instead of left dangling.
-   */
   function normalizeWorkspaces(d) {
     if (!d || typeof d !== "object") return d;
     const boardIds = new Set(
@@ -734,8 +770,6 @@ const StorageManager = (() => {
     return d;
   }
 
-  // Older saves predate this key entirely, and a hand-edited import could
-  // carry anything, so it is rebuilt from whatever survives validation.
   function normalizeFeatureState(d) {
     if (!d || typeof d !== "object") return d;
 
@@ -901,11 +935,6 @@ const StorageManager = (() => {
         collapsedSettingsAccordions.data = [...dataCollapsed];
       }
       if ((loadedSettings.settingsLayoutVersion || 0) < 9) {
-        // Fold the two largest theme groups away for profiles that predate
-        // them shipping shut. Anyone who has actually opened one has it
-        // recorded in `expandedSettingsAccordions`, and that choice is left
-        // alone - this only catches sections that were open because they
-        // always had been, never because someone opened them.
         const themeCollapsed = new Set(collapsedSettingsAccordions.theme || []);
         const deliberate = new Set(
           (loadedSettings.expandedSettingsAccordions || {}).theme || [],
@@ -915,10 +944,7 @@ const StorageManager = (() => {
         });
         collapsedSettingsAccordions.theme = [...themeCollapsed];
       }
-      // The Gamer presets were replaced by the Neon group. A retired id is
-      // cleared rather than remapped: the accent, seed and corner style the
-      // user is already on are kept verbatim, so their page looks identical
-      // and simply reports as "Custom".
+
       if (RETIRED_PRESET_IDS.includes(loadedSettings.preset)) {
         loadedSettings.preset = "";
         if (
@@ -928,11 +954,6 @@ const StorageManager = (() => {
           loadedSettings.cornerRadius = "0px";
       }
 
-      // Wallpaper softness was stored as a blur radius in pixels on a 2-40
-      // scale; it is a percentage on a 0-100 one now. A profile saved under
-      // the old scale is converted once, so a picture keeps roughly the
-      // softness it had rather than jumping when the meaning of the number
-      // changed underneath it.
       if ((loadedSettings.settingsLayoutVersion || 0) < 10) {
         const px = loadedSettings.wallpaperBlurAmount;
         if (typeof px === "number")
@@ -941,20 +962,11 @@ const StorageManager = (() => {
           );
       }
 
-      // "Default" is no longer a corner style, a typeface or a search engine -
-      // every menu now names the thing it actually applies - so a profile saved
-      // under the old sentinel is written across to the concrete value it
-      // always meant. The old "Default (Browser)" engine sent queries to
-      // whatever the browser was configured with, which for almost everyone
-      // was Google; that is now what it says.
       if (!CORNER_RADII.includes(loadedSettings.cornerRadius))
         loadedSettings.cornerRadius = CORNER_STYLES[0].value;
       if (!APP_FONT_VALUES.includes(loadedSettings.fontFamily))
         loadedSettings.fontFamily = APP_FONTS[0].value;
-      // 2.0.143 rewrote everyone's engine from "default" to "google", which
-      // took the browser's own search provider out of the loop and is what the
-      // Web Store flagged. Profiles carrying that rewrite are put back, and the
-      // browser default is restored to the engine list it was removed from.
+
       if ((loadedSettings.settingsLayoutVersion || 0) < 11) {
         if (loadedSettings.searchEngine === "google")
           loadedSettings.searchEngine = "default";
@@ -963,9 +975,7 @@ const StorageManager = (() => {
             ...new Set(["default", ...loadedSettings.enabledEngines]),
           ];
       }
-      // 2.0.152 added more engines. A saved list predates them, and without
-      // this they would exist only on the settings page, switched off, for
-      // everyone but a fresh install.
+
       if (
         (loadedSettings.settingsLayoutVersion || 0) < 13 &&
         Array.isArray(loadedSettings.enabledEngines)
@@ -982,11 +992,6 @@ const StorageManager = (() => {
         ];
       }
 
-      // Icons used to be off by default, and every profile saved since then
-      // carries a stored `false` that is indistinguishable from a deliberate
-      // opt-out. So the new default is applied once, and only to profiles that
-      // never actually touched the switch - `remoteFaviconsChoice` is written
-      // the moment someone toggles it, and is respected forever after.
       const faviconDefaults = {};
       if (
         (loadedSettings.remoteFaviconsDefaultVersion || 0) <
@@ -998,16 +1003,6 @@ const StorageManager = (() => {
           DEFAULT_SETTINGS.remoteFaviconsDefaultVersion;
       }
 
-      /* The packaged wallpaper is for *new* profiles only.
-
-         `packagedWallpaperTried` defaults to false, and a default that new
-         reaches existing users too - so an upgrade would have handed the
-         shipped wallpaper to someone who has been happily running a solid
-         colour for months, replacing their background without being asked.
-         A profile that already has stored settings has, by definition,
-         already opened new tabs without a packaged wallpaper; it is marked as
-         having had its turn. Same shape of guard as the favicon default
-         above, and for the same reason. */
       const packagedWallpaperDefaults = {};
       if (
         rawSettings &&
@@ -1018,13 +1013,6 @@ const StorageManager = (() => {
         packagedWallpaperDefaults.packagedWallpaperTried = true;
       }
 
-      // Interface strength changed meaning in layout version 8. It used to be
-      // the alpha of a white tint washed over the page, so 8% was a sensible
-      // default; it is now the opacity of the surface itself, where 100% is
-      // fully solid. Carrying the old number across would have made every
-      // panel 8% opaque - the whole interface would have vanished - so the
-      // one-time reset puts everyone on the new default instead of scaling a
-      // number that no longer means the same thing.
       const strengthRescaled = (loadedSettings.settingsLayoutVersion || 0) >= 8;
       const interfaceOpacity = strengthRescaled
         ? Math.max(0, Math.min(100, migratedInterfaceOpacity))
@@ -1032,11 +1020,7 @@ const StorageManager = (() => {
       const surfaceOpacity = strengthRescaled
         ? loadedSettings.surfaceOpacity || {}
         : {};
-      // Board transparency was a second, independent alpha stacked on top of
-      // the board fill, so a board could be dimmed twice over by two controls
-      // that did not know about each other. It is folded into the "boards"
-      // surface override the first time settings pass through this migration,
-      // so a look someone already dialed in survives losing the extra knob.
+
       if (
         !strengthRescaled &&
         typeof loadedSettings.boardTransparency === "number" &&
@@ -1082,13 +1066,7 @@ const StorageManager = (() => {
       todosDrained = false;
       saveImmediate();
     }
-    // The legacy key is retired once its contents are folded into
-    // `data.sessions`. Leaving it in place made the merge run on every load,
-    // so a session the user deleted came straight back on the next one.
-    //
-    // The delete is chained onto the write rather than fired alongside it:
-    // dropping the only copy of the sessions before the merged copy has
-    // landed would lose them outright if the write failed.
+
     if (Array.isArray(legacyStashes) && legacyStashes.length && isExtValid()) {
       try {
         await EXT.storage.local.set({ data, writer: nextWriterStamp() });
@@ -1097,7 +1075,7 @@ const StorageManager = (() => {
         handleStorageError("session migration:", e);
       }
     }
-    // Every new tab starts on Home, regardless of where the last one was left.
+
     settings.activeTab = "home";
     [
       "accentColor",
@@ -1114,7 +1092,7 @@ const StorageManager = (() => {
       }
     });
     mirrorBootState();
-    // What storage now holds, as far as this tab knows - see `persist`.
+
     storedData = snapshot(data);
     storedSettings = snapshot(settings);
     return { data, settings };
@@ -1122,31 +1100,34 @@ const StorageManager = (() => {
 
   let bootBg = null;
 
-  let bootPreview;
-
   function mirrorBootState() {
     try {
       const isLight =
         settings.mode === "light" ||
         (settings.mode === "system" &&
           !window.matchMedia("(prefers-color-scheme: dark)").matches);
-      const bg =
-        typeof bootBg === "string" && /^#[0-9a-f]{3,6}$/i.test(bootBg)
-          ? bootBg
-          : isLight
-            ? "#f4f6f8"
-            : "#0d1117";
-      let preview = bootPreview;
-      if (preview === undefined) {
-        try {
-          preview = JSON.parse(
-            localStorage.getItem("et_boot") || "null",
-          )?.preview;
-        } catch {}
+      const mode = isLight ? "light" : "dark";
+
+      let prev = null;
+      try {
+        prev = JSON.parse(localStorage.getItem("et_boot") || "null");
+      } catch {}
+
+      let bg = null;
+      if (typeof bootBg === "string" && /^#[0-9a-f]{3,6}$/i.test(bootBg)) {
+        bg = bootBg;
+      } else if (
+        prev &&
+        prev.mode === mode &&
+        typeof prev.pageBg === "string" &&
+        /^#[0-9a-f]{3,6}$/i.test(prev.pageBg)
+      ) {
+        bg = prev.pageBg;
+      } else {
+        bg = isLight ? "#f4f6f8" : "#0d1117";
       }
-      const boot = { mode: isLight ? "light" : "dark", pageBg: bg };
-      if (typeof preview === "string") boot.preview = preview;
-      localStorage.setItem("et_boot", JSON.stringify(boot));
+
+      localStorage.setItem("et_boot", JSON.stringify({ mode, pageBg: bg }));
     } catch (e) {}
   }
 
@@ -1161,27 +1142,57 @@ const StorageManager = (() => {
     }
   }
 
-  function setBootPreview(dataUrl) {
-    bootPreview = typeof dataUrl === "string" ? dataUrl : null;
-    mirrorBootState();
-  }
-
   const SYNC_MIN_INTERVAL = 30000;
   let syncTimer = null;
+  let syncFirstQueuedAt = 0;
   let lastSyncedSettingsStr = "";
 
+  let syncQuotaWarned = false;
+
+  let syncAttempts = 0;
+  const MAX_SYNC_ATTEMPTS = 3;
+
   function writeSyncNow() {
+    if (syncTimer) clearTimeout(syncTimer);
     syncTimer = null;
+    syncFirstQueuedAt = 0;
     if (!isExtValid() || !EXT.storage || !EXT.storage.sync) return;
     try {
       const trimmed = trimForSync(settings);
       const str = JSON.stringify(trimmed);
       if (str === lastSyncedSettingsStr) return;
+
+      const previous = lastSyncedSettingsStr;
       lastSyncedSettingsStr = str;
 
       EXT.storage.sync
         .set({ settings: trimmed })
-        .catch((e) => handleStorageError("sync save:", e));
+        .then(() => {
+          syncAttempts = 0;
+        })
+        .catch((e) => {
+          lastSyncedSettingsStr = previous;
+          const msg = String(e?.message || e || "");
+
+          const transient = !/QUOTA_BYTES/i.test(msg);
+          if (/QUOTA_BYTES/i.test(msg) && !syncQuotaWarned) {
+            syncQuotaWarned = true;
+            try {
+              ToastSystem.warning(
+                "Settings are too large to sync",
+                0,
+                "This device keeps them; other devices will not receive them.",
+              );
+            } catch {}
+          }
+          if (transient && syncAttempts < MAX_SYNC_ATTEMPTS) {
+            syncAttempts++;
+            if (syncTimer) clearTimeout(syncTimer);
+            syncFirstQueuedAt = 0;
+            syncTimer = setTimeout(writeSyncNow, SYNC_MIN_INTERVAL * syncAttempts);
+          }
+          handleStorageError("sync save:", e);
+        });
     } catch (e) {
       handleStorageError("sync save:", e);
     }
@@ -1189,20 +1200,19 @@ const StorageManager = (() => {
 
   function queueSync() {
     if (!isExtValid() || !EXT.storage || !EXT.storage.sync) return;
-    if (syncTimer) clearTimeout(syncTimer);
+    if (!syncFirstQueuedAt) syncFirstQueuedAt = Date.now();
+    if (Date.now() - syncFirstQueuedAt >= SYNC_MIN_INTERVAL) {
+      writeSyncNow();
+      return;
+    }
+    if (syncTimer) return;
     syncTimer = setTimeout(writeSyncNow, SYNC_MIN_INTERVAL);
   }
 
-  /* What storage last held for each key, as this tab read or wrote it.
+  function flushSync() {
+    if (syncTimer || syncFirstQueuedAt) writeSyncNow();
+  }
 
-     A write from one tab makes every other open tab reload and repaint, and a
-     repaint calls save() on its way through. Writing back an identical copy
-     then woke the first tab, whose repaint wrote back again - so two new tabs
-     left open could keep rebuilding each other's pages indefinitely. That is
-     the text that shivered with nothing touched, the hover states that looked
-     stuck, and the clicks that took several tries because the page was being
-     replaced under the pointer. An unchanged copy is now never written, which
-     ends the exchange after the first repaint. */
   let storedData = null;
   let storedSettings = null;
   const snapshot = (value) => {
@@ -1268,9 +1278,7 @@ const StorageManager = (() => {
   }
 
   let pendingPersist = null;
-  // Settings-only writes skip the `data` blob. Dragging a slider fires `input`
-  // at pointer rate, and routing every one of those through the full persist
-  // re-serialised every board, note and session on each 120ms flush.
+
   let dataDirty = false;
 
   function schedule(withData) {
@@ -1545,9 +1553,6 @@ const StorageManager = (() => {
       out.settingsLayoutVersion = 5;
     }
     if ((num(raw.settingsLayoutVersion, 0, 20) || 0) < 9) {
-      // Same fold as the load path, so a restored backup opens the way a
-      // fresh profile does. A section the user had deliberately opened is
-      // recorded in `expandedSettingsAccordions` and is left as they left it.
       const themeCollapsed = new Set(
         out.collapsedSettingsAccordions.theme || [],
       );
@@ -1747,14 +1752,20 @@ const StorageManager = (() => {
           typeof imported.media === "object" &&
           !Array.isArray(imported.media)
         ) {
+          const MAX_MEDIA_CHARS = Math.ceil(MAX_IMPORT_MEDIA_BYTES * 1.4);
+          let taken = 0;
           for (const [id, value] of Object.entries(imported.media)) {
+            if (taken >= MAX_IMPORT_MEDIA) break;
             if (!/^[a-z0-9_-]{1,128}$/i.test(id)) continue;
             if (
               typeof value !== "string" ||
               !/^data:(image|video)\//i.test(value)
             )
               continue;
+            if (value.length > MAX_MEDIA_CHARS) continue;
             await putMedia(id, value);
+            taken++;
+            await new Promise((r) => setTimeout(r, 0));
           }
         }
         if (imported.data) data = refill(data, restoredData);
@@ -1764,8 +1775,7 @@ const StorageManager = (() => {
         normalizeSessions(data);
         normalizeReadLater(data);
         normalizeWorkspaces(data);
-        // A restore replays someone's past. Without this, every todo in the
-        // backup whose time already passed today would chime on load.
+
         muteRemindersFromNow();
         saveImmediate();
         await pruneMedia();
@@ -1780,11 +1790,6 @@ const StorageManager = (() => {
     reader.readAsText(file);
   }
 
-  /**
-   * Draws a line under every reminder that is currently due or overdue, so a
-   * fresh set of data cannot announce things the user never scheduled in this
-   * session.
-   */
   function muteRemindersFromNow() {
     const now = Date.now();
     data.remindersMutedBefore = now;
@@ -1846,6 +1851,10 @@ const StorageManager = (() => {
     resolveMedia,
     pruneMedia,
     repairMedia,
+    drainInboxQueue,
+    INBOX_QUEUE_KEY,
+    UPDATE_PENDING_KEY,
+    flushSync,
     isMediaRef,
     refId,
     sanitizeSettings,
@@ -1860,7 +1869,6 @@ const StorageManager = (() => {
     MAX_NOTE_TABS,
     MAX_NOTE_CHARS,
     setBootBg,
-    setBootPreview,
     getWriterId: () => WRITER_ID,
     isOwnWriter,
     SURFACE_KEYS,

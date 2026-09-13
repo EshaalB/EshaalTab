@@ -45,24 +45,46 @@ const TabStash = (() => {
     return board;
   }
 
+  const OPEN_ALL_ASK_ABOVE = 15;
+  const OPEN_ALL_MAX = 60;
+
+  async function openMany(bms) {
+    if (HAS_EXT && EXT.tabs) {
+      for (const bm of bms) {
+        const url = safeHref(bm.url);
+        if (url === "#") continue;
+        try {
+          await EXT.tabs.create({ url, active: false });
+        } catch {}
+      }
+    } else {
+      bms.forEach((bm) => {
+        const url = safeHref(bm.url);
+        if (url !== "#") window.open(url, "_blank");
+      });
+    }
+    ToastSystem.success(`Opened ${bms.length} link${bms.length === 1 ? "" : "s"}`);
+  }
+
   async function openAll(board) {
     const bms = (board && board.bookmarks) || [];
     if (!bms.length) {
       ToastSystem.info("This board has no links.");
       return;
     }
-    if (HAS_EXT && EXT.tabs) {
-      for (const bm of bms) {
-        try {
-          await EXT.tabs.create({ url: safeHref(bm.url), active: false });
-        } catch {}
-      }
-    } else {
-      bms.forEach((bm) => window.open(safeHref(bm.url), "_blank"));
+    if (bms.length > OPEN_ALL_ASK_ABOVE) {
+      const take = Math.min(bms.length, OPEN_ALL_MAX);
+      showConfirm(
+        `Open ${take} tabs?`,
+        take < bms.length
+          ? `This board holds ${bms.length} links. The first ${take} will open; more than that stops the browser responding.`
+          : `This will open ${take} tabs at once.`,
+        () => openMany(bms.slice(0, take)),
+        { tone: "warning", confirmLabel: `Open ${take}` },
+      );
+      return;
     }
-    ToastSystem.success(
-      `Opened ${bms.length} link${bms.length === 1 ? "" : "s"}`,
-    );
+    await openMany(bms);
   }
 
   return { stashCurrentWindow, openAll };

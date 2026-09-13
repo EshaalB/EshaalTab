@@ -40,30 +40,22 @@
     let wallpaperDropped = false;
 
     delete s.accentOverride;
+
+    delete s.wpExtractedAccent;
     if (p) {
       s.mode = p.mode;
       s.modeLocked = true;
-      // `seed` lets a preset set its background base independently of the
-      // accent. Without it the base is derived from the accent, which cannot
-      // express a bright colour on a near-black ground.
+
       s.solidSeed = p.seed || p.accent;
       s.accentColor = p.accent;
-      // The swatch has always shown two dots; this is what finally makes the
-      // second one mean something once the preset is applied.
-      // Feeds the swatch dots and, if the user has switched the two-tone fill
-      // on, the gradient. A preset never turns the gradient on by itself: flat
-      // is the default everywhere and the sweep stays an explicit opt-in.
+
       s.accent2 = p.accent2 || "";
       s.cornerRadius = CORNER_STYLES[0].value;
-      // applyTheme() only derives a palette from `solidSeed` when the
-      // background is solid, so with a wallpaper up a preset used to change
-      // nothing but the accent and read as "the colours didn't switch". A
-      // preset is a whole look, so it takes the background back.
+
       if (s.backgroundType && s.backgroundType !== "solid") {
         s.backgroundType = "solid";
         s.backgroundValue = p.seed || p.accent;
-        // applyTheme() paints over the photo layer but leaves a playing video
-        // running behind the new solid ground.
+
         const videoBg = $("video-bg");
         if (videoBg) {
           videoBg.pause();
@@ -133,10 +125,6 @@
     };
   }
 
-  /* `btoa` only accepts Latin-1, so a theme carrying any character outside it -
-     a display name, an imported preset title - threw and took the whole export
-     with it. Encoding the UTF-8 bytes first makes the code safe for any text,
-     and the decoder below reverses exactly the same steps. */
   const toBase64 = (text) =>
     btoa(String.fromCharCode(...new TextEncoder().encode(text)));
 
@@ -145,16 +133,6 @@
       Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0)),
     );
 
-  /**
-   * Copies text, and says truthfully whether it worked.
-   *
-   * The async clipboard API rejects for reasons that have nothing to do with
-   * the user - the document not being focused is enough - and the old handler
-   * answered that with "Preset code created", which is not a failure message
-   * and not a success message either: the code was nowhere the user could get
-   * at it. The execCommand path still works when the promise does not, and if
-   * both fail the code is put on screen to be copied by hand.
-   */
   async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text);
@@ -207,7 +185,6 @@
       try {
         jsonStr = fromBase64(str.slice(4));
       } catch {
-        // Codes made before the UTF-8 change decode as plain Latin-1.
         try {
           jsonStr = atob(str.slice(4));
         } catch {}
@@ -226,34 +203,14 @@
     return false;
   }
 
-  /* Square the wallpaper is scaled into before it is read. 64 is enough for a
-     stable average and a usable colour histogram, and small enough that the
-     decode plus read costs well under a frame. */
   const SAMPLE = 64;
 
-  /** Edge of the frame, as a fraction of its height, that counts as a band. */
   const BAND = 0.2;
 
-  /**
-   * Reads a downsampled wallpaper frame for the two things the interface needs
-   * from it: an accent worth borrowing, and how bright the picture actually is
-   * behind the chrome laid over it.
-   *
-   * Brightness comes back per band - the strip under the toolbar, the middle
-   * where the clock sits, the strip under the date and weather - rather than as
-   * one number for the whole picture. A photo that averages mid-grey is very
-   * often bright sky over dark ground, and a single average picks the wrong ink
-   * for both ends of it; that is what made light wallpapers keep white icons.
-   *
-   * `spread` is the standard deviation of pixel luminance and stands in for
-   * busyness. A flat colour needs almost no text shadow to stay readable; a
-   * detailed photo needs a real one. Deriving the shadow from it is what stops
-   * the halo being uniformly heavy on wallpapers that never needed it.
-   */
   function analyzeWallpaper(data, size) {
     const buckets = new Map();
     const bandRows = Math.max(1, Math.round(size * BAND));
-    // r/g/b sums and pixel count, per band: 0 top, 1 middle, 2 bottom, 3 all.
+
     const bands = [0, 1, 2, 3].map(() => ({ r: 0, g: 0, b: 0, n: 0 }));
     let sumY = 0,
       sumY2 = 0;
@@ -307,15 +264,6 @@
     };
   }
 
-  /**
-   * The colour in the picture most worth using as an accent.
-   *
-   * Scored on how much of the frame it covers and how chromatic it is, with
-   * near-black and near-white pushed down hard: they dominate most photographs
-   * by area, and neither survives being used as a UI accent. Chroma is measured
-   * against the channel maximum rather than as HSL saturation, so a dark but
-   * genuinely coloured region still competes with a large washed-out one.
-   */
   function pickAccent(buckets) {
     let best = null,
       bestScore = -1;
@@ -327,7 +275,7 @@
         mn = Math.min(r, g, b);
       const chroma = mx === 0 ? 0 : (mx - mn) / mx;
       const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-      // Peaks around mid-lightness and falls away at both ends.
+
       const usable = Math.max(0.04, 1 - Math.pow((lum - 0.5) / 0.5, 4));
       const score = e.n * (chroma * chroma * 3 + 0.05) * usable;
       if (score > bestScore) {
@@ -338,28 +286,17 @@
     return best || "#6366f1";
   }
 
-  /**
-   * @param {boolean} toneOnly Record only the brightness measurements and leave
-   *   the accent alone - used to backfill a wallpaper that predates the tone
-   *   analysis, where re-deriving the accent would silently overwrite one the
-   *   user picked themselves.
-   */
   function applyExtracted(data, size, toneOnly = false) {
     const tone = analyzeWallpaper(data, size);
     const settings = StorageManager.getSettings();
     if (!toneOnly) {
       delete settings.accentOverride;
-      // The most characteristic colour in a photograph is very often unusable
-      // as an accent on its own - a night scene's is near-black, a snow
-      // scene's is near-white - so the hue is kept and its lightness is
-      // brought into the band a UI colour has to live in. Doing it here rather
-      // than at paint time means the swatch in Settings shows the colour that
-      // will actually be used.
+
       const accent = Contrast.tint(
         tone.accent,
         Contrast.isLight(tone.overall) ? "light" : "dark",
       );
-      settings.accentColor = accent;
+
       settings.wpExtractedAccent = accent;
     }
     settings.wpTone = {
@@ -370,9 +307,6 @@
       spread: tone.spread,
     };
     if (!toneOnly && settings.mode !== "system" && !settings.modeLocked) {
-      // Which ink the picture as a whole calls for is the same question as
-      // which mode it wants, so it is answered by the same function the rest
-      // of the app uses rather than by a second brightness rule of its own.
       settings.mode = Contrast.isLight(tone.overall) ? "light" : "dark";
     }
     if (!toneOnly) settings.preset = "wallpaper";
@@ -517,6 +451,9 @@
     bindHomeToggle("wGreetingToggle", "greeting");
     bindHomeToggle("wSearchToggle", "navSearch");
     bindHomeToggle("wWorkspaceToggle", "workspace");
+    bindHomeToggle("wLibraryToggle", "library");
+    bindHomeToggle("wFocusTimerToggle", "focusTimer");
+    bindHomeToggle("wPaletteToggle", "palette");
     bindHomeToggle("wDateToggle", "date");
     bindHomeToggle("wWeatherToggle", "weather");
     $("wPinnedLinksToggle")?.addEventListener("change", (e) => {
@@ -526,9 +463,6 @@
       HomeRenderer.render();
     });
 
-    // Not `bindHomeToggle`: the task list is not painted by
-    // `applyWidgetVisibility` the way the other widgets are - it is rebuilt
-    // from the notes each time - so it needs the Home repaint as well.
     $("wNotesTodosToggle")?.addEventListener("change", (e) => {
       settings.widgets.notesTodos = e.target.checked;
       StorageManager.saveSettings();
@@ -548,18 +482,11 @@
       HomeRenderer.render();
     });
 
-    $("wTaskCount")?.addEventListener("change", (e) => {
-      const v = Number(e.target.dataset?.value ?? e.target.value);
-      settings.homeTaskCount = v === 5 ? 5 : 3;
-      StorageManager.saveSettings();
-      HomeRenderer.render();
-    });
-
     $("btnExtractWallpaper")?.addEventListener("click", async () => {
       delete settings.accentOverride;
       settings.preset = "wallpaper";
       if (settings.wpExtractedAccent) {
-        settings.accentColor = settings.wpExtractedAccent;
+        delete settings.accentOverride;
         StorageManager.save();
         applyTheme();
         renderSideSheetContent();
@@ -595,11 +522,30 @@
 
     $("myntColorPicker")?.addEventListener("input", (e) => {
       settings.solidSeed = e.target.value;
+
+      settings.backgroundValue = e.target.value;
       if (!settings.accentOverride) settings.accentColor = e.target.value;
+
+      const hadWallpaper =
+        settings.backgroundType === "image" || settings.backgroundType === "video";
+      if (hadWallpaper) {
+        settings.backgroundType = "solid";
+        settings.backgroundValue = e.target.value;
+        delete settings.wpExtractedAccent;
+        const videoBg = $("video-bg");
+        if (videoBg) {
+          videoBg.pause();
+          videoBg.classList.remove("active");
+        }
+      }
 
       settings.preset = "custom";
       StorageManager.saveSettings();
       applyTheme();
+      if (hadWallpaper) {
+        renderSideSheetContent();
+        ToastSystem.info("Switched to solid colour mode");
+      }
     });
     $("myntColorPicker")?.addEventListener("change", () => {
       renderSideSheetContent();
@@ -607,9 +553,6 @@
     });
 
     $("stAccent1Picker")?.addEventListener("input", (e) => {
-      // Only the override. `accentColor` stays the seed-derived value so that
-      // clearing the override falls back to it — writing both left two
-      // sources of truth that drifted apart across preset/custom cycles.
       settings.accentOverride = e.target.value;
       settings.preset = "custom";
       StorageManager.saveSettings();
@@ -618,8 +561,7 @@
 
     $("stAccentGradientToggle")?.addEventListener("change", (e) => {
       settings.accentGradient = e.target.checked;
-      // Turning it on with no secondary picked yet would sweep a colour into
-      // itself and show nothing, so seed it from the preset's pair.
+
       if (settings.accentGradient && !HEX6.test(settings.accent2 || "")) {
         const p = presetById(settings.preset);
         settings.accent2 = p?.accent2 || effectiveAccent();
@@ -647,6 +589,7 @@
         settings.solidSeed ||
         (settings.mode === "light" ? "#6366f1" : "#818cf8");
       StorageManager.saveSettings();
+
       applyTheme();
       renderSideSheetContent();
       ToastSystem.info("Accent follows the base colour again");
@@ -654,18 +597,15 @@
 
     $("stInterfaceOpacity")?.addEventListener("input", (e) => {
       settings.interfaceOpacity = parseInt(e.target.value, 10);
-
+      settings.surfaceOpacity = {};
       settings.boardOpacity = settings.interfaceOpacity / 100;
       $("stInterfaceOpacityVal").textContent = `${e.target.value}%`;
       StorageManager.saveSettings();
       paintNextFrame("theme", applyTheme);
-      // The surfaces still on Auto move with this slider, so their readouts
-      // have to follow rather than sit on stale numbers.
+
       paintSurfaceLabels();
     });
 
-    // Per-surface strength. Moving a slider pins that one surface; Auto drops
-    // the override so it follows the overall slider again.
     const paintSurfaceLabels = () => {
       const resolved = S.surfaceStrengths(settings);
       const live = settings.surfaceOpacity || {};
@@ -720,9 +660,6 @@
     });
 
     $("btnExportPresetCode")?.addEventListener("click", exportPresetCode);
-
-    // The wallpaper crop, dim, blur and gallery controls render in the
-    // Customize tab now, and are bound there - one copy of each.
 
     $("themeWpToggle")?.addEventListener("change", (e) => {
       const controls = $("themeWpControls");
@@ -875,19 +812,13 @@
     }
   }
 
-  /* Only surfaces that actually have a fill to strengthen.
-
-     "Tab bar" and "Top bar buttons" used to be listed here. Both bars lost
-     their backgrounds - the nav and the toolbar icons sit straight on the page
-     now - and nothing in the stylesheets reads `--topbar-opacity` or
-     `--widget-bg-alpha` any more. Two sliders that visibly did nothing were
-     worse than no sliders: they read as broken. Any value already stored for
-     those keys is left in place and simply ignored. */
   const SURFACES = [
+    { key: "topbar", label: "Top bar" },
+    { key: "widgets", label: "To-do list" },
+    { key: "pins", label: "Pinned links" },
     { key: "search", label: "Search bar" },
     { key: "boards", label: "Boards and cards" },
     { key: "notes", label: "Notepad" },
-    { key: "panels", label: "Panels and dialogs" },
   ];
 
   function render(settings, data) {
@@ -896,8 +827,7 @@
     const overrides = settings.surfaceOpacity || {};
     const hasOverride = (key) => typeof overrides[key] === "number";
     const surfaceValue = (key) => Math.round(resolvedStrengths[key]);
-    // "Auto" rather than a bare number when a surface is still following the
-    // overall slider, so the two states are told apart at a glance.
+
     const surfaceLabel = (key) =>
       hasOverride(key) ? `${surfaceValue(key)}%` : `Auto · ${surfaceValue(key)}%`;
     const surfaceOverrideCount = SURFACES.filter((sf) => hasOverride(sf.key)).length;
@@ -967,16 +897,39 @@
             <div class="st-row"><label class="st-label">Clock</label><input type="checkbox" id="wClockToggle" ${settings.widgets?.clock !== false ? "checked" : ""} /></div>
             <div class="st-row"><label class="st-label" for="wGreetingToggle">Greeting</label><input type="checkbox" id="wGreetingToggle" ${settings.widgets?.greeting !== false ? "checked" : ""} /></div>
             <div class="st-row"><label class="st-label">Search bar</label><input type="checkbox" id="wSearchToggle" ${settings.widgets?.navSearch !== false ? "checked" : ""} /></div>
-            <div class="st-row"><label class="st-label">App launcher</label><input type="checkbox" id="wWorkspaceToggle" ${settings.widgets?.workspace !== false ? "checked" : ""} /></div>
             <div class="st-row"><label class="st-label">Date</label><input type="checkbox" id="wDateToggle" ${settings.widgets?.date ? "checked" : ""} /></div>
             <div class="st-row"><label class="st-label">Weather</label><input type="checkbox" id="wWeatherToggle" ${settings.widgets?.weather ? "checked" : ""} /></div>
-            <div class="st-row"><label class="st-label">Pinned links</label><input type="checkbox" id="wPinnedLinksToggle" ${!settings.hidePinnedOnHome ? "checked" : ""} /></div>
-            <div class="st-row"><label class="st-label" for="wPinsPosition">Pinned links position</label>${CustomSelect.render({ id: "wPinsPosition", value: ["left", "right", "bottom"].includes(settings.pinsPosition) ? settings.pinsPosition : "center", options: [{ value: "center", label: "Under search" }, { value: "left", label: "Left side" }, { value: "right", label: "Right side" }, { value: "bottom", label: "Bottom" }], style: "width:160px;" })}</div>
+            <div class="st-row"><label class="st-label">Tasks from notes</label><input type="checkbox" id="wNotesTodosToggle" ${settings.widgets?.notesTodos !== false ? "checked" : ""} /></div>
+            <div class="st-hint">Shows unchecked to-dos from your notes. Tick one to delete it - you can undo.</div>
+          </div>
+        </div>
+      </div>
+      <div class="st-accordion is-expanded" data-page="home" data-accordion-key="pinned links">
+        <button class="st-accordion-header" type="button">
+          <span class="st-group-title">Pinned links</span>
+          <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="st-accordion-body">
+          <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
+            <div class="st-row"><label class="st-label">Show pinned links</label><input type="checkbox" id="wPinnedLinksToggle" ${!settings.hidePinnedOnHome ? "checked" : ""} /></div>
+            <div class="st-row"><label class="st-label" for="wPinsPosition">Position</label>${CustomSelect.render({ id: "wPinsPosition", value: ["left", "right", "bottom"].includes(settings.pinsPosition) ? settings.pinsPosition : "center", options: [{ value: "center", label: "Under search" }, { value: "left", label: "Left side" }, { value: "right", label: "Right side" }, { value: "bottom", label: "Bottom" }], style: "width:160px;" })}</div>
             <div class="st-row"><label class="st-label" for="wPinnedBoardsToggle">Pinned boards</label><input type="checkbox" id="wPinnedBoardsToggle" ${settings.widgets?.pinnedBoards !== false ? "checked" : ""} /></div>
             <div class="st-hint">Open boards from the board button in your pinned links. To choose which boards show, pin them from a board's menu.</div>
-            <div class="st-row"><label class="st-label">Tasks from notes</label><input type="checkbox" id="wNotesTodosToggle" ${settings.widgets?.notesTodos !== false ? "checked" : ""} /></div>
-            <div class="st-row"><label class="st-label" for="wTaskCount">Tasks shown</label>${CustomSelect.render({ id: "wTaskCount", value: settings.homeTaskCount === 5 ? "5" : "3", options: [{ value: "3", label: "3 tasks" }, { value: "5", label: "5 tasks" }], style: "width:130px;" })}</div>
-            <div class="st-hint">Shows unchecked to-dos from your notes. Tick one to delete it - you can undo.</div>
+          </div>
+        </div>
+      </div>
+      <div class="st-accordion is-expanded" data-page="home" data-accordion-key="top bar">
+        <button class="st-accordion-header" type="button">
+          <span class="st-group-title">Top bar</span>
+          <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="st-accordion-body">
+          <div class="st-card" style="display:flex; flex-direction:column; gap:12px;">
+            <div class="st-row"><label class="st-label" for="wLibraryToggle">Library</label><input type="checkbox" id="wLibraryToggle" ${settings.widgets?.library !== false ? "checked" : ""} /></div>
+            <div class="st-row"><label class="st-label" for="wFocusTimerToggle">Focus timer</label><input type="checkbox" id="wFocusTimerToggle" ${settings.widgets?.focusTimer !== false ? "checked" : ""} /></div>
+            <div class="st-row"><label class="st-label" for="wPaletteToggle">Command palette</label><input type="checkbox" id="wPaletteToggle" ${settings.widgets?.palette !== false ? "checked" : ""} /></div>
+            <div class="st-row"><label class="st-label" for="wWorkspaceToggle">App launcher</label><input type="checkbox" id="wWorkspaceToggle" ${settings.widgets?.workspace !== false ? "checked" : ""} /></div>
+            <div class="st-hint">Settings always stays in the top bar. Ctrl+K opens the command palette even when its button is hidden.</div>
           </div>
         </div>
       </div>`;

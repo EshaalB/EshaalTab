@@ -1,7 +1,7 @@
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  z-index: 4000;
+  z-index: var(--z-modal);
   background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
@@ -9,10 +9,6 @@
   padding: var(--sp-4);
 }
 
-/* Dialogs ------------------------------------------------------------------
-   Sized to their content rather than to a fixed wide box. A short question in
-   a 440px card is mostly empty card, and the wider the card the further the
-   eye has to travel from the question to the buttons that answer it. */
 .et-modal-card {
   width: min(92vw, calc(400px * var(--ui-scale)));
   max-height: calc(100dvh - var(--sp-8));
@@ -24,14 +20,11 @@
   box-shadow: var(--e3);
 }
 
-/* A one-field prompt is narrower still - close to square once the label, the
-   input and one row of buttons are stacked in it. */
 .et-modal-card:has(.modal-body-content > .dialog-field:only-child),
 .et-modal-card:has(.dialog-stack > .dialog-field:only-child) {
   width: min(92vw, calc(340px * var(--ui-scale)));
 }
 
-/* The confirmation layout: icon, question, choices, straight down the middle. */
 .et-modal-card.is-centered {
   width: min(92vw, calc(336px * var(--ui-scale)));
   padding: var(--sp-6) var(--sp-5) var(--sp-5);
@@ -79,9 +72,6 @@
   margin-bottom: var(--sp-2);
 }
 
-/* Both choices at equal width under the question, rather than pushed into the
-   bottom-right corner: at this width they read as a pair of answers, and the
-   destructive one is distinguished by colour rather than by position. */
 .et-modal-card.is-centered .dialog-modal-actions {
   margin-top: var(--sp-5);
   gap: var(--sp-2);
@@ -90,12 +80,6 @@
 .et-modal-card.is-centered .et-modal-btn {
   flex: 1;
   min-width: 0;
-}
-
-.dialog-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
 }
 
 .dialog-field {
@@ -120,7 +104,6 @@
   color: var(--text);
   font-size: var(--fs-sm);
   font-family: inherit;
-  outline: none;
   transition:
     border-color var(--dur-1) var(--ease-out),
     box-shadow var(--dur-1) var(--ease-out);
@@ -128,7 +111,6 @@
 
 .dialog-input:focus {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 20%, transparent);
 }
 
 .dialog-modal-actions {
@@ -171,9 +153,6 @@
   opacity: 0.88;
 }
 
-/* A destructive confirm is red rather than accent-coloured. The accent is the
-   colour of every ordinary action in the app, so using it here made "Delete"
-   and "Save" the same button with different words on it. */
 .et-modal-btn.primary.danger {
   background: var(--danger);
   color: #ffffff;
@@ -184,21 +163,11 @@
   font-size: var(--fs-sm);
 }
 
-.modal-error-msg {
-  color: var(--danger-text, var(--danger));
-  font-size: var(--fs-xs);
-  margin-top: var(--sp-2);
-}
-
 .et-pomo-overlay {
   --text: rgba(255, 255, 255, 0.95);
   --text-dim: rgba(255, 255, 255, 0.65);
   --text-faint: rgba(255, 255, 255, 0.35);
-  /* The flip clock is an object, not a themed surface: it is the same machined
-     dark face whatever the rest of the app is set to, because a countdown you
-     stare at for 25 minutes should not change colour with the wallpaper. The
-     shades are declared once here and referenced everywhere else, so the object
-     stays internally consistent. */
+
   --flip-face: #111214;
   --flip-face-top: #151618;
   --flip-ink: #f0f0ec;
@@ -210,13 +179,16 @@
 
   position: fixed;
   inset: 0;
-  z-index: 3500;
+  z-index: var(--z-overlay);
   background: #000000;
   display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--sp-5);
+  box-sizing: border-box;
+  padding: max(72px, calc(env(safe-area-inset-top) + 60px)) 16px
+    max(96px, calc(env(safe-area-inset-bottom) + 84px));
 }
 
 .et-pomo-overlay.open,
@@ -236,7 +208,7 @@
   right: 28px;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 28px;
   cursor: pointer;
   transition: color var(--dur-1) var(--ease-out);
@@ -277,13 +249,10 @@
   transform: rotate(180deg);
 }
 
-/* One segmented control rather than five separately outlined pills: the row is
-   secondary chrome and shouldn't compete with the clock. */
 .et-pomo-preset-row {
   position: absolute;
   top: 28px;
-  /* Explicitly centred. It was leaning on its static position inside the flex
-     column, which only holds while nothing else in the overlay changes width. */
+
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -330,7 +299,6 @@
   border: 1px solid transparent;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r-pill);
-  outline: none;
   color-scheme: dark;
   background: transparent;
   color: rgba(255, 255, 255, 0.4);
@@ -348,8 +316,6 @@
 
 .et-pomo-custom-btn:focus-visible {
   border-color: rgba(255, 255, 255, 0.3);
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
 }
 
 .et-pomo-display-switch {
@@ -387,7 +353,7 @@
   position: fixed;
   top: 72px;
   left: 50%;
-  z-index: 20;
+  z-index: var(--z-raised);
   width: min(300px, calc(100vw - 24px));
   overflow: hidden;
   border: 1px solid var(--flip-edge);
@@ -468,7 +434,6 @@
   scroll-snap-type: y mandatory;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  outline: none;
 }
 
 .et-pomo-wheel::-webkit-scrollbar {
@@ -520,9 +485,8 @@
 
 .et-flip-card {
   position: relative;
-  width: clamp(72px, 35vw, 460px);
-  height: clamp(100px, 38vw, 500px);
-  background: var(--flip-face);
+  width: clamp(72px, min(36vw, 42vh), 480px);
+  height: clamp(100px, min(48vw, 60vh), 680px);
   border-radius: var(--r-lg);
   border: 1px solid var(--flip-edge);
   box-shadow:
@@ -542,13 +506,11 @@
 }
 
 .et-flip-top {
-  background: var(--flip-face-top);
   border-bottom: 1px solid var(--flip-seam);
   box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.7);
 }
 
 .et-flip-bottom {
-  background: var(--flip-face);
   box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.75);
 }
 
@@ -561,7 +523,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(48px, 25vw, 340px);
+  font-size: clamp(44px, min(25vw, 29vh), 340px);
   font-weight: 700;
   color: var(--flip-ink);
   line-height: 0.9;
@@ -587,7 +549,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(48px, 25vw, 340px);
+  font-size: clamp(44px, min(25vw, 29vh), 340px);
   font-weight: 700;
   color: var(--flip-ink);
   line-height: 0.9;
@@ -611,7 +573,6 @@
   right: 0;
   height: 3px;
   margin-top: -1px;
-  background: var(--flip-seam);
   box-shadow:
     0 -1px rgba(255, 255, 255, 0.035),
     0 1px 2px rgba(0, 0, 0, 0.95);
@@ -640,23 +601,15 @@
 
 .et-pomo-overlay.has-wide-timer-value .et-flip-top span,
 .et-pomo-overlay.has-wide-timer-value .et-flip-bottom span {
-  font-size: clamp(42px, 19vw, 250px);
+  font-size: clamp(38px, min(19vw, 22vh), 250px);
   letter-spacing: -0.055em;
 }
 
-/* The display switch and both status lines share a single bottom row, so the
-   idle screen reads as clock + one line of chrome above and below it. */
-/* The footer's whole definition, in one place. It had been spread over three
-   separate `.et-pomo-footer` blocks, two of which only set `transition` and so
-   were silently cancelled by the third. */
 .et-pomo-footer {
   position: absolute;
   bottom: 28px;
   left: 50%;
-  /* The zen offset is a variable rather than its own transform. Zen mode set
-     `transform: translateY(6px)` and, being the more specific selector, that
-     replaced this centring translate outright - so the controls slid to the
-     left edge on their way out instead of fading straight down. */
+
   --pomo-footer-shift: 0px;
   transform: translateX(-50%) translateY(var(--pomo-footer-shift));
   display: flex;
@@ -669,9 +622,9 @@
   opacity: 1;
   visibility: visible;
   transition:
-    opacity var(--dur-4, 400ms) var(--ease-out),
-    transform var(--dur-4, 400ms) var(--ease-out),
-    visibility var(--dur-4, 400ms) var(--ease-out);
+    opacity var(--dur-4, 240ms) var(--ease-out),
+    transform var(--dur-4, 240ms) var(--ease-out),
+    visibility var(--dur-4, 240ms) var(--ease-out);
 }
 
 .et-pomo-status-badge {
@@ -710,13 +663,6 @@
   color: var(--accent-color);
 }
 
-/* Zen mode -----------------------------------------------------------------
-   Once the countdown is running and nothing has moved for a few seconds,
-the
-   controls fade out and the clock is left alone. Everything here animates
-   opacity and transform only - both compositor properties,
-so the fade costs
-   no layout and no repaint while a timer is the only thing on screen. */
 .et-pomo-overlay.is-zen .et-pomo-preset-row,
 .et-pomo-overlay.is-zen .et-pomo-close-btn,
 .et-pomo-overlay.is-zen .et-pomo-reset-fab{
@@ -729,27 +675,42 @@ so the fade costs
 .et-pomo-close-btn,
 .et-pomo-reset-fab{
   transition:
-    opacity var(--dur-4, 400ms) var(--ease-out),
-    transform var(--dur-4, 400ms) var(--ease-out);
+    opacity var(--dur-4, 240ms) var(--ease-out),
+    transform var(--dur-4, 240ms) var(--ease-out);
 }
 
-/* The clock takes the space the controls gave up. */
 .et-flip-container {
-  transition: transform var(--dur-4, 400ms) var(--ease-out);
+  transition: transform var(--dur-4, 240ms) var(--ease-out);
 }
 
 .et-pomo-overlay.is-zen .et-flip-container {
   transform: scale(1.06);
 }
 
-/* Zen mode used to lay a pulsing radial accent glow over the backdrop, on an
-   8s loop, forever. It was the one piece of motion in the app that never
-   stopped and never meant anything - decoration that draws the eye back to a
-   screen whose entire purpose is to stop doing that. The clock scaling up as
-   the controls fade is the whole effect now. */
 @media (prefers-reduced-motion: reduce) {
   .et-pomo-overlay.is-zen .et-flip-container {
     transform: none;
   }
 }
 
+@media (max-width: 600px) {
+  .et-pomo-overlay {
+    gap: var(--sp-4);
+    padding: max(128px, calc(env(safe-area-inset-top) + 116px)) 12px
+      max(150px, calc(env(safe-area-inset-bottom) + 136px));
+  }
+  .et-flip-container {
+    gap: var(--sp-3);
+  }
+  .et-pomo-footer {
+    bottom: max(76px, calc(env(safe-area-inset-bottom) + 68px));
+    max-width: calc(100vw - 32px);
+    gap: var(--sp-2) var(--sp-3);
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .et-pomo-overlay {
+    padding: 56px 72px;
+  }
+}

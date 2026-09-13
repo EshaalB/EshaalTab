@@ -1,11 +1,8 @@
 "use strict";
 
 const SettingsRenderer = (() => {
-  // Which subject the sheet is showing. The tab modules are an authoring
-  // detail underneath this - a page may need one of them or two.
-  let activePage = "appearance";
-  // Queued scroll target, consumed by the next paint. Used by deep links such
-  // as "open settings at the wallpaper picker".
+  let activePage = "home";
+
   let pendingSection = null;
 
   const PRESETS = [
@@ -155,9 +152,6 @@ const SettingsRenderer = (() => {
 
   const PRESET_GROUPS = ["Pastel", "Neon"];
 
-  // Presets retired when the Gamer group was replaced. Anyone still on one
-  // keeps the exact colours they had -- the theme simply becomes "Custom" --
-  // so the swap cannot silently restyle someone's page.
   const RETIRED_PRESETS = {
     neon: "0px",
     synthwave: "0px",
@@ -179,6 +173,10 @@ const SettingsRenderer = (() => {
   function effectiveAccent() {
     const s = StorageManager.getSettings();
     if (HEX6.test(s.accentOverride || "")) return s.accentOverride;
+    const overMedia =
+      s.backgroundType === "image" || s.backgroundType === "video";
+    if (overMedia && HEX6.test(s.wpExtractedAccent || ""))
+      return s.wpExtractedAccent;
     if (HEX6.test(s.accentColor || "")) return s.accentColor;
     return liveVar("--accent-color", "#6366f1");
   }
@@ -359,30 +357,33 @@ const SettingsRenderer = (() => {
     });
   }
 
-  /**
-   * The settings pages, in sidebar order.
-   *
-   * A page is a subject, not a module. "Wallpaper" means every wallpaper
-   * control there is, wherever it happens to be authored - the picker lives in
-   * the theme module and the crop and blur controls in the widgets module, and
-   * the user should never have to know or care. Each page names the tab modules
-   * whose markup it needs; everything rendered is then filtered down to the
-   * blocks tagged `data-page` with this page's id, so one module can contribute
-   * sections to several pages without any of them being rendered twice.
-   *
-   * `find` carries the words someone might search for that are not in the
-   * title. Adding a setting later is a row here plus a `data-page` attribute.
-   */
   const PAGES = [
     {
-      group: "Customize",
+      group: "Everyday",
       items: [
         {
-          id: "appearance",
-          label: "Appearance",
-          tabs: ["widgets", "theme"],
-          find: "corner radius rounded sharp font typeface board width size interface background strength opacity transparency surface performance ambient wash",
+          id: "home",
+          label: "Home page",
+          tabs: ["theme", "widgets"],
+          find: "widgets clock greeting name date weather search bar pinned links launcher time format 12 24 hour shadow top bar library timer palette tasks",
         },
+        {
+          id: "wallpaper",
+          label: "Wallpaper",
+          tabs: ["theme", "widgets"],
+          find: "photo video upload url blur soften dim crop zoom position fit gallery saved mute volume",
+        },
+        {
+          id: "search",
+          label: "Search engines",
+          tabs: ["search"],
+          find: "engine default browser google duckduckgo yandex yahoo bing chatgpt claude gemini perplexity brave youtube reddit pinterest quora ai",
+        },
+      ],
+    },
+    {
+      group: "Look and feel",
+      items: [
         {
           id: "themes",
           label: "Themes",
@@ -396,31 +397,19 @@ const SettingsRenderer = (() => {
           find: "preset share copy code export import theme pastel neon",
         },
         {
-          id: "wallpaper",
-          label: "Wallpaper",
-          tabs: ["theme", "widgets"],
-          find: "photo video upload url blur soften dim crop zoom position fit gallery saved mute volume",
-        },
-        {
-          id: "home",
-          label: "Home page",
-          tabs: ["theme", "widgets"],
-          find: "widgets clock greeting name date weather search bar pinned links launcher time format 12 24 hour shadow",
-        },
-        {
-          id: "search",
-          label: "Search engines",
-          tabs: ["search"],
-          find: "engine default browser google duckduckgo yandex yahoo bing chatgpt claude gemini perplexity brave youtube reddit pinterest quora ai",
+          id: "appearance",
+          label: "Appearance",
+          tabs: ["widgets", "theme"],
+          find: "corner radius rounded sharp font typeface board width size interface background strength opacity transparency surface performance ambient wash",
         },
       ],
     },
     {
       group: "Your data",
       items: [
-        { id: "backup", label: "Backup & import", tabs: ["data"], find: "export json bookmarks raindrop restore" },
-        { id: "maintenance", label: "Maintenance", tabs: ["data"], find: "duplicates repair wallpaper cache" },
+        { id: "backup", label: "Backup & import", tabs: ["data"], find: "export import csv json bookmarks raindrop restore" },
         { id: "privacy", label: "Privacy", tabs: ["data"], find: "favicons remote tracking permissions" },
+        { id: "maintenance", label: "Maintenance", tabs: ["data"], find: "duplicates repair wallpaper cache" },
         { id: "reset", label: "Reset", tabs: ["data"], find: "clear boards wipe delete everything factory danger" },
       ],
     },
@@ -433,7 +422,6 @@ const SettingsRenderer = (() => {
     },
   ];
 
-  /* Deep links from elsewhere in the app still name the old tabs. */
   const TAB_TO_PAGE = {
     theme: "themes",
     widgets: "appearance",
@@ -450,9 +438,7 @@ const SettingsRenderer = (() => {
     const nav = $("settingsNav");
     if (!nav) return;
     const q = filter.trim().toLowerCase();
-    // The group name comes from the group, not the item - matching a section by
-    // the heading it sits under is half of what makes searching for "data" or
-    // "customize" work.
+
     const match = (it, group) =>
       !q ||
       it.label.toLowerCase().includes(q) ||
@@ -491,7 +477,6 @@ const SettingsRenderer = (() => {
     markActiveNavItem();
   }
 
-  /** Opens a page from a sidebar row, a search hit or a deep link. */
   function goToPage(id) {
     const page = pageById(id);
     if (!page) return;
@@ -504,14 +489,6 @@ const SettingsRenderer = (() => {
     renderSideSheetContent(false);
   }
 
-  /**
-   * Marks the one sidebar row that is on screen.
-   *
-   * A tab can render several sections, so "same tab" is not enough to identify
-   * a row - matching on that alone lit up four rows at once. When no section
-   * has been chosen (the sheet was opened cold on its last tab) the first row
-   * belonging to that tab stands in, because that is what the page opens at.
-   */
   function markActiveNavItem() {
     $$("#settingsNav .et-set-nav-item").forEach((el) => {
       const on = el.dataset.page === activePage;
@@ -531,8 +508,6 @@ const SettingsRenderer = (() => {
 
     if (overlay) {
       overlay.addEventListener("click", (e) => {
-        // Ignores a text selection that was dragged out of the panel onto the
-        // backdrop; that reports the backdrop as the click target.
         if (e.target === overlay && !gestureStartedIn($("sidesheetPanel")))
           closeSideSheet();
       });
@@ -551,9 +526,7 @@ const SettingsRenderer = (() => {
           const isExp = acc.classList.contains("is-expanded");
           const ownBody = header.nextElementSibling;
           const isBody = ownBody?.classList.contains("st-accordion-body");
-          // Measured before the class flip below changes which CSS rule is
-          // active, so the slide has a real starting height to animate from
-          // - measuring after would read the height it is becoming.
+
           const fromHeight = isBody
             ? ownBody.getBoundingClientRect().height
             : null;
@@ -573,9 +546,7 @@ const SettingsRenderer = (() => {
           const expanded = new Set(
             settings.expandedSettingsAccordions?.[activePage] || [],
           );
-          // Recorded in both directions. Only tracking what was collapsed made
-          // "never touched" and "deliberately expanded" the same state, so a
-          // section that ships collapsed was force-opened on every load.
+
           if (isExp) {
             collapsed.add(key);
             expanded.delete(key);
@@ -611,8 +582,7 @@ const SettingsRenderer = (() => {
         renderSettingsNav("");
         return;
       }
-      // Enter goes to the first thing left in the list, so a search that has
-      // narrowed to one answer does not also need a click to accept it.
+
       if (e.key === "Enter") {
         const first = nav?.querySelector(".et-set-nav-item");
         if (first) goToPage(first.dataset.page);
@@ -631,14 +601,13 @@ const SettingsRenderer = (() => {
 
     sheetReturnFocus = document.activeElement;
     const settings = StorageManager.getSettings();
-    // Callers still name a tab ("theme") or a page ("wallpaper"); both resolve
-    // to a page, so old deep links keep working.
+
     const asked = TAB_TO_PAGE[tab] || tab;
     activePage = pageById(asked)
       ? asked
       : pageById(settings.lastSettingsPage || "")
         ? settings.lastSettingsPage
-        : "appearance";
+        : "home";
     pendingSection = section;
     settings.lastSettingsPage = activePage;
     StorageManager.saveSettings();
@@ -704,15 +673,6 @@ const SettingsRenderer = (() => {
     StorageManager.saveSettings();
   }
 
-  /**
-   * Paints one page.
-   *
-   * A page may be authored across two tab modules, so each one it needs is
-   * rendered in turn and appended, then bound. Every section carries a
-   * `data-page`; anything not tagged for this page is dropped, so a module that
-   * contributes to three pages still only ever renders once per paint and the
-   * user sees exactly the subject they asked for.
-   */
   function paintPage(mods, page, token, savedScrollTop) {
     const body = $("sidesheetBody");
     if (!body || token !== renderToken || activePage !== page) return;
@@ -726,27 +686,31 @@ const SettingsRenderer = (() => {
       body.append(...holder.childNodes);
     }
 
-    // Sections belonging to another page are removed rather than hidden: a
-    // hidden duplicate still answers `getElementById`, so a binding meant for
-    // the visible copy could silently attach to an off-page one.
     body.querySelectorAll("[data-page]").forEach((el) => {
       if (el.dataset.page !== page) el.remove();
     });
-    // A container left holding nothing is a stack of padding with no content.
+
     body.querySelectorAll(".st-container").forEach((el) => {
       if (!el.children.length) el.remove();
     });
+
+    if (page === "home") {
+      const topBar = body.querySelector('[data-accordion-key="top bar"]');
+      const containers = body.querySelectorAll(".st-container");
+      const last = containers[containers.length - 1];
+      if (topBar && last && !last.contains(topBar)) last.append(topBar);
+      const oldHolder = [...containers].find((c) => !c.children.length);
+      oldHolder?.remove();
+    }
 
     const lower = (list) =>
       new Set((list || []).map((v) => String(v).toLowerCase()));
     const collapsed = lower(settings.collapsedSettingsAccordions?.[page]);
     const expanded = lower(settings.expandedSettingsAccordions?.[page]);
     body.querySelectorAll(".st-accordion").forEach((acc) => {
-      // `querySelector` would reach into a nested accordion when the outer one
-      // has no header of its own, which would key the two together.
       const header = acc.querySelector(":scope > .st-accordion-header");
       const key = accordionKey(header);
-      // An accordion nobody has touched keeps whatever the markup asked for.
+
       if (collapsed.has(key)) acc.classList.remove("is-expanded");
       else if (expanded.has(key)) acc.classList.add("is-expanded");
     });
@@ -760,13 +724,6 @@ const SettingsRenderer = (() => {
     markActiveNavItem();
   }
 
-  /**
-   * Opens and scrolls to whichever section was asked for, then forgets it.
-   *
-   * Was a single hardcoded case for the wallpaper card. Every sidebar row and
-   * every search hit needs the same behaviour, so it looks the section up by
-   * the key the accordion already carries rather than by knowing what is in it.
-   */
   function revealSection(body, page) {
     if (!pendingSection) return;
 
@@ -804,8 +761,6 @@ const SettingsRenderer = (() => {
       : settings.settingsScrollPositions?.[page] || 0;
     const token = ++renderToken;
 
-    // Everything this page needs already in memory: paint without a frame of
-    // "Loading", which is the common case once a module has been fetched.
     if (spec.tabs.every((t) => tabModules[t])) {
       paintPage(
         spec.tabs.map((t) => tabModules[t]),
@@ -854,7 +809,6 @@ const SettingsRenderer = (() => {
     }
   }
 
-  /** The overall interface strength, 0-100, with the legacy key folded in. */
   function overallStrength(settings) {
     const legacy =
       typeof settings.boardOpacity === "number" ? settings.boardOpacity * 100 : 8;
@@ -865,23 +819,9 @@ const SettingsRenderer = (() => {
     return Math.max(0, Math.min(100, raw));
   }
 
-  /**
-   * Resolves each interface surface to a concrete strength, 0-100.
-   *
-   * The overall slider is a promise: 0% is fully transparent and 100% fully
-   * opaque. Surfaces that carry small text (notes, widgets, the topbar) want a
-   * little more body than a board card at the same setting, but that boost has
-   * to fade out towards both ends - otherwise 0% is not really transparent and
-   * 100% is reached early.
-   *
-   * There is one slider now. The per-surface overrides that used to sit under
-   * it were six more ways to end up with unreadable text, for a distinction
-   * most people never wanted to draw; the relationships between the surfaces
-   * are what this curve is for.
-   */
   function surfaceStrengths(settings) {
     const t = overallStrength(settings) / 100;
-    // Peaks mid-slider and vanishes at both ends.
+
     const lift = (amount) => (t + amount * t * (1 - t) * 4) * 100;
     const auto = {
       boards: t * 100,
@@ -889,16 +829,13 @@ const SettingsRenderer = (() => {
       search: lift(0.04),
       notes: lift(0.06),
       widgets: lift(0.08),
-      // Panels, popovers and dialogs sit *over* the page rather than being part
-      // of it, and they carry the densest text in the app. They stay solid
-      // unless the user asks otherwise, so dragging the overall slider down for
-      // a glassier home page does not also make the settings sheet unreadable.
+      pins: lift(0.08),
+
       panels: 100,
     };
-    // A surface listed in `surfaceOpacity` opts out of the curve: the override
-    // is an absolute strength, taken literally, because someone who reached for
-    // one surface wants that number and not that number plus a boost.
-    const overrides = settings.surfaceOpacity || {};
+
+    const overrides = { ...(settings.surfaceOpacity || {}) };
+    delete overrides.panels;
     const out = {};
     for (const key of Object.keys(auto)) {
       out[key] = Math.max(
@@ -1332,59 +1269,15 @@ const SettingsRenderer = (() => {
     WidgetsRenderer.applyClockAppearance(settings);
   }
 
-  /**
-   * One angle for every gradient in the UI.
-   *
-   * Mixed angles are the single loudest tell of a slapped-together gradient:
-   * a 135deg button next to a 90deg pill reads as two unrelated surfaces. The
-   * horizontal variant exists only for elements that are far wider than they
-   * are tall, where a diagonal compresses into a visible corner-to-corner
-   * band.
-   */
   const GRADIENT_ANGLE = 135;
 
-  /**
-   * Constrains an accent pair into a gradient that reads as one colour with
-   * depth rather than two colours fighting.
-   *
-   * Three things make an interface gradient look cheap, and this fixes all
-   * three:
-   *
-   * 1. *Too much hue travel.* A sweep across more than a quarter of the wheel
-   *    stops being a shade and becomes a rainbow. The secondary hue is pulled
-   *    to sit within MAX_HUE_TRAVEL of the primary, taking the short way
-   *    round the wheel.
-   * 2. *Too much lightness travel.* A stop much lighter than the other forces
-   *    the label to fight for contrast at one end. Lightness delta is capped,
-   *    and the darker stop is placed last so the diagonal falls off into
-   *    shadow the way a lit surface does.
-   * 3. *A dead midpoint.* sRGB interpolation routes between saturated hues
-   *    through a desaturated middle, which is where the grey smear in the
-   *    centre of a bad gradient comes from. Interpolating in oklab keeps
-   *    chroma up across the whole ramp.
-   *
-   * @param {string} [bg] Background the pair is read against, so the tuned
-   *   stop goes through the same contrast pass as the accent itself - nudging
-   *   a hue can push a stop under AA, and a label has to stay readable at
-   *   both ends of the ramp, not just the one it was checked against.
-   * @returns {{from:string,to:string}} Ordered stops, lighter first.
-   */
   function harmoniseGradient(primary, secondary, bg) {
     const a = hexToHsl(primary);
     const b = hexToHsl(secondary);
 
-    /* How far the second stop may sit from the first. These were 45deg and
-       0.16, tuned back when the ramp interpolated through sRGB and anything
-       wider went grey in the middle. The ramp runs in OKLab now, which stays
-       chromatic across the transit, so the clamp no longer has to protect the
-       midpoint - only the composition. Widening it is what lets a deliberately
-       chosen second colour actually show up instead of being pulled back onto
-       the first and rendering as one flat colour twice. */
     const MAX_HUE_TRAVEL = 110;
     const MAX_LIGHT_TRAVEL = 0.26;
 
-    // Signed shortest distance around the wheel, so a red->magenta pair does
-    // not travel the long way through green.
     let dh = ((b.h - a.h + 540) % 360) - 180;
     dh = Math.max(-MAX_HUE_TRAVEL, Math.min(MAX_HUE_TRAVEL, dh));
 
@@ -1393,28 +1286,11 @@ const SettingsRenderer = (() => {
       Math.min(MAX_LIGHT_TRAVEL, b.l - a.l),
     );
 
-    /* Keep the second stop in the same register as the first - a vivid stop
-       next to a washed-out one looks like a rendering error rather than a
-       choice - but band it around the *pair* rather than pinning it to the
-       primary. The old rule multiplied the primary's saturation, so a near-grey
-       primary forced the secondary grey too and every pairing involving a
-       muted colour came out muddy whatever the user picked. A floor keeps the
-       ramp from collapsing when both are desaturated. */
     const sat = Math.max(0.25, Math.min(Math.max(a.s, b.s), (a.s + b.s) / 2 + 0.18));
 
     let tuned = hslToHex(a.h + dh, sat, a.l + dl);
     if (bg) tuned = accentTokens(tuned, bg).ui;
 
-    // The label colour is picked once, from the primary, but it has to stay
-    // legible everywhere along the ramp - the far stop is a background too.
-    // So the tuned stop is mixed back toward the primary until the ink clears
-    // AA against it.
-    //
-    // The mix runs in RGB rather than HSL: HSL lightness is not luminance, and
-    // a blue and a cyan at the same nominal lightness sit almost three stops
-    // apart in contrast, so nudging lightness could iterate to no effect.
-    // Mixing toward the primary always converges, because the primary is by
-    // definition the colour the ink was chosen for.
     const ink = contrastText(primary);
     const base = hexToRgb(primary);
     const far = hexToRgb(tuned);
@@ -1435,19 +1311,9 @@ const SettingsRenderer = (() => {
         .join("")}`;
     }
 
-    // Lighter stop first: light reads as coming from the top-left, so a
-    // 135deg ramp that darkens matches how every other surface is lit.
     return dl >= 0 ? { from: tuned, to: primary } : { from: primary, to: tuned };
   }
 
-  /**
-   * True when the browser understands perceptual gradient interpolation.
-   *
-   * Custom properties accept almost any token sequence, so an unsupported
-   * `in oklab` would sail into `--accent-fill` and only fail later, at the
-   * `background: var(--accent-fill)` that uses it - painting nothing at all.
-   * The support question is settled once, here.
-   */
   const SUPPORTS_OKLAB_GRADIENT = (() => {
     try {
       return CSS.supports(
@@ -1459,13 +1325,6 @@ const SettingsRenderer = (() => {
     }
   })();
 
-  /**
-   * Builds the gradient, interpolated perceptually where the browser allows.
-   *
-   * The sRGB fallback adds a midpoint stop: without perceptual interpolation
-   * the centre of the ramp desaturates, and an explicit middle colour is what
-   * keeps it from going grey there.
-   */
   function gradientCss(angle, { from, to }) {
     if (SUPPORTS_OKLAB_GRADIENT)
       return `linear-gradient(${angle}deg in oklab, ${from} 0%, ${to} 100%)`;
@@ -1481,20 +1340,6 @@ const SettingsRenderer = (() => {
     return `linear-gradient(${angle}deg, ${from} 0%, ${mid} 50%, ${to} 100%)`;
   }
 
-  /**
-   * Publishes the secondary accent.
-   *
-   * Historically this was handed the primary accent, so `--accent-2` was only
-   * ever a duplicate of `--accent-1` and the stored `accent2` did nothing. It
-   * now prefers the real secondary, run through the same contrast pass as the
-   * primary so a theme cannot ship an unreadable second colour, and falls back
-   * to the primary whenever no secondary is set.
-   *
-   * @param {string} primary Already contrast-corrected primary accent.
-   * @param {string} [secondary] Raw secondary from settings, may be empty.
-   * @param {string} [bg] Background the pair is read against.
-   * @param {boolean} [gradient] Whether `--accent-fill` sweeps the two colours.
-   */
   function applyAccent2(el, primary, secondary, bg, gradient) {
     const raw = HEX6.test(secondary || "") ? secondary : primary;
     const value = bg ? accentTokens(raw, bg).ui : raw;
@@ -1502,10 +1347,7 @@ const SettingsRenderer = (() => {
     el.setProperty("--accent-2-contrast", contrastText(value));
     const rgb = hexToRgb(value);
     el.setProperty("--accent-2-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
-    // The gradient tokens always describe the accent pair, so anything that
-    // specifically wants a sweep can reach for `--accent-gradient` directly.
-    // `--accent-fill` is what every button, pill and active tab paints with,
-    // and it stays flat unless the user asked for two-tone.
+
     const stops = harmoniseGradient(primary, value, bg);
     el.setProperty("--accent-gradient", gradientCss(GRADIENT_ANGLE, stops));
     el.setProperty("--accent-gradient-h", gradientCss(90, stops));
@@ -1517,17 +1359,6 @@ const SettingsRenderer = (() => {
     );
   }
 
-  /**
-   * The ground a surface that carries its *own* colour is built on.
-   *
-   * `--board-rgb` is deliberately tinted with the theme accent, which is right
-   * for anything that should follow the theme - but wrong for a board the user
-   * has given a colour of its own. Mixing a red board into a blue-tinted ground
-   * produces a muddy purple that is neither colour, which is exactly the "my
-   * board colour got blended with the accent" complaint. Boards with a colour
-   * mix into this neutral instead, so the only hue in the result is the one
-   * that was picked.
-   */
   function setNeutralGround(el, isLight) {
     el.setProperty("--board-neutral-rgb", isLight ? "247, 248, 250" : "18, 19, 24");
   }
@@ -1561,16 +1392,6 @@ const SettingsRenderer = (() => {
     }
   }
 
-  /**
-   * Darkens the edges of the wallpaper and leaves the middle alone.
-   *
-   * A photo is usually brightest where the clock sits, and the ink measurement
-   * then has to work hardest exactly where the largest text is. A vignette buys
-   * that contrast back without dimming the picture as a whole the way the
-   * overlay does - the subject stays lit and only the corners give way. It is
-   * one radial gradient on a layer that already exists, so it costs nothing to
-   * have switched on.
-   */
   function applyWallpaperVignette() {
     const settings = StorageManager.getSettings();
     const on =
@@ -1595,34 +1416,8 @@ const SettingsRenderer = (() => {
     );
   }
 
-  /**
-   * Blurs the wallpaper itself rather than laying anything over it, so a busy
-   * photo stops competing with the text without being darkened as well. The
-   * filter goes on the two background layers only - putting it on a wrapper
-   * would blur the interface along with the picture.
-   */
-  /* Radius, in pixels, that 100% blur means. Past roughly this the picture has
-     stopped being a picture and the extra cost buys nothing but a slower
-     paint, so the slider spends its whole range where the change is visible. */
-  const BLUR_MAX_PX = 26;
+  const BLUR_MAX_PX = 12;
 
-  /**
-   * Blur strength as a percentage of "as blurred as this is worth going",
-   * rather than as a raw pixel radius.
-   *
-   * Two things were harsh about the old control. It was labelled in pixels,
-   * which is a number about the implementation rather than about the picture -
-   * nobody knows what 12px of blur looks like until they try it. And it was
-   * linear, so the first third of the slider went from sharp to unrecognisable
-   * and the rest was mush; the useful range - a photo softened just enough to
-   * read text over - lived in about four pixels near the bottom.
-   *
-   * The curve fixes the second problem: raising the fraction to 1.8 spends most
-   * of the travel in the gentle end, where the differences are actually worth
-   * choosing between, while still reaching full blur at 100%. A straight square
-   * pushed too far the other way and left the bottom quarter of the slider
-   * doing nothing visible at all.
-   */
   const blurRadius = (percent) =>
     BLUR_MAX_PX * Math.pow(Math.max(0, Math.min(100, percent)) / 100, 1.8);
 
@@ -1634,37 +1429,17 @@ const SettingsRenderer = (() => {
     document.body.classList.toggle("wp-blur-on", on);
     const el = document.documentElement.style;
     el.setProperty("--wp-blur-amount", `${px.toFixed(1)}px`);
-    // A blur samples past the edge of its own element, so an un-compensated
-    // one leaves a feathered grey border around the viewport - which is what
-    // "harsh" looked like at the top of the old slider, where a fixed 1.06
-    // scale could not cover a 40px radius. Overscanning by three radii on
-    // every side keeps the edge off screen at any strength, and costs nothing
-    // at zero.
+
     const shortest = Math.min(window.innerWidth, window.innerHeight) || 1;
     el.setProperty(
       "--wp-blur-scale",
       String(1 + (px * 6) / shortest),
     );
+    const pagePx = Math.max(px, 8);
+    el.setProperty("--wp-page-blur", `${pagePx.toFixed(1)}px`);
+    el.setProperty("--wp-page-scale", String(1 + (pagePx * 6) / shortest));
   }
 
-  /**
-   * Turns the measured wallpaper tone into the ink and halo that everything
-   * sitting over the picture is drawn with.
-   *
-   * Three grounds come out of the analysis - the strip under the toolbar, the
-   * middle where the clock and pins are, the strip under the date and weather -
-   * and each one picks its own ink through the same APCA call the rest of the
-   * app uses, so a bright sky gets dark icons while dark ground below it keeps
-   * light ones. The scrim is folded in first: a wallpaper the user has dimmed
-   * by 40% is a genuinely darker ground and choosing ink for the undimmed
-   * picture is choosing it for something nobody can see.
-   *
-   * The halo is the inverse of whatever ink won, and its weight is derived
-   * rather than fixed: busy pictures (high luminance spread) and grounds where
-   * the winning ink only just cleared the bar get a real shadow, flat ones get
-   * almost none. A uniform heavy halo is what made the toolbar look smudged on
-   * wallpapers that never needed one.
-   */
   function applyWallpaperTone() {
     const settings = StorageManager.getSettings();
     const el = document.documentElement.style;
@@ -1705,8 +1480,7 @@ const SettingsRenderer = (() => {
       const ink = Contrast.ink(ground);
       const light = ink === Contrast.INK_LIGHT;
       el.setProperty(inkVar, ink);
-      // The same pair as rgb components, for the borders and plates that need
-      // the ink at a partial alpha rather than as a solid colour.
+
       el.setProperty(
         inkVar.replace("--wp-ink", "--wp-ink-rgb"),
         light ? "255, 255, 255" : "20, 21, 26",
@@ -1722,14 +1496,8 @@ const SettingsRenderer = (() => {
     applyTextHalo(settings, { spread: tone.spread, worstLc });
   }
 
-  /* Weakest contrast, in Lc, a band can reach before the halo stops scaling up. */
   const HALO_FLOOR_LC = 78;
 
-  /**
-   * Writes the halo the wallpaper text shadows are built from - derived from
-   * the picture when the user has not overridden it, and taken verbatim from
-   * their own colour and opacity the moment they have.
-   */
   function applyTextHalo(settings, measured) {
     const el = document.documentElement.style;
     if (settings.wpShadowAuto === false || !measured) {
@@ -1753,8 +1521,7 @@ const SettingsRenderer = (() => {
     );
     el.setProperty("--wp-shadow-rgb", "var(--wp-halo-mid, 0, 0, 0)");
     el.setProperty("--wp-shadow-opacity", strength.toFixed(3));
-    // A busier picture needs the halo spread wider as well as darker, or it
-    // reads as an outline rather than as separation.
+
     el.setProperty("--wp-shadow-blur", `${Math.round(12 + strength * 16)}px`);
   }
 
@@ -1793,15 +1560,18 @@ const SettingsRenderer = (() => {
 
     el.setProperty("--board-opacity", px(strengths.boards));
     el.setProperty("--board-opacity-pct", `${strengths.boards}%`);
-    // At full strength a board is painted as a plain solid colour. The mix
-    // toward transparent is exact in most engines, but a browser that cannot
-    // evaluate it drops the whole background and the board turned see-through
-    // at the very setting that asks for it to be solid.
+
     document.body.classList.toggle("boards-opaque", strengths.boards >= 100);
+    document.body.classList.toggle("boards-glass", strengths.boards < 70);
     el.setProperty("--search-opacity", px(strengths.search));
     el.setProperty("--notes-opacity", px(strengths.notes));
-    // No `--topbar-opacity` / `--widget-bg-alpha`: neither has a consumer since
-    // the tab bar and toolbar buttons stopped having a fill of their own.
+    el.setProperty("--topbar-opacity", px(strengths.topbar));
+    el.setProperty("--widgets-opacity", px(strengths.widgets));
+    el.setProperty("--pins-opacity", px(strengths.pins));
+    document.body.classList.toggle("topbar-plate", strengths.topbar >= 1);
+    document.body.classList.toggle("widgets-plate", strengths.widgets >= 1);
+    document.body.classList.toggle("pins-plate", strengths.pins >= 1);
+
     el.setProperty("--panel-opacity", px(strengths.panels));
 
     document.body.classList.toggle(
@@ -1837,9 +1607,12 @@ const SettingsRenderer = (() => {
       el.setProperty("--accent-color", ui);
       el.setProperty("--accent-ink", ink);
       el.setProperty("--accent-display", display);
-      // The deeper body-text step: the brighter display step washed logos out
-      // on white tiles in pastel themes.
-      applyIconTint(ink);
+
+      const tileBg = isLight ? PIN_TILE_LIGHT : PIN_TILE_DARK;
+      el.setProperty("--pin-tile-bg", tileBg);
+      document.body.classList.toggle("icon-duotone", isLight);
+      if (isLight)
+        applyIconTint(accentTokens(accent, tileBg, presetSwatch(settings)).ink);
       el.setProperty("--accent-contrast", contrastText(ui));
       applyAccent2(el, ui, settings.accent2, p.bg, !!settings.accentGradient);
       el.setProperty("--accent-rgb", `${accRgb.r}, ${accRgb.g}, ${accRgb.b}`);
@@ -1847,12 +1620,7 @@ const SettingsRenderer = (() => {
       const sRgb = hexToRgb(p.surface);
       el.setProperty("--board-rgb", `${sRgb.r}, ${sRgb.g}, ${sRgb.b}`);
       setNeutralGround(el, isLight);
-      // The wallpaper branch writes `--page-bg` and only clears it in its own
-      // light case, so switching to a solid background left whatever the last
-      // wallpaper render had put there. Solid mode owns the page colour while
-      // it is on, and derives it from the base colour for both modes - which is
-      // what makes a chosen base survive a light/dark switch instead of
-      // reverting to the stock grey.
+
       el.setProperty("--page-bg", p.bg);
 
       const bodyEl = document.body.style;
@@ -1866,7 +1634,10 @@ const SettingsRenderer = (() => {
       document.body.classList.toggle("theme-dark", !isLight);
 
       const accent =
-        settings.accentOverride || settings.accentColor || "#6366f1";
+        settings.accentOverride ||
+        settings.wpExtractedAccent ||
+        settings.accentColor ||
+        "#6366f1";
 
       const { ui, ink, display } = accentTokens(
         accent,
@@ -1877,9 +1648,8 @@ const SettingsRenderer = (() => {
       el.setProperty("--accent-color", ui);
       el.setProperty("--accent-ink", ink);
       el.setProperty("--accent-display", display);
-      // The deeper body-text step: the brighter display step washed logos out
-      // on white tiles in pastel themes.
-      applyIconTint(ink);
+
+      document.body.classList.remove("icon-duotone");
       el.setProperty("--accent-contrast", contrastText(ui));
       applyAccent2(
         el,
@@ -1898,7 +1668,6 @@ const SettingsRenderer = (() => {
             b: Math.round(a.b * 0.35 + 240 * 0.65),
           }
         : {
-            // Dark mode: slate black base (18, 19, 24) without cold blue cast
             r: Math.round(a.r * 0.12 + 18 * 0.88),
             g: Math.round(a.g * 0.12 + 19 * 0.88),
             b: Math.round(a.b * 0.12 + 24 * 0.88),
@@ -1906,7 +1675,6 @@ const SettingsRenderer = (() => {
       el.setProperty("--board-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
       setNeutralGround(el, isLight);
 
-      // In dark mode, tint the obsidian slate background and panel with a clean, subtle hue
       if (!isLight) {
         const pageBg = {
           r: Math.round(a.r * 0.03 + 9 * 0.97),
@@ -1920,14 +1688,9 @@ const SettingsRenderer = (() => {
         };
         const toHex = (c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, "0");
         el.setProperty("--page-bg", `#${toHex(pageBg.r)}${toHex(pageBg.g)}${toHex(pageBg.b)}`);
-        // Components, not a hex: `--panel` is composed from these plus the
-        // strength alpha, so overriding the colour here must not also pin the
-        // opacity back to solid.
+
         el.setProperty("--panel-rgb", `${panel.r}, ${panel.g}, ${panel.b}`);
       } else {
-        // Light mode over a wallpaper: the page colour is barely visible behind
-        // the photo, but it is what the browser paints before the picture
-        // loads, so it is set rather than left to whatever ran last.
         el.setProperty("--page-bg", "#f4f6f8");
         el.removeProperty("--panel-rgb");
       }
@@ -1976,35 +1739,9 @@ const SettingsRenderer = (() => {
     applyTheme();
   }
 
-  /* How long the boot will wait for a wallpaper before showing the page.
-
-     This is an anti-flash measure, not a correctness one: `boot.js` has
-     already painted a small cached preview of this very wallpaper as the page
-     background, so revealing a few frames before the full-resolution image is
-     ready costs a slight sharpening, not a flash of the wrong colour. Half a
-     second is far longer than a local file needs and short enough that a
-     wallpaper which is not coming back never holds up the page. */
   const WALLPAPER_PAINT_DEADLINE = 500;
   const DECODE_DEADLINE = 250;
 
-  /**
-   * Resolves once the wallpaper is ready to be shown - or once waiting for it
-   * has stopped being worth it - with the decoded image when there is one, so
-   * the caller can reuse it instead of decoding the same file again.
-   *
-   * Two deadlines, because the two ways this can hang are different.
-   *
-   * `img.decode()` does not settle at all in a document that is not being
-   * painted, and a new tab page is very often opened in the background:
-   * ctrl-clicked, restored with a session, or in a window that opens behind
-   * another. The previous version awaited it with only a 5000ms backstop, so
-   * every background new tab sat blank for five seconds before revealing
-   * itself - measured at 5651ms against 314ms for the image to actually load.
-   * The decode is now raced rather than awaited.
-   *
-   * And when the document is hidden there is nothing being painted to flash,
-   * so there is nothing to wait for at all.
-   */
   function waitForImagePaint(src) {
     if (!src) return Promise.resolve();
     if (document.hidden) return Promise.resolve();
@@ -2012,7 +1749,7 @@ const SettingsRenderer = (() => {
     return new Promise((resolve) => {
       const img = new Image();
       let done = false;
-      /** @param {HTMLImageElement|null} loaded The decoded image, when there is one. */
+
       const finish = (loaded) => {
         if (!done) {
           done = true;
@@ -2036,8 +1773,6 @@ const SettingsRenderer = (() => {
     });
   }
 
-  /* Same reasoning as the image path: a hidden document paints nothing, and a
-     video that has not produced a frame must not hold the page back. */
   function waitForVideoPaint(video) {
     if (!video || video.readyState >= 2) return Promise.resolve();
     if (document.hidden) return Promise.resolve();
@@ -2058,57 +1793,6 @@ const SettingsRenderer = (() => {
     });
   }
 
-  function cacheBootPreview(source, type) {
-    try {
-      const paint = (media) => {
-        try {
-          const sw = media.videoWidth || media.naturalWidth || media.width;
-          const sh = media.videoHeight || media.naturalHeight || media.height;
-          if (!sw || !sh) return;
-          const canvas = document.createElement("canvas");
-          canvas.width = 160;
-          canvas.height = 90;
-          const ctx = canvas.getContext("2d", { alpha: false });
-          const scale = Math.max(canvas.width / sw, canvas.height / sh);
-          const dw = sw * scale,
-            dh = sh * scale;
-          ctx.drawImage(
-            media,
-            (canvas.width - dw) / 2,
-            (canvas.height - dh) / 2,
-            dw,
-            dh,
-          );
-          StorageManager.setBootPreview(canvas.toDataURL("image/jpeg", 0.68));
-        } catch {}
-      };
-      if (type === "video") paint(source);
-      else if (source instanceof HTMLImageElement) {
-        // Already decoded by the caller. Decoding a 2560x1440 wallpaper a
-        // second time, purely to shrink it to a 160x90 thumbnail, is a whole
-        // extra full-size bitmap in memory and a second pass of decode work -
-        // on the same image that was decoded a moment ago.
-        paint(source);
-      } else {
-        const img = new Image();
-        img.onload = () => paint(img);
-        img.src = source;
-      }
-    } catch {}
-  }
-
-  /* The wallpaper that ships inside the package.
-
-     Referenced by its path rather than copied into storage. A packaged file is
-     already on disk, already the right size, and already served from the
-     extension's own origin, so putting a base64 copy of it into
-     `chrome.storage.local` would spend quota and startup time duplicating
-     something the browser can read directly. It also means the picture
-     survives an update without migration - the path is still the path.
-
-     `.webp` because every image the extension stores goes through
-     `downscaleImage`, which encodes WebP; shipping a PNG or JPEG here would
-     make the one wallpaper users start on the only one that is not. */
   const PACKAGED_WALLPAPER = "wallpaper/default.webp";
 
   const packagedWallpaperUrl = () => {
@@ -2116,26 +1800,10 @@ const SettingsRenderer = (() => {
       if (HAS_EXT && EXT.runtime && EXT.runtime.getURL)
         return EXT.runtime.getURL(PACKAGED_WALLPAPER);
     } catch {}
-    // Outside the extension host the page is served from the project root, so
-    // the relative path resolves on its own.
+
     return PACKAGED_WALLPAPER;
   };
 
-  /**
-   * Applies the packaged wallpaper, once, on a profile that has not chosen a
-   * background of its own.
-   *
-   * Deliberately conditional on three things:
-   *
-   *  - it has not been tried before, so a user who switches back to a solid
-   *    colour is not overruled on the next new tab;
-   *  - the profile is still on a solid background, so an install that arrives
-   *    with a wallpaper already configured (a restored backup, a managed
-   *    deployment, a synced profile) keeps the one it came with;
-   *  - the file actually exists, checked with a real request rather than
-   *    assumed, so a build that ships without one degrades to the solid
-   *    default instead of painting a broken image.
-   */
   async function applyPackagedWallpaper() {
     const settings = StorageManager.getSettings();
     if (settings.packagedWallpaperTried) return false;
@@ -2151,8 +1819,6 @@ const SettingsRenderer = (() => {
 
     const url = packagedWallpaperUrl();
     try {
-      // HEAD would be lighter, but the extension protocol does not answer it
-      // consistently across engines, so the file is fetched and discarded.
       const res = await fetch(url, { cache: "force-cache" });
       if (!res.ok) {
         StorageManager.saveSettings();
@@ -2222,10 +1888,10 @@ const SettingsRenderer = (() => {
     const src = await StorageManager.resolveMedia(value);
 
     if (type === "video") {
+      if (photoBg) photoBg.style.backgroundColor = "";
       if (videoBg) {
         videoBg.src = src;
         await waitForVideoPaint(videoBg);
-        cacheBootPreview(videoBg, "video");
         videoBg.classList.add("active");
         if (!document.hidden && !settings.performanceMode)
           videoBg.play().catch(() => {});
@@ -2233,13 +1899,10 @@ const SettingsRenderer = (() => {
       if (photoBg) photoBg.classList.remove("active");
     } else if (type === "image") {
       if (photoBg) {
-        const decoded = await waitForImagePaint(src);
+        photoBg.style.backgroundColor = "";
+        await waitForImagePaint(src);
         photoBg.style.backgroundImage = `url("${String(src).replace(/"/g, "%22")}")`;
         photoBg.classList.add("active");
-        // The element when the wait produced one, the URL when it did not
-        // (a hidden document skips the wait entirely) - `cacheBootPreview`
-        // takes either and only re-decodes in the second case.
-        cacheBootPreview(decoded || src, "image");
       }
       if (videoBg) {
         videoBg.pause();
@@ -2247,10 +1910,13 @@ const SettingsRenderer = (() => {
         videoBg.classList.remove("active");
       }
     } else {
-      StorageManager.setBootPreview(null);
+      if (HEX6.test(settings.solidSeed || "")) {
+        settings.backgroundValue = settings.solidSeed;
+      } else if (HEX6.test(value || "")) {
+        settings.solidSeed = value;
+      }
       if (photoBg) {
         photoBg.style.backgroundImage = "none";
-        photoBg.style.backgroundColor = value;
         photoBg.classList.add("active");
       }
       if (videoBg) videoBg.classList.remove("active");
@@ -2287,40 +1953,19 @@ const SettingsRenderer = (() => {
     return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
   }
 
-  /* Accent text has to clear APCA Lc 60 - the body-text floor - not WCAG 2's
-     4.5:1 ratio.
-
-     The two disagree badly on exactly the colours this app deals in. A
-     saturated mid-tone accent can pass 4.5:1 and still score Lc 34, which is
-     roughly a third of readable; that is precisely what left the Boards and
-     Notes labels washed out on a solid ground for any accent a user picked.
-     WCAG 2's formula is symmetric and does not know that light-on-mid reads
-     worse than dark-on-mid, which is the whole reason DESIGN.md picked APCA
-     for the ink decision in the first place. This is the last place that had
-     not caught up. */
   const INK_MIN_LC = 60;
 
-  // Fills only have to separate from the ground, not be read as text, so the
-  // bar is deliberately much lower and the accent nearly always survives it.
+  const PIN_TILE_LIGHT = "#ffffff";
+  const PIN_TILE_DARK = "#25262c";
+
   const FILL_MIN_LC = 25;
-  // Display type: the clock and other very large accent text.
+
   const DISPLAY_MIN_LC = 35;
 
-  /**
-   * @param {string} [swatch] A preset's second colour - the dot its swatch
-   *   shows. Pastel presets pair a very pale first colour with a stronger
-   *   second one, and deriving everything from the pale one produced an accent
-   *   that matched nothing on the swatch: too faint to use as-is, so it was
-   *   darkened into a muted shade the user never picked. The shown colour now
-   *   leads the ink, and stands in for the fill when the first is too faint.
-   */
   function accentTokens(accent, bg, swatch) {
     const shown = HEX6.test(swatch || "") ? swatch : accent;
     const ink = readableInk(shown, bg);
-    // Large type - the clock above all - stays readable at far lower contrast
-    // than body text, so it gets its own, brighter step of the same colour.
-    // Holding it to the body-text bar is what turned a pastel pink swatch into
-    // a dark wine on the page.
+
     const display = Contrast.readable(shown, bg, DISPLAY_MIN_LC);
     const ui =
       [accent, shown].find((c) => Math.abs(Contrast.lc(c, bg)) >= FILL_MIN_LC) ||
@@ -2328,22 +1973,10 @@ const SettingsRenderer = (() => {
     return { ui, ink, display };
   }
 
-  /** The swatch colour, only for a preset - a custom second colour is a gradient stop, not an ink. */
   const presetSwatch = (s) => (presetById(s.preset) ? s.accent2 : "");
 
   const SVG_NS = "http://www.w3.org/2000/svg";
 
-  /**
-   * Recolours pinned-link icons on a solid background as a duotone.
-   *
-   * The dark parts of a logo take the accent and the light parts stay light,
-   * by mapping each pixel's luminance between the two. It replaced a mask that
-   * painted the icon's whole shape in the accent: that was fine for a line
-   * glyph and useless for a logo drawn as a filled shape - YouTube's play
-   * button, a solid app tile - which became a blank coloured blob. A filter
-   * works on the rendered pixels, so it also applies to icons loaded from
-   * another site, which a mask cannot read.
-   */
   function applyIconTint(hex) {
     if (!document.body || !HEX6.test(hex || "")) return;
     let svg = document.getElementById("etIconTintSvg");
@@ -2372,44 +2005,31 @@ const SettingsRenderer = (() => {
     matrix.setAttribute("values", `${row(r)} ${row(g)} ${row(b)} 0 0 0 1 0`);
   }
 
-  /**
-   * The accent, kept as itself where it is already legible and nudged along
-   * its own hue toward the ground's ink where it is not.
-   *
-   * `Contrast.readable` walks the colour toward whichever ink the background
-   * calls for and stops the moment it clears the bar, so the hue survives and
-   * only lightness moves - a brand colour stays recognisable instead of
-   * collapsing to grey.
-   */
-  function readableInk(accent, bg) {
-    return Contrast.readable(accent, bg, INK_MIN_LC);
+  function wcagRatio(a, b) {
+    const lin = (v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    };
+    const lum = (hex) => {
+      const { r, g, b: bl } = Contrast.toRgb(hex);
+      return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(bl);
+    };
+    const x = lum(a);
+    const y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
   }
 
-  // --- APCA (Accessible Perceptual Contrast Algorithm), constants from the
-  // published 0.98G-4g formulation.
-  //
-  // WCAG 2's contrast ratio is symmetric: it does not know that light text on
-  // a mid colour reads far worse than dark text on the same colour. Picking
-  // black-vs-white by ratio therefore flips to white too early on saturated
-  // mid-tones - the classic "white label on a medium blue button" that looks
-  // washed out. APCA models polarity, so the flip lands where the eye puts it.
-  /** Picks the ink - near-black or white - that reads best on `color`. */
-  const contrastText = (color) => Contrast.ink(color);
+  function readableInk(accent, bg) {
+    let ink = Contrast.readable(accent, bg, INK_MIN_LC);
+    for (let lc = INK_MIN_LC + 5; wcagRatio(ink, bg) < 4.5 && lc <= 105; lc += 5) {
+      ink = Contrast.readable(accent, bg, lc);
+    }
+    return ink;
+  }
 
-  /**
-   * Makes every slider's numeric readout directly editable, everywhere in
-   * Settings, without touching each slider's own binding code.
-   *
-   * A value label opts in with `data-slider-val="<slider id>"`, or, for a
-   * slider addressed by a data-attribute rather than an id (the per-surface
-   * strength sliders), `data-slider-val-key="<key>"` naming the value of its
-   * `data-surface-slider`. Clicking the label swaps it for a number input;
-   * Enter or blur commits by writing the slider's `value` and dispatching a
-   * real `input` and `change` event on it, so the slider's own listener does
-   * the clamping, the storage write and the repaint exactly as if the user
-   * had dragged it. Escape cancels. This file never needs to know what a
-   * given slider is for.
-   */
+  const contrastText = (color) =>
+    wcagRatio("#ffffff", color) >= wcagRatio("#14151a", color) ? "#ffffff" : "#14151a";
+
   const SliderValueEditor = (() => {
     function resolveSlider(label) {
       const key = label.getAttribute("data-slider-val-key");
@@ -2448,16 +2068,12 @@ const SettingsRenderer = (() => {
         slider.value = String(clamped);
         slider.dispatchEvent(new Event("input", { bubbles: true }));
         slider.dispatchEvent(new Event("change", { bubbles: true }));
-        // The dispatched events already repaint most labels; this covers the
-        // rare slider whose `input` handler does not touch its own label.
+
         if (label.isConnected && label.querySelector("input"))
           label.textContent = `${clamped}${suffix}`;
       };
 
       input.addEventListener("keydown", (e) => {
-        // Without this, Enter/Escape bubbles up to the label's own keydown
-        // listener (there so the label itself is keyboard-operable) and
-        // immediately reopens the editor it was just told to close.
         e.stopPropagation();
         if (e.key === "Enter") {
           e.preventDefault();
@@ -2501,18 +2117,21 @@ const SettingsRenderer = (() => {
     return { wire };
   })();
 
-  /** Coalesces repeated repaints per key into one animation frame. */
   function createFrameScheduler() {
     const pending = new Map();
     return function paintNextFrame(key, fn) {
       if (pending.has(key)) return;
-      pending.set(
-        key,
-        requestAnimationFrame(() => {
-          pending.delete(key);
-          fn();
-        }),
-      );
+      const entry = {};
+      const run = () => {
+        if (pending.get(key) !== entry) return;
+        pending.delete(key);
+        cancelAnimationFrame(entry.raf);
+        clearTimeout(entry.timer);
+        fn();
+      };
+      pending.set(key, entry);
+      entry.raf = requestAnimationFrame(run);
+      entry.timer = setTimeout(run, 32);
     };
   }
 

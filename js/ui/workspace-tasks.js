@@ -215,9 +215,6 @@ const WorkspaceWidget = (() => {
       return;
     }
 
-    // One grid, pinned apps first. There used to be an All / Starred switch
-    // and a separate Starred section, so pinning an app moved it into a
-    // category rather than simply to the front.
     const ordered = [
       ...filteredApps.filter(([name]) => favs.has(name)),
       ...filteredApps.filter(([name]) => !favs.has(name)),

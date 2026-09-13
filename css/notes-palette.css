@@ -1,7 +1,7 @@
 .et-search-overlay {
   position: fixed;
   inset: 0;
-  z-index: 30000;
+  z-index: var(--z-overlay);
   background: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: flex-start;
@@ -10,9 +10,9 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  filter: none !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  filter: none;
   transition: none !important;
 }
 
@@ -29,12 +29,12 @@
   border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.2));
   border-radius: var(--r-lg);
   overflow: hidden;
-  box-shadow: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  box-shadow: none;
+  filter: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   contain: layout paint;
-  transform: none !important;
+  transform: none;
   transition: none !important;
   color: var(--text, #ffffff);
 }
@@ -51,7 +51,7 @@
 
 .et-search-overlay.open .et-search-modal,
 .et-search-overlay.active .et-search-modal {
-  transform: none !important;
+  transform: none;
   transition: none !important;
 }
 
@@ -79,15 +79,12 @@
   flex: 1;
   background: none;
   border: none;
-  outline: none;
   font-size: var(--fs-base, 15px);
   font-weight: 500;
   color: var(--text, #ffffff);
   font-family: inherit;
 }
 
-/* Theme ink, not white. The palette panel is light in light mode, and a
-   42%-white placeholder on it was simply not there. */
 .et-search-input-wrap input::placeholder {
   color: var(--text-faint) !important;
   font-weight: 400 !important;
@@ -100,13 +97,11 @@
   color: var(--text-dim, rgba(255, 255, 255, 0.8));
   background: color-mix(in srgb, var(--text) 9%, transparent);
   border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.18));
-  border-radius: var(--r-sm, 6px);
+  border-radius: var(--r-sm, 8px);
   padding: 3px 8px;
   font-family: inherit;
 }
 
-/* A min-height keeps the empty palette from opening as a bare horizontal bar;
-   it holds the shape it will have once results arrive. */
 .et-search-results {
   min-height: 160px;
   max-height: 420px;
@@ -114,9 +109,6 @@
   padding: var(--sp-2);
 }
 
-/* The notepad is what people come to this view for; the clipboard is a
-   sidekick. So the editor takes every pixel the viewport can spare and the
-   snippet rail is held to a fixed, narrower column. */
 .et-notes-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) calc(268px * var(--ui-scale));
@@ -266,7 +258,7 @@
   border: none;
   background: transparent;
   color: inherit;
-  opacity: 0.5;
+  opacity: 0.75;
   font-size: var(--fs-sm);
   line-height: 1;
   padding: 0 2px;
@@ -304,11 +296,9 @@
   flex: 1;
   resize: none;
   border: none;
-  outline: none;
   color: var(--text);
   font-family: inherit;
-  /* Set per-element by the toolbar's A-/A+ and persisted in settings; the
-     token is the fallback for a page that has not applied it yet. */
+
   font-size: var(--notes-font-size, var(--fs-md));
   line-height: 1.6;
   padding: var(--sp-5) var(--sp-6);
@@ -333,7 +323,6 @@
   border: none;
   border-radius: var(--r-sm);
   color: var(--board-text, #fff);
-  outline: none;
 }
 
 .et-clip-add-btn {
@@ -364,7 +353,7 @@
   justify-content: center;
   gap: var(--sp-2);
   padding: var(--sp-8) var(--sp-4);
-  color: var(--board-text-dim, rgba(255, 255, 255, 0.45));
+  color: var(--text-dim);
   font-size: var(--fs-xs);
   text-align: center;
 }
@@ -428,7 +417,7 @@
 }
 
 .et-clip-copy-btn:hover {
-  background: var(--accent-color);
+  background: var(--accent-fill, var(--accent-color));
   color: var(--accent-contrast);
   border-color: var(--accent-color);
 }
@@ -442,7 +431,7 @@
 .et-clip-del-btn {
   background: transparent;
   border: none;
-  color: var(--board-text-dim, rgba(255, 255, 255, 0.4));
+  color: var(--text-dim, rgba(255, 255, 255, 0.72));
   font-size: var(--fs-md);
   cursor: pointer;
   padding: 2px var(--sp-2);
@@ -458,9 +447,6 @@
   background: var(--danger-fill, rgba(239, 68, 68, 0.12));
 }
 
-/* Notepad toolbar ---------------------------------------------------------
-   Wraps rather than scrolls: a hidden Paste button is a Paste button nobody
-   finds, and the row is short enough that two lines is not a cost. */
 .et-notes-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -470,32 +456,47 @@
   border-bottom: 1px solid var(--border-soft);
 }
 
-/* Named groups, the way a word processor names them. The buttons alone are a
-   row of single characters - B, I, U, H, a bullet, "1." - which is only
-   readable if you already know what a rich-text toolbar looks like. A caption
-   per group says what the cluster below it is for, in a line small enough that
-   it costs one row of 9px text rather than any horizontal space. */
 .et-notes-tool-group {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 2px 4px 3px;
-  border-radius: var(--r-sm);
-  /* Mixed from the toolbar's own ink so the group plate is visible on a light
-     notepad and a dark one alike; the themed board tint it used to take is a
-     near-white in light mode and vanished against the paper. */
-  background: color-mix(in srgb, currentColor 7%, transparent);
+  align-items: center;
 }
 
-.et-notes-tool-caption {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.et-notes-tool-group + .et-notes-tool-group:not(.et-notes-tool-group-end) {
+  padding-left: var(--sp-2);
+  border-left: 1px solid var(--border-soft);
+}
+
+.et-notes-more-sep {
+  height: 1px;
+  margin: var(--sp-1) 0;
+  background: var(--border-soft);
+}
+
+.et-notes-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  width: 100%;
+  padding: 7px var(--sp-2);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.et-notes-menu-item:hover {
+  background: var(--menu-hover);
+}
+
+.et-notes-menu-item kbd {
+  font: inherit;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
-  text-align: center;
-  line-height: 1.4;
-  user-select: none;
 }
 
 .et-notes-tool-row {
@@ -504,31 +505,25 @@
   gap: 2px;
 }
 
-/* Pushed to the far end so the destructive button is nowhere near the
-   formatting ones. */
-.et-notes-tool-group-end {
-  margin-left: auto;
-}
-
 .et-notes-tool {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 26px;
+  min-width: 30px;
+  height: 30px;
   padding: 0 var(--sp-2);
   border: none;
-  border-radius: var(--r-xs, 4px);
+  border-radius: var(--r-sm);
   background: transparent;
-  color: var(--text-dim);
+  color: var(--text);
   font-family: inherit;
-  font-size: var(--fs-xs);
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: 500;
   line-height: 1;
   cursor: pointer;
   transition:
-    background var(--dur-1, 0.12s) var(--ease-out),
-    color var(--dur-1, 0.12s) var(--ease-out);
+    background var(--dur-1, 70ms) var(--ease-out),
+    color var(--dur-1, 70ms) var(--ease-out);
 }
 
 .et-notes-tool:hover {
@@ -545,18 +540,14 @@
   color: var(--danger, #ef4444);
 }
 
-/* A pressed formatting button, the way Bold stays lit in Word or Docs while
-   the caret sits inside bold text - the toolbar was otherwise indistinguishable
-   from a row of one-shot actions, with no way to tell what applied to the
-   current selection versus what did not. */
 .et-notes-tool.is-active {
-  background: var(--accent-color);
-  color: var(--accent-contrast, #fff);
+  background: var(--accent-fill, var(--accent-color));
+  color: var(--accent-contrast, #ffffff);
 }
 
 .et-notes-tool.is-active:hover {
-  background: var(--accent-color);
-  color: var(--accent-contrast, #fff);
+  background: var(--accent-fill, var(--accent-color));
+  color: var(--accent-contrast, #ffffff);
   filter: brightness(1.08);
 }
 
@@ -568,9 +559,6 @@
   color: var(--text-dim);
 }
 
-/* Between the stacked layout and a roomy desktop the sidebar is still a fixed
-   column, so it eats a far larger share of a 768px window than of a 1280px
-   one. Trimming it keeps the editor the dominant panel at every width. */
 @media (min-width: 561px) and (max-width: 900px) {
   .et-notes-grid {
     grid-template-columns: minmax(0, 1fr) calc(216px * var(--ui-scale));
@@ -578,10 +566,6 @@
   }
 }
 
-/* Below 561px there is no width left to give a side-by-side clipboard column
-   without squeezing the notepad - the thing people actually opened this view
-   for - down to a sliver. It drops below the editor instead, capped to a
-   fixed height with its own scroll, same as it always had. */
 @media (max-width: 560px) {
   .et-notes-grid {
     grid-template-columns: 1fr;
@@ -594,9 +578,6 @@
   }
 }
 
-/* The toolbar only fits on one line once there is real width to spare. Below
-   that it becomes a single swipeable row rather than stacking into three, so
-   it never claims a third of the editor. */
 @media (max-width: 900px) {
   .et-notes-toolbar {
     flex-wrap: nowrap;
@@ -612,10 +593,6 @@
   }
 }
 
-/* Rich-text editor ---------------------------------------------------------
-   The note body is a contenteditable now, so it needs the block styling a
-   textarea never did - and a placeholder, which contenteditable has no
-   native equivalent for. */
 .et-notes-area {
   overflow-y: auto;
   white-space: pre-wrap;
@@ -630,10 +607,6 @@
   position: relative;
 }
 
-/* Taken out of flow so it cannot push the caret onto a second line: the
-   prompt now sits exactly where the first character will land, and typing
-   replaces it in place. `padding: inherit` lines it up with the text rather
-   than with the padding edge. */
 .et-notes-area.is-empty::before {
   content: attr(data-placeholder);
   position: absolute;
@@ -693,53 +666,18 @@
   font-family: var(--font-mono);
   font-size: 0.92em;
   background: rgba(var(--board-rgb, 255, 255, 255), 0.1);
-  border-radius: var(--r-xs, 4px);
+  border-radius: var(--r-xs, 6px);
   padding: 0.1em 0.35em;
 }
 
-/* Note text colour and highlight -------------------------------------------
-
-   Two rules matter here.
-
-   First, the *default* is the theme's own ink and nothing else. A note that
-   has never been coloured must take `--text`, so it flips with light/dark like
-   every other piece of text in the app. The rule below re-asserts that against
-   anything that arrives carrying its own colour - a `<font color>` from a
-   paste, a legacy note written before the sanitiser existed, a stray inline
-   style that has not been through `clean()` yet because it was pasted a
-   moment ago. Those are stripped on the next save, but until then the editor
-   should still be showing the user's theme rather than someone else's markup.
-
-   Second, a colour the user *did* choose is stored as a class, not a hex, so
-   it is resolved per theme. Red picked at midnight is a pale red on the dark
-   panel; the same note opened in light mode is a deep red on white. Storing
-   `#ff8a8a` would have given an unreadable wash on the light panel, and there
-   would be no way to tell it apart from a pasted colour. */
 .et-notes-area font,
 .et-notes-area [color],
 .et-notes-area [style*="color"]:not([class*="et-note-fg-"]):not([class*="et-note-bg-"]) {
-  /* `!important` is not decoration here: an inline `style` attribute beats any
-     selector in any stylesheet no matter how specific, so this is the only
-     thing that can reach a pasted `style="color:#0f0"`. The `:not()` pair
-     keeps it away from the classes the user's own colours use, and nothing
-     else in a note is ever allowed to carry an inline colour - the sanitiser
-     strips them on the way to storage - so there is nothing legitimate for
-     this to override. */
   color: inherit !important;
   background-color: transparent !important;
 }
 
-/* Declared at the root, not on the editor.
-
-   The toolbar's colour picker is a sibling of `.et-notes-area`, not a child of
-   it - it has to be, because a menu inside a scrolling editor would be clipped
-   by it. Custom properties only inherit downward, so tokens defined on the
-   editor were invisible to the picker and every swatch resolved to
-   `transparent`: a row of empty squares offering colours you could not see.
-   From the root both the editor and the picker can read them. */
 :root {
-  /* Ink: light enough to read on the dark notepad panel, saturated enough to
-     be told apart at a glance from the neutral text around it. */
   --note-fg-red: #ff8f8f;
   --note-fg-orange: #ffb673;
   --note-fg-yellow: #ffe27a;
@@ -748,16 +686,6 @@
   --note-fg-purple: #cba8ff;
   --note-fg-grey: #a9b1be;
 
-  /* Highlight: translucent, so the theme's own text colour still reads through
-     it and a highlighted run does not have to carry its own ink.
-
-     Held at 0.5 rather than the 0.3 this started at. A bright hue laid thinly
-     over a dark panel does not read as that hue - it reads as a slightly
-     lighter patch of the panel, and yellow, green and grey were indis-
-     tinguishable from each other. Half opacity is where each one becomes
-     nameable again, and it costs nothing: white text over the darkest result
-     still measures APCA Lc -74 (yellow, the worst case) against a floor of
-     60, and the rest land between -79 and -89. */
   --note-bg-red: rgba(255, 92, 92, 0.5);
   --note-bg-orange: rgba(255, 150, 60, 0.5);
   --note-bg-yellow: rgba(255, 214, 64, 0.5);
@@ -768,8 +696,6 @@
 }
 
 body.theme-light {
-  /* Darkened rather than merely swapped: the same seven hues, taken to a
-     lightness that clears the white panel. */
   --note-fg-red: #c62828;
   --note-fg-orange: #a8560a;
   --note-fg-yellow: #8a6a00;
@@ -795,8 +721,6 @@ body.theme-light {
 .et-notes-area .et-note-fg-purple { color: var(--note-fg-purple); }
 .et-notes-area .et-note-fg-grey { color: var(--note-fg-grey); }
 
-/* "No colour" has to be a colour, because it sits inside whatever it is
-   clearing. `inherit` would inherit the very span being cleared. */
 .et-notes-area .et-note-fg-none { color: var(--text); }
 
 .et-notes-area .et-note-bg-red { background-color: var(--note-bg-red); }
@@ -808,9 +732,6 @@ body.theme-light {
 .et-notes-area .et-note-bg-grey { background-color: var(--note-bg-grey); }
 .et-notes-area .et-note-bg-none { background-color: transparent; }
 
-/* A highlight that stops dead at the glyph edge reads as a rendering fault.
-   The padding is negative on the block axis so a highlighted run still sits on
-   its own line without pushing the leading apart. */
 .et-notes-area [class*="et-note-bg-"]:not(.et-note-bg-none) {
   padding: 0.05em 0.14em;
   margin: 0 -0.04em;
@@ -819,10 +740,6 @@ body.theme-light {
   -webkit-box-decoration-break: clone;
 }
 
-/* Toolbar swatch buttons ---------------------------------------------------
-   An "A" with a bar of the current colour under it - the control everyone
-   already knows from every word processor, which is worth more here than
-   anything more inventive. */
 .et-note-swatch-btn {
   flex-direction: column;
   gap: 2px;
@@ -849,10 +766,9 @@ body.theme-light {
   transition: background var(--dur-2) var(--ease-out);
 }
 
-/* The colour picker popover ------------------------------------------------ */
 .et-note-color-menu {
   position: fixed;
-  z-index: 10000;
+  z-index: var(--z-dropdown);
   display: grid;
   grid-template-columns: repeat(4, auto);
   gap: var(--sp-2);
@@ -886,19 +802,12 @@ body.theme-light {
   border-color: var(--accent-color);
 }
 
-.et-note-color-swatch:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
-}
-
 .et-note-color-swatch.is-active {
   border-color: var(--accent-color);
   box-shadow: 0 0 0 2px
     color-mix(in srgb, var(--accent-color) 40%, transparent);
 }
 
-/* The "clear" swatch is the absence of a colour, drawn as one: a slash across
-   an empty tile, the way a colour picker has always said "none". */
 .et-note-color-swatch.is-none {
   background: transparent;
 }
@@ -916,8 +825,6 @@ body.theme-light {
   );
 }
 
-/* Checklists are ordinary <ul><li> with the marker replaced, so Enter,
-   Backspace and Tab keep behaving the way list editing already does. */
 .et-notes-area ul.et-note-checklist {
   list-style: none;
   padding-left: 0.2em;
@@ -936,7 +843,7 @@ body.theme-light {
   width: 1em;
   height: 1em;
   border: 1.5px solid var(--border-strong, var(--border-soft));
-  border-radius: var(--r-xs, 4px);
+  border-radius: var(--r-xs, 6px);
   cursor: pointer;
 }
 
@@ -958,11 +865,6 @@ body.theme-light {
   text-decoration-color: var(--text-faint);
 }
 
-/* ------------------------------------------------- notepad header and menu
-   The header row is the note's tab strip now. "Notepad" told the user what
-   they were already looking at, and the word count sat beside it competing
-   with the note's own name; both moved into the overflow menu or out entirely,
-   the way a document editor puts its file name where the tabs are. */
 .et-notes-header .et-notes-tabs {
   flex: 1;
   min-width: 0;
@@ -975,9 +877,6 @@ body.theme-light {
   display: none;
 }
 
-/* Overflow menu, in the manner of a document editor's toolbar: the controls
-   people reach for once a session live behind one button instead of taking
-   permanent space next to the ones they use constantly. */
 .et-notes-tool-group-end {
   position: relative;
   margin-left: auto;
@@ -992,7 +891,7 @@ body.theme-light {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  z-index: 60;
+  z-index: var(--z-dropdown);
   min-width: 210px;
   padding: var(--sp-2);
   display: flex;
@@ -1026,29 +925,3 @@ body.theme-light {
   gap: 2px;
 }
 
-/* Past 900px the toolbar has more width than it has buttons, and hiding two
-   controls behind a "more" button in that space is a menu for its own sake.
-   The same nodes lay out inline instead - no duplicate markup, no second set
-   of ids - so the button disappears and the panel stops being a panel. */
-@media (min-width: 901px) {
-  .et-notes-more-btn {
-    display: none;
-  }
-  .et-notes-more-menu,
-  .et-notes-more-menu[hidden] {
-    display: flex !important;
-    position: static;
-    flex-direction: row;
-    align-items: center;
-    gap: var(--sp-3);
-    min-width: 0;
-    padding: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  .et-notes-more-row {
-    gap: var(--sp-2);
-    padding: 0;
-    font-size: var(--fs-xs);
-  }
-}

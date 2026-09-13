@@ -1,25 +1,3 @@
-/* demo-mode.js — SCREENSHOT ONLY. Never referenced by index.html, never packaged.
-   `dev/` is excluded from both the CI allow-list (.github/workflows/deploy.yml)
-   and build-zip.bat, so this file cannot reach the Web Store package.
-
-   Purpose: put EshaalTab into a clean, full, presentable state for store
-   screenshots, then put it back exactly as it was.
-
-   USAGE
-     1. Open the new tab page, then DevTools (F12) -> Console.
-     2. Paste this whole file in, press Enter.
-     3. EshaalTabDemo.enable()     // snapshots your real data first
-     4. Take screenshots.
-     5. EshaalTabDemo.disable()    // restores your real data
-
-   SAFETY
-     - enable() writes a full snapshot of `data` and `settings` BEFORE touching
-       anything, and refuses to overwrite an existing snapshot, so running it
-       twice can never destroy the original.
-     - Wallpaper media (wpmedia: keys) is never written, deleted or pruned.
-     - No permissions are requested, no production code path is modified on
-       disk, and nothing here persists once you reload without pasting it.
-*/
 'use strict';
 
 window.EshaalTabDemo = (function () {
@@ -41,8 +19,6 @@ window.EshaalTabDemo = (function () {
     else localStorage.removeItem(BACKUP_KEY);
   }
 
-  /* Deliberately generic, safe, real-looking content. No names, no employers,
-     no internal URLs, no tokens in query strings -- reviewers look at these. */
   function demoBoards() {
     const link = (title, url, tags, pinned) => {
       const b = { id: uid(), title, url, tags: tags || [] };
@@ -111,8 +87,6 @@ window.EshaalTabDemo = (function () {
   ].join('\n');
 
   function demoSettings(base) {
-    /* Balanced, neutral, and deliberately NOT a pastel preset: screenshots want
-       a theme where the accent reads clearly at thumbnail size. */
     return Object.assign({}, base, {
       preset: '',
       mode: 'dark',
@@ -134,10 +108,6 @@ window.EshaalTabDemo = (function () {
     });
   }
 
-  /* Ctrl+K normally pulls open tabs and history from the browser. For a filled
-     palette screenshot you can either open a few clean tabs yourself (most
-     honest -- the results are then genuinely real), or switch on these sample
-     rows. They are patched in memory only and vanish on reload. */
   let patched = null;
   const SAMPLE_TABS = [
     { title: 'Chrome for Developers', url: 'https://developer.chrome.com/docs/extensions', tabId: 1, windowId: 1 },

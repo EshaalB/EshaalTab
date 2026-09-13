@@ -44,8 +44,7 @@
       const row = $("stWpOverlayOpacityRow");
       if (row) row.style.display = e.target.checked ? "flex" : "none";
       StorageManager.saveSettings();
-      // The wallpaper analysis folds the scrim into the ground it picks ink
-      // against, so dimming has to re-run the whole theme, not just the layer.
+
       applyTheme();
     });
 
@@ -222,8 +221,7 @@
     WidgetsRenderer.attachCityPicker($("stWeatherCity"), {
       onPick: () => $("stWeatherApplyBtn")?.click(),
     });
-    // Enter with no list open saves what is typed. The picker takes Enter
-    // first when a list is showing, and marks it handled.
+
     $("stWeatherCity")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.defaultPrevented) $("stWeatherApplyBtn")?.click();
     });
@@ -240,9 +238,7 @@
 
   function render(settings, data) {
     const w = settings.widgets || {};
-    // Text halos and every wallpaper control below are wallpaper-only - solid
-    // mode strips every text-shadow in CSS and has no picture to crop - so on a
-    // solid background they would move stored numbers that nothing reads.
+
     const hasWallpaper = ["image", "video"].includes(settings.backgroundType);
     return `
         <div class="st-container">
@@ -323,8 +319,8 @@
                   <input type="range" class="se-slider" id="stWpVignetteAmount" min="0" max="100" step="5" value="${settings.wallpaperVignetteAmount ?? 45}" />
                 </div>
 
-                <label class="st-row" style="cursor:pointer;"><span class="st-label">Soften wallpaper</span><input type="checkbox" id="stWpBlurToggle" ${settings.wallpaperBlur ? "checked" : ""} /></label>
-                <div class="st-hint">Blurs the wallpaper so text stands out.</div>
+                <label class="st-row" style="cursor:pointer;"><span class="st-label">Soften wallpaper on Home</span><input type="checkbox" id="stWpBlurToggle" ${settings.wallpaperBlur ? "checked" : ""} /></label>
+                <div class="st-hint">Blurs the wallpaper on Home so text stands out. Boards and Notes always use a light blur so your content stays in focus.</div>
                 <div id="stWpBlurAmountRow" style="display:${settings.wallpaperBlur ? "flex" : "none"}; flex-direction:column; gap:6px;">
                   <div class="se-label" style="display:flex; justify-content:space-between;"><span>Softness</span><span id="stWpBlurAmountVal" data-slider-val="stWpBlurAmount" data-slider-suffix="%">${settings.wallpaperBlurAmount ?? 40}%</span></div>
                   <input type="range" class="se-slider" id="stWpBlurAmount" min="0" max="100" step="1" value="${settings.wallpaperBlurAmount ?? 40}" />

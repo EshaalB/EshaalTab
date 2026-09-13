@@ -156,7 +156,7 @@
       }
       if (count === -1) {
         ToastSystem.error(
-          'No "url" column found. Export from Raindrop as CSV.',
+          'No "url" column found. The CSV needs a url column.',
         );
         return;
       }
@@ -168,7 +168,7 @@
       BoardRenderer.renderBoards();
       HomeRenderer.renderPinned();
       ToastSystem.success(
-        `Imported ${count} bookmark${count === 1 ? "" : "s"} from Raindrop!`,
+        `Imported ${count} bookmark${count === 1 ? "" : "s"} `,
       );
     };
     reader.readAsText(file);
@@ -337,8 +337,7 @@
 
     $("stRemoteFavicons")?.addEventListener("change", (e) => {
       settings.remoteFavicons = e.target.checked;
-      // Marks this as a deliberate choice, so a future change to the default
-      // never quietly reverses it.
+
       settings.remoteFaviconsChoice = e.target.checked;
       StorageManager.saveSettings();
       BoardRenderer.renderBoards();
@@ -473,7 +472,7 @@
                 <div class="st-subhead">Import bookmarks</div>
                 <div class="st-btn-grid">
                   <button id="btnImportBrowser" class="st-action-btn st-icon-upload">Import Chrome</button>
-                  <button id="btnRaindropTrigger" class="st-action-btn st-icon-upload">Import Raindrop.io</button>
+                  <button id="btnRaindropTrigger" class="st-action-btn st-icon-upload">Import CSV or JSON</button>
                 </div>
                 <input type="file" id="btnImportRaindropFile" accept=".csv,.json" style="display:none;" />
               </div>
