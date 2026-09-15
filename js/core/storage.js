@@ -530,6 +530,7 @@ const StorageManager = (() => {
       bookmarks: normBms,
     };
     if (b.pinnedToHome) out.pinnedToHome = true;
+    if (b.hideTitles) out.hideTitles = true;
     return out;
   }
 

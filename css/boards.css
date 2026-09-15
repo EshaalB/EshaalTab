@@ -446,6 +446,11 @@ body.theme-light .et-board-card {
   user-select: none;
 }
 
+.et-board-card.hide-titles .et-board-tile-title {
+  display: none;
+}
+
+.et-board-card.hide-titles .et-board-tile,
 .et-board-tile.is-icon-only {
   justify-content: center;
   padding: 8px 4px;
