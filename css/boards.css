@@ -432,29 +432,33 @@ body.theme-light .et-board-card {
 .et-board-tile {
   position: relative;
   width: 100%;
-  min-height: 64px;
+  min-height: 68px;
   background: none;
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
+  border: none;
+  border-radius: var(--r-md);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  gap: 5px;
-  padding: var(--sp-2) 3px;
+  gap: 6px;
+  padding: 12px 4px 8px;
   cursor: pointer;
   user-select: none;
 }
 
+.et-board-tile.is-icon-only {
+  justify-content: center;
+  padding: 8px 4px;
+}
+
 .et-board-tile:hover {
   background: var(--board-wash-strong);
-  border-color: var(--board-line);
 }
 
 .et-board-tile-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--r-xs);
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   object-fit: contain;
   flex-shrink: 0;
   transition: transform var(--dur-2) var(--ease-out);

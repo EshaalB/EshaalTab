@@ -253,7 +253,8 @@ const NotesRenderer = (() => {
         const span = document.createElement("span");
         if (el.getAttribute("class")) span.className = el.getAttribute("class");
         span.append(...el.childNodes);
-        el.replaceWith(span.className ? span : document.createRange().createContextualFragment(span.innerHTML));
+        if (span.className) el.replaceWith(span);
+        else el.replaceWith(...span.childNodes);
       }
     }
   }
@@ -762,7 +763,7 @@ const NotesRenderer = (() => {
         return;
       }
       if (!text) return;
-      exec("insertHTML", NoteHTML.toEditor(text));
+      exec("insertText", text.replace(/\r\n?/g, "\n"));
     }
   }
 
@@ -1034,11 +1035,14 @@ const NotesRenderer = (() => {
         if (!dt) return;
         e.preventDefault();
         const html = dt.getData("text/html");
-        const text = dt.getData("text/plain");
-        const safe = html
-          ? NoteHTML.clean(html)
-          : NoteHTML.toEditor(text || "");
-        document.execCommand("insertHTML", false, safe);
+        const text = (dt.getData("text/plain") || "").replace(/\r\n?/g, "\n");
+        const structured =
+          html && /<(p|div|li|ul|ol|h[1-6]|table|blockquote|pre)\b/i.test(html);
+        if (structured) {
+          document.execCommand("insertHTML", false, NoteHTML.clean(html));
+        } else if (text) {
+          document.execCommand("insertText", false, text);
+        }
         commitEdit();
       });
 
@@ -1763,11 +1767,13 @@ const HomeRenderer = (() => {
     const wrap = $("homePinned");
     if (!wrap) return;
     const settings = StorageManager.getSettings();
-    if (settings.hidePinnedOnHome) {
+    const linksOn = !settings.hidePinnedOnHome;
+    const boardsOn = typeof PinnedBoards !== "undefined" && PinnedBoards.enabled();
+    if (!linksOn && !boardsOn) {
       wrap.style.display = "none";
       return;
     }
-    const pinned = BookmarkManager.getPinned();
+    const pinned = linksOn ? BookmarkManager.getPinned() : [];
     wrap.style.display = "flex";
 
     const frag = document.createDocumentFragment();
@@ -1817,8 +1823,12 @@ const HomeRenderer = (() => {
       a.className = "dock-pin";
       a.href = safeHref(bm.url);
       a.setAttribute("data-id", bm.id);
-      a.setAttribute("aria-label", bm.title);
-      a.setAttribute("data-tooltip", bm.title);
+      let pinName = (bm.title || "").trim();
+      if (!pinName) {
+        try { pinName = new URL(bm.url).hostname.replace(/^www\./, ""); } catch { pinName = bm.url; }
+      }
+      a.setAttribute("aria-label", pinName);
+      a.setAttribute("data-tooltip", pinName);
       setSafeHTML(
         a,
         `
@@ -1884,7 +1894,7 @@ const HomeRenderer = (() => {
       frag.appendChild(btn);
     };
 
-    if (pinned.length >= BookmarkManager.PIN_LIMIT) {
+    if (!linksOn || pinned.length >= BookmarkManager.PIN_LIMIT) {
       appendBoardsButton();
       wrap.replaceChildren(frag);
       return;

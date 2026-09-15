@@ -193,6 +193,40 @@
       ToastSystem.info("Clock follows the accent colour again");
     });
 
+    [
+      ["stClockScale", "clockScale"],
+      ["stGreetingScale", "greetingScale"],
+      ["stMetaScale", "metaScale"],
+    ].forEach(([id, key]) => {
+      $(id)?.addEventListener("input", (e) => {
+        live()[key] = parseInt(e.target.value, 10);
+        const label = $(`${id}Val`);
+        if (label) label.textContent = `${e.target.value}%`;
+        StorageManager.save();
+        paintNextFrame("clock-style", () =>
+          WidgetsRenderer.applyClockAppearance(live()),
+        );
+      });
+    });
+
+    [
+      ["stGreetingColor", "greetingColor"],
+      ["stMetaColor", "metaColor"],
+    ].forEach(([id, key]) => {
+      $(id)?.addEventListener("input", (e) => {
+        live()[key] = e.target.value;
+        StorageManager.save();
+        paintNextFrame("clock-style", () =>
+          WidgetsRenderer.applyClockAppearance(live()),
+        );
+      });
+      $(`${id}Reset`)?.addEventListener("click", () => {
+        live()[key] = "";
+        StorageManager.save();
+        WidgetsRenderer.applyClockAppearance(live());
+      });
+    });
+
     $("stWpShadowOpacity")?.addEventListener("input", (e) => {
       const val = parseInt(e.target.value, 10);
       live().wpShadowOpacity = val;
@@ -343,7 +377,7 @@
 
           <div class="st-accordion is-expanded" data-page="home">
             <button class="st-accordion-header" type="button">
-              <span class="st-group-title">Clock and text</span>
+              <span class="st-group-title">Clock, greeting and date</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
             </button>
             <div class="st-accordion-body">
@@ -407,6 +441,32 @@
                        value="${/^#[0-9a-f]{6}$/i.test(settings.clockColor || "") ? settings.clockColor : effectiveAccent()}" />
                 <button id="stClockColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Use accent</button>
               </div>
+            </div>
+            <div class="st-slider-row">
+              <div class="se-label"><span>Clock size</span> <span id="stClockScaleVal">${settings.clockScale ?? 100}%</span></div>
+              <input type="range" class="se-slider" id="stClockScale" min="60" max="130" step="5" value="${settings.clockScale ?? 100}" />
+            </div>
+            <div class="st-row">
+              <label class="st-label" for="stGreetingColor">Greeting colour</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="color" id="stGreetingColor" class="st-color" value="${/^#[0-9a-f]{6}$/i.test(settings.greetingColor || "") ? settings.greetingColor : "#ffffff"}" />
+                <button id="stGreetingColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Auto</button>
+              </div>
+            </div>
+            <div class="st-slider-row">
+              <div class="se-label"><span>Greeting size</span> <span id="stGreetingScaleVal">${settings.greetingScale ?? 100}%</span></div>
+              <input type="range" class="se-slider" id="stGreetingScale" min="70" max="150" step="5" value="${settings.greetingScale ?? 100}" />
+            </div>
+            <div class="st-row">
+              <label class="st-label" for="stMetaColor">Date and weather colour</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="color" id="stMetaColor" class="st-color" value="${/^#[0-9a-f]{6}$/i.test(settings.metaColor || "") ? settings.metaColor : "#ffffff"}" />
+                <button id="stMetaColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Auto</button>
+              </div>
+            </div>
+            <div class="st-slider-row">
+              <div class="se-label"><span>Date and weather size</span> <span id="stMetaScaleVal">${settings.metaScale ?? 100}%</span></div>
+              <input type="range" class="se-slider" id="stMetaScale" min="70" max="150" step="5" value="${settings.metaScale ?? 100}" />
             </div>`
                 : ""
             }

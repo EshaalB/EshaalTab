@@ -652,7 +652,7 @@ body.performance-mode .et-home-center {
     sans-serif
   );
   font-variant-numeric: tabular-nums;
-  font-size: var(--clock-size);
+  font-size: calc(var(--clock-size) * var(--clock-scale, 1));
   font-weight: var(--clock-weight, 400);
   letter-spacing: var(--clock-tracking, 0.02em);
 }
@@ -2206,8 +2206,21 @@ body.performance-mode.wallpaper-mode :is(.et-top-left, .et-main-tabs, .et-top-ri
   margin-block: auto;
 }
 
+body.has-greeting-color #clockWidget .et-home-greeting {
+  color: var(--greeting-color);
+}
+
+body.has-meta-color #clockWidget :is(.et-home-date, .et-weather-inline, .et-weather-inline:hover) {
+  color: var(--meta-color);
+}
+
+.et-board-tile-title:empty {
+  display: none;
+}
+
 #clockWidget .et-home-meta {
   margin-bottom: clamp(8px, calc(var(--clock-size) * 0.15), 22px);
+  font-size: calc(clamp(14px, calc(var(--clock-size) * 0.19), 21px) * var(--meta-scale, 1));
 }
 
 #clockWidget .et-home-time {
@@ -2216,6 +2229,7 @@ body.performance-mode.wallpaper-mode :is(.et-top-left, .et-main-tabs, .et-top-ri
 }
 
 #clockWidget .et-home-greeting {
+  font-size: calc(clamp(17px, calc(var(--clock-size) * 0.25), 30px) * var(--greeting-scale, 1));
   margin-top: calc(
     clamp(8px, var(--clock-size) * 0.15, 22px) - var(--greeting-ink-top, 0px)
   );

@@ -323,7 +323,7 @@ const BookmarkManager = (() => {
     norm.forEach(TagManager.add);
     const bm = {
       id: uuid(),
-      title: String(title || safe)
+      title: String(title || "")
         .trim()
         .slice(0, 300),
       nickname: String(nickname || "")
@@ -343,7 +343,7 @@ const BookmarkManager = (() => {
     if (!bm) return;
     const safe = normalizeUrl(url);
     if (!safe) return;
-    bm.title = String(title || safe)
+    bm.title = String(title || "")
       .trim()
       .slice(0, 300);
     bm.nickname = String(nickname || "")

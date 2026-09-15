@@ -507,7 +507,27 @@ const SettingsRenderer = (() => {
     if (closeBtn) closeBtn.addEventListener("click", closeSideSheet);
 
     if (overlay) {
+      const isPicker = (el) => el?.matches?.('input[type="color"]');
+      const stopPicking = () => overlay.classList.remove("is-picking");
+      overlay.addEventListener(
+        "click",
+        (e) => {
+          if (isPicker(e.target)) overlay.classList.add("is-picking");
+        },
+        true,
+      );
+      overlay.addEventListener("change", (e) => {
+        if (isPicker(e.target)) stopPicking();
+      });
+      overlay.addEventListener("focusout", (e) => {
+        if (isPicker(e.target)) stopPicking();
+      });
+      window.addEventListener("focus", stopPicking);
       overlay.addEventListener("click", (e) => {
+        if (overlay.classList.contains("is-picking") && !isPicker(e.target)) {
+          stopPicking();
+          return;
+        }
         if (e.target === overlay && !gestureStartedIn($("sidesheetPanel")))
           closeSideSheet();
       });
@@ -1967,9 +1987,7 @@ const SettingsRenderer = (() => {
     const ink = readableInk(shown, bg);
 
     const display = Contrast.readable(shown, bg, DISPLAY_MIN_LC);
-    const ui =
-      [accent, shown].find((c) => Math.abs(Contrast.lc(c, bg)) >= FILL_MIN_LC) ||
-      Contrast.readable(shown, bg, FILL_MIN_LC + 5);
+    const ui = HEX6.test(accent || "") ? accent : Contrast.readable(shown, bg, FILL_MIN_LC + 5);
     return { ui, ink, display };
   }
 

@@ -250,6 +250,11 @@ const StorageManager = (() => {
     clockPosition: "center",
     clockFont: "system",
     clockColor: "",
+    clockScale: 100,
+    greetingScale: 100,
+    metaScale: 100,
+    greetingColor: "",
+    metaColor: "",
     solidAmbient: true,
     performanceMode: false,
     wpShadowAuto: true,
@@ -490,7 +495,7 @@ const StorageManager = (() => {
     url = url.slice(0, MAX_URL_LEN);
     return {
       id: bm.id || uuid(),
-      title: String(bm.title || url)
+      title: String(typeof bm.title === "string" ? bm.title : url)
         .trim()
         .slice(0, 300),
       url: url,
@@ -1647,6 +1652,15 @@ const StorageManager = (() => {
       /^#[0-9a-f]{6}$/i.test(raw.clockColor || "") || raw.clockColor === ""
         ? raw.clockColor
         : undefined,
+    );
+    pick("clockScale", num(raw.clockScale, 60, 130));
+    pick("greetingScale", num(raw.greetingScale, 70, 150));
+    pick("metaScale", num(raw.metaScale, 70, 150));
+    ["greetingColor", "metaColor"].forEach((key) =>
+      pick(
+        key,
+        /^#[0-9a-f]{6}$/i.test(raw[key] || "") || raw[key] === "" ? raw[key] : undefined,
+      ),
     );
     pick("topbarOpacity", num(raw.topbarOpacity, 0, 100));
     pick("widgetBgOpacity", num(raw.widgetBgOpacity, 0, 100));

@@ -951,8 +951,9 @@ const WidgetsRenderer = (() => {
       const btn = $(id);
       if (btn) btn.style.display = w[key] !== false ? "" : "none";
     });
-    if (pinned) pinned.style.display = s.hidePinnedOnHome ? "none" : "flex";
-    document.body.classList.toggle("hide-pinned-home", !!s.hidePinnedOnHome);
+    const dockEmpty = !!s.hidePinnedOnHome && w.pinnedBoards === false;
+    if (pinned) pinned.style.display = dockEmpty ? "none" : "flex";
+    document.body.classList.toggle("hide-pinned-home", dockEmpty);
     const pinsPos = ["left", "right", "bottom"].includes(s.pinsPosition)
       ? s.pinsPosition
       : "center";
@@ -1085,6 +1086,24 @@ const WidgetsRenderer = (() => {
       : "";
     if (custom) root.setProperty("--clock-color", custom);
     else root.removeProperty("--clock-color");
+
+    const scale = Number.isFinite(s.clockScale)
+      ? Math.min(130, Math.max(60, s.clockScale))
+      : 100;
+    root.setProperty("--clock-scale", String(scale / 100));
+    const pct = (v, lo, hi) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : 100) / 100;
+    root.setProperty("--greeting-scale", String(pct(s.greetingScale, 70, 150)));
+    root.setProperty("--meta-scale", String(pct(s.metaScale, 70, 150)));
+
+    [
+      ["greetingColor", "--greeting-color", "has-greeting-color"],
+      ["metaColor", "--meta-color", "has-meta-color"],
+    ].forEach(([key, prop, cls]) => {
+      const val = /^#[0-9a-f]{6}$/i.test(s[key] || "") ? s[key] : "";
+      if (val) root.setProperty(prop, val);
+      else root.removeProperty(prop);
+      document.body.classList.toggle(cls, !!val);
+    });
 
     watchClockSpacing();
     fitClockSpacing();

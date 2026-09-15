@@ -1177,18 +1177,21 @@ const BoardRenderer = (() => {
               ? board.bookmarks
                   .map((bm) => {
                     const rawTitle = (bm.title || "").trim();
+                    let host = bm.url;
+                    try { host = new URL(bm.url).hostname.replace(/^www\./, ""); } catch {}
+                    const name = rawTitle || host;
                     return `
-              <div class="et-board-tile${bm.pinnedToHome ? " is-pinned" : ""}" data-id="${bm.id}" draggable="true" role="button" tabindex="0"
-                   aria-label="${escapeHtml(rawTitle)}${bm.pinnedToHome ? ", pinned to Home" : ""}" title="${escapeHtml(bm.title)} (${escapeHtml(bm.url)})">
+              <div class="et-board-tile${bm.pinnedToHome ? " is-pinned" : ""}${rawTitle ? "" : " is-icon-only"}" data-id="${bm.id}" draggable="true" role="button" tabindex="0"
+                   aria-label="${escapeHtml(name)}${bm.pinnedToHome ? ", pinned to Home" : ""}" title="${escapeHtml(name)} (${escapeHtml(bm.url)})">
                 <button type="button" class="et-board-tile-more" data-more="${bm.id}"
                         tabindex="-1" aria-hidden="true"
-                        title="More actions for ${escapeHtml(rawTitle)} (or right-click)">${icon("more", 12)}</button>
+                        title="More actions for ${escapeHtml(name)} (or right-click)">${icon("more", 12)}</button>
                 <img class="et-board-tile-icon" ${faviconAttr(bm.url)} alt="" width="26" height="26" loading="lazy" />
-                <span class="et-board-tile-title" title="${escapeHtml(bm.title)}">${escapeHtml(rawTitle)}</span>
+                <span class="et-board-tile-title" title="${escapeHtml(rawTitle)}">${escapeHtml(rawTitle)}</span>
                 <button type="button" class="board-pin-badge${bm.pinnedToHome ? " is-pinned" : ""}" data-pin="${bm.id}"
                         aria-pressed="${!!bm.pinnedToHome}"
                         title="${bm.pinnedToHome ? "Unpin from Home" : "Pin to Home"}"
-                        aria-label="${bm.pinnedToHome ? "Unpin" : "Pin"} ${escapeHtml(rawTitle)} to Home">${icon("pinFilled", 13)}</button>
+                        aria-label="${bm.pinnedToHome ? "Unpin" : "Pin"} ${escapeHtml(name)} to Home">${icon("pinFilled", 13)}</button>
               </div>
             `;
                   })
@@ -1216,8 +1219,8 @@ const BoardRenderer = (() => {
       `
       <div class="dialog-stack">
         <div class="dialog-field">
-          <label class="dialog-label">Title</label>
-          <input type="text" id="bmTitleInp" class="dialog-input" placeholder="Title" />
+          <label class="dialog-label">Title (optional)</label>
+          <input type="text" id="bmTitleInp" class="dialog-input" placeholder="Leave empty to show only the icon" />
         </div>
         <div class="dialog-field">
           <label class="dialog-label">URL</label>
@@ -1229,16 +1232,9 @@ const BoardRenderer = (() => {
         const urlEl = $("bmUrlInp");
         const title = titleEl.value.trim();
         const url = urlEl.value.trim();
-        if (!title || !url) {
-          markInvalid(titleEl, !title);
-          markInvalid(urlEl, !url);
-          showModalError(
-            !title && !url
-              ? "Title and URL are required."
-              : !title
-                ? "Title is required."
-                : "URL is required.",
-          );
+        if (!url) {
+          markInvalid(urlEl, true);
+          showModalError("URL is required.");
           return false;
         }
         let finalUrl = url;
@@ -1260,16 +1256,12 @@ const BoardRenderer = (() => {
       `
       <div class="dialog-stack">
         <div class="dialog-field">
-          <label class="dialog-label">Title</label>
-          <input type="text" id="bmTitleInp" class="dialog-input" value="${escapeHtml(bm.title)}" />
+          <label class="dialog-label">Title (optional)</label>
+          <input type="text" id="bmTitleInp" class="dialog-input" placeholder="Leave empty to show only the icon" value="${escapeHtml(bm.title)}" />
         </div>
         <div class="dialog-field">
           <label class="dialog-label">URL</label>
           <input type="text" id="bmUrlInp" class="dialog-input" value="${escapeHtml(bm.url)}" />
-        </div>
-        <div class="dialog-field">
-          <label class="dialog-label">Tags (optional)</label>
-          <input type="text" id="bmTagsInp" class="dialog-input" value="${(bm.tags || []).join(", ")}" />
         </div>
       </div>`,
       () => {
@@ -1277,26 +1269,14 @@ const BoardRenderer = (() => {
         const urlEl = $("bmUrlInp");
         const title = titleEl.value.trim();
         const url = urlEl.value.trim();
-        if (!title || !url) {
-          markInvalid(titleEl, !title);
-          markInvalid(urlEl, !url);
-          showModalError(
-            !title && !url
-              ? "Title and URL are required."
-              : !title
-                ? "Title is required."
-                : "URL is required.",
-          );
+        if (!url) {
+          markInvalid(urlEl, true);
+          showModalError("URL is required.");
           return false;
         }
-        const rawTags = $("bmTagsInp").value;
         let finalUrl = url;
         if (!/^https?:\/\//i.test(finalUrl)) finalUrl = "https://" + finalUrl;
-        const tags = rawTags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean);
-        BookmarkManager.edit(boardId, bm.id, title, finalUrl, tags);
+        BookmarkManager.edit(boardId, bm.id, title, finalUrl, bm.tags || []);
         renderBoards();
         HomeRenderer.renderPinned();
         return true;

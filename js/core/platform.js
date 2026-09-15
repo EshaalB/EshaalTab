@@ -367,8 +367,6 @@ function faviconSrcSet(url) {
       chain.push(bundledIcons[domain]);
     }
   }
-  const ext = extFaviconUrl(url);
-  if (ext) chain.push(ext);
   const allowRemote = remoteFaviconsAllowed();
   if (domain && allowRemote) {
     chain.push(
@@ -379,6 +377,8 @@ function faviconSrcSet(url) {
   if (origin && allowRemote && /^https?:$/.test(new URL(origin).protocol)) {
     chain.push(origin + "/favicon.ico");
   }
+  const ext = extFaviconUrl(url);
+  if (ext) chain.push(ext);
   const uniq = [...new Set(chain.filter(Boolean))];
   return { src: uniq[0] || "", fallbacks: uniq.slice(1) };
 }

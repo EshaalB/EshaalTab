@@ -143,12 +143,12 @@ const WorkspaceWidget = (() => {
     const ext = extFaviconUrl(url);
 
     const chain = [localAppIcon(name)];
-    if (ext) chain.push(ext);
     if (remoteFaviconsAllowed()) {
       if (APP_ICONS[name]) chain.push(APP_ICONS[name]);
       const remote = faviconSrcSet(url);
       chain.push(remote.src, ...remote.fallbacks);
     }
+    if (ext) chain.push(ext);
     const uniq = [...new Set(chain.filter(Boolean))];
     return `src="${uniq[0] || ""}" data-fav data-fav-url="${String(url).replace(/"/g, "&quot;")}" data-fav-fallbacks="${uniq.slice(1).join("|")}"`;
   }

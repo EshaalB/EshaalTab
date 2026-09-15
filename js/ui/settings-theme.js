@@ -479,6 +479,7 @@
     $("wPinnedBoardsToggle")?.addEventListener("change", (e) => {
       settings.widgets.pinnedBoards = e.target.checked;
       StorageManager.saveSettings();
+      WidgetsRenderer.applyWidgetVisibility();
       HomeRenderer.render();
     });
 
