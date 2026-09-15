@@ -204,7 +204,7 @@ const ContextMenu = (() => {
       <div class="board-menu-item" data-act="rename"><span class="board-menu-icon">${icon("edit", 16)}</span><span class="board-menu-label">Rename board</span></div>
       <div class="board-menu-item" data-act="addlink"><span class="board-menu-icon">+</span><span class="board-menu-label">Add link</span></div>
       <div class="board-menu-item" data-act="openall"><span class="board-menu-icon">${icon("grid", 16)}</span><span class="board-menu-label">Open all in tabs</span></div>
-      <div class="board-menu-item board-menu-check" data-act="titles" role="menuitemcheckbox" aria-checked="${!board.hideTitles}"><span class="board-menu-icon">${board.hideTitles ? "" : "✓"}</span><span class="board-menu-label">Show titles</span></div>
+      <div class="board-menu-item board-menu-check" data-act="titles" role="menuitemcheckbox" aria-checked="${!board.hideTitles}"><span class="board-menu-icon">${icon(board.hideTitles ? "eyeOff" : "eye", 16)}</span><span class="board-menu-label">Show titles</span><span class="board-menu-tick" aria-hidden="true">${board.hideTitles ? "" : icon("check", 14)}</span></div>
       <div class="board-menu-item" data-act="pinboard"><span class="board-menu-icon">${icon("pin", 16)}</span><span class="board-menu-label">${board.pinnedToHome ? "Unpin from Home" : "Pin board to Home"}</span></div>
       <div class="board-menu-sep"></div>
       <div class="board-menu-swatches" role="group" aria-label="Board colour">
