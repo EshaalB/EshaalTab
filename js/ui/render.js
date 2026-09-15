@@ -704,7 +704,16 @@ const BoardRenderer = (() => {
           "--ui-scale",
         ),
       ) || 1;
-    const realWidth = boardsArea()?.clientWidth || 0;
+    const areaEl = boardsArea();
+    const areaStyle = areaEl ? getComputedStyle(areaEl) : null;
+    const realWidth = areaEl
+      ? Math.max(
+          0,
+          areaEl.clientWidth -
+            parseFloat(areaStyle.paddingLeft || "0") -
+            parseFloat(areaStyle.paddingRight || "0"),
+        )
+      : 0;
     const areaWidth = realWidth || Math.max(240, window.innerWidth - 32) || 1200;
     const preferredWidth = Math.round(
       (StorageManager.getSettings().boardWidth || 270) * uiScale,

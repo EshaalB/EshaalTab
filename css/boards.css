@@ -4,8 +4,9 @@
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
+  --boards-gutter: clamp(12px, 3vw, 32px);
   margin-top: var(--sp-2);
-  padding: var(--sp-6) 0 100px;
+  padding: var(--boards-gutter) var(--boards-gutter) 100px;
   scrollbar-width: none;
 }
 
@@ -361,7 +362,7 @@ body.theme-light .et-board-card {
   padding: var(--sp-2);
   border-radius: var(--r-md);
   border: none;
-  background: var(--board-inset);
+  background: transparent;
   max-height: 280px;
   overflow-y: auto;
   scrollbar-width: thin;

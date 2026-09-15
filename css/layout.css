@@ -1859,7 +1859,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
   }
 
   .et-boards-area {
-    padding: 12px 12px 72px;
+    padding-bottom: 72px;
   }
 
   .et-board-grid {
@@ -2035,8 +2035,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
 
   .et-boards-area {
     margin-top: 0;
-    padding: 8px max(10px, env(safe-area-inset-left))
-      calc(72px + env(safe-area-inset-bottom));
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
   }
 
   .et-board-grid {
