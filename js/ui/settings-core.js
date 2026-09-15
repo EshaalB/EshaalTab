@@ -1622,6 +1622,7 @@ const SettingsRenderer = (() => {
     if (solid) {
       const seed = settings.solidSeed || (isLight ? "#c7d2fe" : "#0d1117");
       const p = derivePalette(seed, activeMode);
+      if (settings.solidExact && HEX6.test(seed)) p.bg = seed;
 
       document.body.classList.toggle("theme-light", isLight);
       document.body.classList.toggle("theme-dark", !isLight);

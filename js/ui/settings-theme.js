@@ -47,6 +47,7 @@
       s.modeLocked = true;
 
       s.solidSeed = p.seed || p.accent;
+      delete s.solidExact;
       s.accentColor = p.accent;
 
       s.accent2 = p.accent2 || "";
@@ -82,6 +83,8 @@
     }
     if (HEX.test(p.accent || "")) s.accentColor = p.accent;
     if (HEX.test(p.solidSeed || "")) s.solidSeed = p.solidSeed;
+    if (typeof p.solidExact === "boolean") s.solidExact = p.solidExact;
+    else delete s.solidExact;
     if (["solid", "image", "video"].includes(p.backgroundType))
       s.backgroundType = p.backgroundType;
     if (
@@ -113,6 +116,7 @@
       mode: s.mode,
       accent: s.accentColor,
       solidSeed: s.solidSeed || s.accentColor,
+      solidExact: !!s.solidExact,
       backgroundType: s.backgroundType || "solid",
       backgroundValue:
         typeof s.backgroundValue === "string" &&
@@ -523,9 +527,9 @@
 
     $("myntColorPicker")?.addEventListener("input", (e) => {
       settings.solidSeed = e.target.value;
+      settings.solidExact = true;
 
       settings.backgroundValue = e.target.value;
-      if (!settings.accentOverride) settings.accentColor = e.target.value;
 
       const hadWallpaper =
         settings.backgroundType === "image" || settings.backgroundType === "video";

@@ -1604,6 +1604,7 @@ const StorageManager = (() => {
         : undefined,
     );
     pick("use12h", typeof raw.use12h === "boolean" ? raw.use12h : undefined);
+    pick("solidExact", typeof raw.solidExact === "boolean" ? raw.solidExact : undefined);
     pick("remoteFavicons", !!raw.remoteFavicons);
     if (raw.remoteFaviconsChoice !== undefined)
       out.remoteFaviconsChoice = !!raw.remoteFaviconsChoice;
