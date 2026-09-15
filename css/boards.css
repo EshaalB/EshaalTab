@@ -458,7 +458,7 @@ body.theme-light .et-board-card {
 .et-board-tile-icon {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   object-fit: contain;
   flex-shrink: 0;
   transition: transform var(--dur-2) var(--ease-out);
