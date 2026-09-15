@@ -1750,7 +1750,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
   font-size: var(--fs-xs);
   font-weight: var(--fw-semi);
   cursor: pointer;
-  border-radius: var(--r-xs, 6px);
+  border-radius: var(--r-xs);
   transition: color var(--dur-1) var(--ease-out);
 }
 
@@ -2124,7 +2124,6 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
   width: 1px;
   height: calc(20px * var(--ui-scale));
   transform: translateY(-50%);
-  border-radius: 1px;
   background: var(--border-soft);
 }
 
