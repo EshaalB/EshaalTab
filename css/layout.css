@@ -27,10 +27,30 @@ body.wp-blur-on #video-bg {
   transition: filter var(--dur-3) var(--ease-out);
 }
 
-body:is(.view-boards, .view-notes) #photo-bg,
+#photo-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  filter: blur(var(--wp-page-extra, 8px));
+  transform: scale(var(--wp-page-scale, 1.04));
+  opacity: 0;
+  transition: opacity var(--dur-2) var(--ease-out);
+  will-change: opacity;
+  pointer-events: none;
+}
+
+body:is(.view-boards, .view-notes) #photo-bg::after {
+  opacity: 1;
+}
+
 body:is(.view-boards, .view-notes) #video-bg {
   filter: blur(var(--wp-page-blur, 8px));
   transform: translateZ(0) scale(var(--wp-page-scale, 1.04));
+}
+
+html.is-lite #photo-bg::after {
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -15,14 +15,27 @@
 }
 
 .et-set-overlay.is-picking {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  visibility: hidden;
 }
 
-.et-set-overlay.is-picking .et-set-panel {
-  opacity: 0.1;
-  transition: opacity var(--dur-2) var(--ease-out);
+.st-eyedrop {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: 6px;
+  padding: 0;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.st-eyedrop:hover {
+  color: var(--text);
+  background: var(--panel-hover);
 }
 
 .et-set-panel {

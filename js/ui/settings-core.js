@@ -507,27 +507,41 @@ const SettingsRenderer = (() => {
     if (closeBtn) closeBtn.addEventListener("click", closeSideSheet);
 
     if (overlay) {
-      const isPicker = (el) => el?.matches?.('input[type="color"]');
-      const stopPicking = () => overlay.classList.remove("is-picking");
-      overlay.addEventListener(
-        "click",
-        (e) => {
-          if (isPicker(e.target)) overlay.classList.add("is-picking");
-        },
-        true,
-      );
-      overlay.addEventListener("change", (e) => {
-        if (isPicker(e.target)) stopPicking();
-      });
-      overlay.addEventListener("focusout", (e) => {
-        if (isPicker(e.target)) stopPicking();
-      });
-      window.addEventListener("focus", stopPicking);
+      if ("EyeDropper" in window) {
+        const addDroppers = () => {
+          overlay.querySelectorAll("input.st-color").forEach((input) => {
+            if (input.nextElementSibling?.classList.contains("st-eyedrop")) return;
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "st-eyedrop";
+            btn.title = "Pick a colour from the screen";
+            btn.setAttribute("aria-label", "Pick a colour from the screen");
+            btn.innerHTML =
+              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>';
+            input.after(btn);
+          });
+        };
+        new MutationObserver(addDroppers).observe(overlay, { childList: true, subtree: true });
+        addDroppers();
+        overlay.addEventListener("click", async (e) => {
+          const btn = e.target.closest?.(".st-eyedrop");
+          if (!btn) return;
+          e.stopPropagation();
+          const input = btn.previousElementSibling;
+          overlay.classList.add("is-picking");
+          try {
+            const { sRGBHex } = await new window.EyeDropper().open();
+            input.value = sRGBHex;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          } catch {
+          } finally {
+            overlay.classList.remove("is-picking");
+            btn.focus();
+          }
+        });
+      }
       overlay.addEventListener("click", (e) => {
-        if (overlay.classList.contains("is-picking") && !isPicker(e.target)) {
-          stopPicking();
-          return;
-        }
         if (e.target === overlay && !gestureStartedIn($("sidesheetPanel")))
           closeSideSheet();
       });
@@ -1457,6 +1471,10 @@ const SettingsRenderer = (() => {
     );
     const pagePx = Math.max(px, 8);
     el.setProperty("--wp-page-blur", `${pagePx.toFixed(1)}px`);
+    el.setProperty(
+      "--wp-page-extra",
+      `${Math.sqrt(Math.max(0, pagePx * pagePx - px * px)).toFixed(1)}px`,
+    );
     el.setProperty("--wp-page-scale", String(1 + (pagePx * 6) / shortest));
   }
 
