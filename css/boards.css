@@ -40,14 +40,9 @@
   --board-ring: 26%;
   --board-ground: var(--board-rgb, 24, 26, 32);
   --board-solid: color-mix(in srgb, var(--board-accent) var(--board-tint), rgb(var(--board-ground)));
-  --board-card-alpha: var(--board-opacity, 0.08);
   --board-ink: var(--text);
-  --board-line: transparent;
-  --board-line-strong: transparent;
   --board-inset-ground: rgba(0, 0, 0, 0.34);
   --board-title-ink: var(--board-text, var(--text));
-  --board-inset: color-mix(in srgb, var(--board-accent) 18%, var(--board-inset-ground));
-  --board-wash: color-mix(in srgb, var(--board-accent) 13%, transparent);
   --board-wash-strong: color-mix(in srgb, var(--board-accent) 20%, transparent);
   width: 100%;
   display: flex;
@@ -158,10 +153,7 @@ body.theme-light .et-board-card.has-own-color {
   --board-text: var(--board-ink);
   --board-text-dim: color-mix(in srgb, var(--board-ink) 70%, transparent);
   --board-inset-ground: color-mix(in srgb, var(--board-ink) 10%, transparent);
-  --board-inset: var(--board-inset-ground);
-  --board-wash: color-mix(in srgb, var(--board-ink) 8%, transparent);
   --board-wash-strong: color-mix(in srgb, var(--board-ink) 14%, transparent);
-  --board-line: color-mix(in srgb, var(--board-ink) 16%, transparent);
 }
 
 .et-board-card.has-own-color.is-pastel,
@@ -187,7 +179,6 @@ body.theme-light .et-board-card {
   --board-tint: 15%;
   --board-ring: 20%;
   --board-inset-ground: rgba(15, 23, 42, 0.07);
-  --board-inset: color-mix(in srgb, var(--board-accent) 12%, var(--board-inset-ground));
 }
 
 .et-board-card-header {
@@ -682,12 +673,10 @@ body.theme-light .et-board-card {
 
 body.solid-mode .et-board-card:not(.has-own-color) {
   --board-solid: color-mix(in oklch, var(--board-accent) 30%, #17181e);
-  --board-inset: color-mix(in oklch, var(--board-accent) 16%, #101116);
 }
 
 body.solid-mode.theme-light .et-board-card:not(.has-own-color) {
   --board-solid: color-mix(in oklch, var(--board-accent) 17%, #ffffff);
-  --board-inset: color-mix(in oklch, var(--board-accent) 7%, #ffffff);
 }
 
 .et-board-card.is-flash {

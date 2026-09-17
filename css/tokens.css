@@ -181,11 +181,6 @@ textarea::placeholder {
   --e4:
     0 4px 8px var(--shadow-contact),
     0 20px 42px -4px var(--shadow-ambient);
-  --e-sheet:
-    -4px 0 8px var(--shadow-contact),
-    -12px 0 32px -4px var(--shadow-ambient);
-  --glass: none;
-  --glass-lg: none;
   --hair: 1px solid var(--border-soft);
 
   --wp-shadow-opacity: 0.6;
@@ -225,11 +220,9 @@ textarea::placeholder {
   --notes-opacity: var(--board-opacity, 0.08);
 
   --search-opacity: var(--topbar-opacity);
-  --surface-topbar: rgba(var(--board-rgb), var(--topbar-opacity));
   --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
   --surface-search: rgba(var(--board-rgb), var(--search-opacity));
 
-  --widget-bg-alpha: 0.95;
   --text: rgba(255, 255, 255, 0.95);
   --text-dim: rgba(255, 255, 255, 0.65);
   --text-faint: rgba(255, 255, 255, 0.35);
@@ -237,18 +230,12 @@ textarea::placeholder {
   --border-strong: rgba(255, 255, 255, 0.22);
   --track: rgba(255, 255, 255, 0.18);
 
-  --op-primary: 1;
-  --op-secondary: 0.78;
-  --op-muted: 0.52;
-  --op-faint: 0.32;
 
   --surface-base: #090a0f;
-  --surface-chip: rgba(255, 255, 255, 0.1);
 
   --surface-panel: rgba(255, 255, 255, 0.04);
   --surface-panel-2: rgba(255, 255, 255, 0.065);
   --border-tactile: 1px solid var(--border-soft);
-  --border-tactile-accent: 1px solid var(--accent-color);
 
   --panel-rgb: 17, 19, 24;
   --panel-opacity: 1;
@@ -268,21 +255,15 @@ textarea::placeholder {
   --menu-active-bg: color-mix(in srgb, var(--accent-color) 18%, transparent);
   --menu-active-ink: var(--accent-ink, var(--accent-color));
 
-  --glass-fill: rgba(14, 16, 22, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-blur: none;
   --scrim: rgba(0, 0, 0, 0.65);
 
   --page-bg: #090a0f;
 
-  --paper: rgba(255, 255, 255, 0.035);
 
-  --warning-wash: rgba(120, 78, 0, 0.52);
   --danger: #ef4444;
   --danger-text: #f87171;
   --danger-fill: rgba(239, 68, 68, 0.12);
   --danger-border: rgba(239, 68, 68, 0.25);
-  --success-border: rgba(16, 185, 129, 0.5);
 
   --ui-scale: 1;
 
@@ -291,15 +272,12 @@ textarea::placeholder {
   --fs-base: calc(15px * var(--ui-scale));
   --fs-md: calc(16px * var(--ui-scale));
   --fs-lg: calc(20px * var(--ui-scale));
-  --fs-2xl: calc(24px * var(--ui-scale));
   --fs-xl: calc(28px * var(--ui-scale));
 
   --clock-size: clamp(59px, min(11.3vw, 17.4vh), calc(174px * var(--ui-scale)));
 
-  --fw-body: 400;
   --fw-medium: 500;
   --fw-semi: 600;
-  --fw-bold: 700;
 
   --r-xs: 6px;
   --r-sm: 8px;
@@ -316,7 +294,6 @@ textarea::placeholder {
   --sp-6: 24px;
   --sp-8: 32px;
   --sp-12: 48px;
-  --sp-16: 64px;
 
   --lh-tight: 1.2;
   --lh-body: 1.6;
@@ -327,19 +304,12 @@ textarea::placeholder {
   --dur-3: 220ms;
   --dur-4: 280ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --texture-paper: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.035'/%3E%3C/svg%3E");
 
   --success: #22c55e;
-  --success-text: #4ade80;
-  --success-fill: rgba(34, 197, 94, 0.12);
   --warning: #f59e0b;
   --warning-text: #fbbf24;
-  --warning-fill: rgba(245, 158, 11, 0.12);
 
-  --z-behind: -1;
-  --z-content: 1;
   --z-raised: 10;
   --z-sticky: 100;
   --z-topbar: 200;
@@ -351,10 +321,6 @@ textarea::placeholder {
   --z-toast: 800;
   --z-tooltip: 900;
 
-  --bp-sm: 640px;
-  --bp-md: 768px;
-  --bp-lg: 1024px;
-  --bp-xl: 1280px;
 }
 
 @media (min-width: 1800px) {
@@ -403,9 +369,6 @@ body.theme-light {
   --e4:
     0 4px 8px var(--shadow-contact),
     0 20px 42px -4px var(--shadow-ambient);
-  --e-sheet:
-    -4px 0 8px var(--shadow-contact),
-    -12px 0 32px -4px var(--shadow-ambient);
   --hair: 1px solid var(--border-soft);
 
   --board-border: transparent;
@@ -418,17 +381,14 @@ body.theme-light {
   --surface: rgba(0, 0, 0, 0.04);
   --surface-2: rgba(0, 0, 0, 0.06);
   --surface-3: rgba(0, 0, 0, 0.1);
-  --surface-topbar: rgba(var(--board-rgb), var(--topbar-opacity));
   --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
   --surface-search: rgba(var(--board-rgb), var(--search-opacity));
   --surface-base: #f4f6f8;
   --surface-card: rgba(var(--board-rgb), var(--board-opacity, 0.08));
-  --surface-chip: rgba(0, 0, 0, 0.05);
 
   --surface-panel: rgba(0, 0, 0, 0.04);
   --surface-panel-2: rgba(0, 0, 0, 0.065);
   --border-tactile: 1px solid var(--border-soft);
-  --border-tactile-accent: 1px solid var(--accent-color);
   --text: rgba(0, 0, 0, 0.88);
   --text-dim: rgba(0, 0, 0, 0.62);
   --text-faint: rgba(0, 0, 0, 0.35);
@@ -448,11 +408,8 @@ body.theme-light {
   --menu-hover: var(--panel-hover);
   --knob: #ffffff;
 
-  --glass-fill: rgba(255, 255, 255, 0.62);
-  --glass-border: rgba(255, 255, 255, 0.75);
   --scrim: rgba(0, 0, 0, 0.35);
 
-  --paper: #fffdf6;
   --danger-text: #b91c1c;
   --danger-fill: rgba(239, 68, 68, 0.08);
   --danger-border: rgba(239, 68, 68, 0.2);
@@ -464,7 +421,4 @@ body.has-custom-cursor .view {
   cursor: var(--app-cursor, default);
 }
 body.solid-mode {
-  --glass-fill: var(--surface-2);
-  --glass-border: var(--border-soft);
-  --glass-blur: none;
 }

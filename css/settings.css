@@ -60,15 +60,6 @@ body.radius-sharp .et-set-panel {
   border-radius: 0;
 }
 
-@keyframes slideLeft {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
 .et-set-header {
   position: relative;
   display: flex;
@@ -730,13 +721,6 @@ body.radius-sharp .et-set-panel {
   cursor: pointer;
 }
 
-.help-intro {
-  font-size: var(--fs-xs);
-  line-height: 1.55;
-  color: var(--text);
-  margin-bottom: var(--sp-2);
-}
-
 .support-about {
   margin: 0 0 var(--sp-5);
   font-size: var(--fs-sm);
@@ -1231,9 +1215,6 @@ body.radius-sharp .et-set-panel {
 }
 
 @media (max-width: 400px) {
-  .et-set-tab span {
-    display: none;
-  }
   .et-set-body {
     padding-inline: 8px;
   }
@@ -1244,20 +1225,8 @@ body.radius-sharp .et-set-panel {
   }
 
   .st-action-btn,
-  .preset-btn,
   .et-set-close-btn {
     min-height: 44px;
-  }
-
-  .st-slider {
-    width: 100%;
-  }
-}
-
-@media (min-width: 401px) and (max-width: 700px) {
-  .et-set-tab svg {
-    width: 15px;
-    height: 15px;
   }
 }
 
