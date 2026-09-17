@@ -1026,57 +1026,9 @@ const WidgetsRenderer = (() => {
       target.appendChild(clock);
   }
 
-  const CLOCK_FONT_STACKS = {
-    system: {
-      stack:
-        "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-
-      weight: 400,
-      spacing: "-0.03em",
-    },
-    default: {
-      stack: "'Orbitron', var(--font-app, sans-serif)",
-      weight: 700,
-      spacing: "0.02em",
-    },
-    thin: {
-      stack:
-        "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', sans-serif",
-      weight: 200,
-      spacing: "-0.02em",
-    },
-    light: {
-      stack: "'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif",
-      weight: 300,
-      spacing: "-0.01em",
-    },
-    app: {
-      stack: "var(--font-app, sans-serif)",
-      weight: 600,
-      spacing: "normal",
-    },
-    serif: {
-      stack: "'Lora', Georgia, 'Times New Roman', serif",
-      weight: 400,
-      spacing: "normal",
-    },
-    mono: {
-      stack: "'JetBrains Mono', ui-monospace, Consolas, monospace",
-      weight: 400,
-      spacing: "-0.03em",
-    },
-    handwriting: { stack: "'Caveat', cursive", weight: 700, spacing: "normal" },
-
-    outfit: {
-      stack: "'Outfit', var(--font-app, sans-serif)",
-      weight: 400,
-      spacing: "-0.02em",
-    },
-  };
-
   function applyClockAppearance(s) {
     const root = document.documentElement.style;
-    const face = CLOCK_FONT_STACKS[s.clockFont] || CLOCK_FONT_STACKS.system;
+    const face = clockFont(s.clockFont);
     root.setProperty("--clock-font", face.stack);
     root.setProperty("--clock-weight", String(face.weight));
     root.setProperty("--clock-tracking", face.spacing);

@@ -106,6 +106,7 @@ const ToastSystem = (() => {
 
   function createController(toast) {
     return {
+      el: toast,
       dismiss: () => dismiss(toast),
       update: (newMsg, newType = "success", newDuration = 3000, detail = "") => {
         if (!toast || !toast.parentNode) return;
@@ -669,4 +670,123 @@ const PomodoroMode = (() => {
     } catch {}
   }
   return { init, enter, exit };
+})();
+
+const BackupReminder = (() => {
+  const DAY = 864e5;
+  const FREQS = ["off", "daily", "weekly", "monthly", "custom"];
+  let toast = null;
+
+  function schedule(s) {
+    const int = (v, lo, hi, d) => (Number.isInteger(v) && v >= lo && v <= hi ? v : d);
+    return {
+      freq: FREQS.includes(s.backupFreq) ? s.backupFreq : "weekly",
+      day: int(s.backupDay, 0, 6, 1),
+      date: int(s.backupDate, 1, 31, 1),
+      time: /^([01]\d|2[0-3]):[0-5]\d$/.test(s.backupTime || "") ? s.backupTime : "09:00",
+      every: int(s.backupEveryDays, 1, 365, 14),
+    };
+  }
+
+  function lastDue(r, now, since) {
+    const [h, m] = r.time.split(":").map(Number);
+    const at = (d) => {
+      const t = new Date(d);
+      t.setHours(h, m, 0, 0);
+      return t;
+    };
+    const n = new Date(now);
+    let t;
+    if (r.freq === "daily") {
+      t = at(n);
+      if (t > n) t.setDate(t.getDate() - 1);
+    } else if (r.freq === "weekly") {
+      t = at(n);
+      t.setDate(t.getDate() - ((t.getDay() - r.day + 7) % 7));
+      if (t > n) t.setDate(t.getDate() - 7);
+    } else if (r.freq === "monthly") {
+      const inMonth = (y, mo) =>
+        new Date(y, mo, Math.min(r.date, new Date(y, mo + 1, 0).getDate()), h, m);
+      t = inMonth(n.getFullYear(), n.getMonth());
+      if (t > n) t = inMonth(n.getFullYear(), n.getMonth() - 1);
+    } else if (r.freq === "custom") {
+      const base = at(since);
+      const days = Math.round(
+        (Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) -
+          Date.UTC(base.getFullYear(), base.getMonth(), base.getDate())) / DAY,
+      );
+      t = new Date(base);
+      t.setDate(t.getDate() + Math.floor(days / r.every) * r.every);
+      if (t > n) t.setDate(t.getDate() - r.every);
+    } else return 0;
+    return t.getTime();
+  }
+
+  function isDue(s, now = Date.now()) {
+    const r = schedule(s);
+    if (r.freq === "off") return false;
+    const seen = (v) => (Number.isFinite(v) && v <= now ? v : 0);
+    const since = seen(s.backupSince) || now;
+    const due = lastDue(r, now, since);
+    return due > Math.max(since, seen(s.lastBackupAt), seen(s.backupDismissedAt));
+  }
+
+  function hide() {
+    toast?.dismiss();
+    toast = null;
+  }
+
+  function check() {
+    const s = StorageManager.getSettings();
+    if (!Number.isFinite(s.backupSince)) {
+      s.backupSince = Date.now();
+      StorageManager.saveSettings();
+    }
+    if (!isDue(s)) return hide();
+    if (toast?.el.isConnected && !toast.el.classList.contains("is-exiting")) return;
+    toast = ToastSystem.action(
+      "Time to back up your data",
+      "Export backup",
+      async () => {
+        try {
+          await StorageManager.exportJSON();
+          ToastSystem.success("Backup exported");
+        } catch (err) {
+          ToastSystem.error(err?.message || "Could not export the backup");
+          toast = null;
+          setTimeout(check, 0);
+        }
+      },
+      "info",
+      0,
+      "Boards, notes, settings and wallpapers in one file.",
+    );
+    const el = toast.el;
+    el.querySelectorAll(".toast-dismiss-btn, .toast-close").forEach((b) =>
+      b.addEventListener("click", () => {
+        StorageManager.getSettings().backupDismissedAt = Date.now();
+        StorageManager.saveSettings();
+      }),
+    );
+  }
+
+  function reschedule() {
+    const s = StorageManager.getSettings();
+    s.backupSince = Date.now();
+    delete s.backupDismissedAt;
+    StorageManager.saveSettings();
+    check();
+  }
+
+  function init() {
+    check();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") check();
+    });
+    setInterval(() => {
+      if (document.visibilityState === "visible") check();
+    }, 60e3);
+  }
+
+  return { init, check, reschedule, isDue, schedule, FREQS };
 })();

@@ -1,4 +1,18 @@
-Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
+Bundled fonts and their licences
+
+SIL Open Font License 1.1 (text below):
+- Inter: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+- Space Grotesk: Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)
+- Nunito: Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+- Bebas Neue: Copyright 2010 by Dharma Type
+- Fraunces: Copyright 2020 The Fraunces Project Authors (https://github.com/undercasetype/Fraunces)
+- Lora: Copyright 2011 The Lora Project Authors (https://github.com/cyrealtype/Lora-Cyrillic)
+- JetBrains Mono: Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+- Orbitron: Copyright 2018 The Orbitron Project Authors (https://github.com/theleagueof/orbitron)
+- Caveat: Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
+
+Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0):
+- Roboto Slab: Copyright 2018 The Roboto Slab Project Authors (https://github.com/googlefonts/robotoslab)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

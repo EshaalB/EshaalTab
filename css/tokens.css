@@ -6,10 +6,10 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "Outfit";
-  src: url("../fonts/outfit-latin.woff2") format("woff2");
+  font-family: "Space Grotesk";
+  src: url("../fonts/space-grotesk-latin.woff2") format("woff2");
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 300 700;
   font-display: swap;
 }
 @font-face {
@@ -20,10 +20,26 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "Lexend";
-  src: url("../fonts/lexend-latin.woff2") format("woff2");
+  font-family: "Nunito";
+  src: url("../fonts/nunito-latin.woff2") format("woff2");
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bebas Neue";
+  src: url("../fonts/bebas-neue-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("../fonts/fraunces-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 300 700;
   font-display: swap;
 }
 @font-face {

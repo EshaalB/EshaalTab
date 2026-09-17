@@ -62,8 +62,8 @@ const APP_FONTS = [
     stack:
       "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   },
-  { value: "geometric", label: "Outfit", stack: "'Outfit', system-ui, sans-serif" },
-  { value: "rounded", label: "Lexend", stack: "'Lexend', system-ui, sans-serif" },
+  { value: "grotesk", label: "Space Grotesk", stack: "'Space Grotesk', system-ui, sans-serif" },
+  { value: "rounded", label: "Nunito", stack: "'Nunito', system-ui, sans-serif" },
   { value: "serif", label: "Lora", stack: "'Lora', Georgia, serif" },
   { value: "slab", label: "Roboto Slab", stack: "'Roboto Slab', Georgia, serif" },
   { value: "monospace", label: "JetBrains Mono", stack: "'JetBrains Mono', monospace" },
@@ -77,6 +77,20 @@ const APP_FONTS = [
 
 const CORNER_RADII = CORNER_STYLES.map((c) => c.value);
 const APP_FONT_VALUES = APP_FONTS.map((f) => f.value);
+
+const CLOCK_FONTS = [
+  { value: "system", label: "System", stack: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", weight: 400, spacing: "-0.03em" },
+  { value: "app", label: "Match app font", stack: "var(--font-app, sans-serif)", weight: 600, spacing: "normal" },
+  { value: "default", label: "Digital (Orbitron)", stack: "'Orbitron', var(--font-app, sans-serif)", weight: 700, spacing: "0.02em" },
+  { value: "condensed", label: "Tall (Bebas Neue)", stack: "'Bebas Neue', Impact, sans-serif", weight: 400, spacing: "0.02em" },
+  { value: "grotesk", label: "Quirky (Space Grotesk)", stack: "'Space Grotesk', system-ui, sans-serif", weight: 500, spacing: "-0.04em" },
+  { value: "rounded", label: "Rounded (Nunito)", stack: "'Nunito', system-ui, sans-serif", weight: 800, spacing: "-0.02em" },
+  { value: "display", label: "Soft serif (Fraunces)", stack: "'Fraunces', Georgia, serif", weight: 600, spacing: "-0.02em" },
+  { value: "serif", label: "Classic serif (Lora)", stack: "'Lora', Georgia, 'Times New Roman', serif", weight: 400, spacing: "normal" },
+  { value: "mono", label: "Monospace", stack: "'JetBrains Mono', ui-monospace, Consolas, monospace", weight: 400, spacing: "-0.03em" },
+  { value: "handwriting", label: "Handwriting", stack: "'Caveat', cursive", weight: 700, spacing: "normal" },
+];
+const clockFont = (v) => CLOCK_FONTS.find((f) => f.value === v) || CLOCK_FONTS[0];
 
 const cornerStyle = (v) =>
   CORNER_STYLES.find((c) => c.value === v) || CORNER_STYLES[0];

@@ -4,6 +4,7 @@ async function repaintAll() {
   SettingsRenderer.applyPresetShell();
   SettingsRenderer.applyTheme();
   SettingsRenderer.applyCursor();
+  BackupReminder.check();
   const s = StorageManager.getSettings();
 
   if (
@@ -59,6 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     SettingsRenderer.init();
 
     ViewController.init();
+    BackupReminder.init();
 
     const welcoming = WelcomeScreen.maybeShow();
 

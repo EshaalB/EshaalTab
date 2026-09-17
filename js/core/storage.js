@@ -252,6 +252,11 @@ const StorageManager = (() => {
     hidePinnedOnHome: false,
     clockPosition: "center",
     clockFont: "system",
+    backupFreq: "weekly",
+    backupDay: 1,
+    backupDate: 1,
+    backupTime: "09:00",
+    backupEveryDays: 14,
     clockColor: "",
     clockScale: 100,
     greetingScale: 100,
@@ -975,6 +980,7 @@ const StorageManager = (() => {
         loadedSettings.cornerRadius = CORNER_STYLES[0].value;
       if (!APP_FONT_VALUES.includes(loadedSettings.fontFamily))
         loadedSettings.fontFamily = APP_FONTS[0].value;
+      loadedSettings.clockFont = clockFont(loadedSettings.clockFont).value;
 
       if ((loadedSettings.settingsLayoutVersion || 0) < 11) {
         if (loadedSettings.searchEngine === "google")
@@ -1370,6 +1376,8 @@ const StorageManager = (() => {
     a.download = `eshaaltab-backup-${new Date().toLocaleDateString("sv")}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    settings.lastBackupAt = Date.now();
+    saveSettings();
   }
 
   const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -1637,21 +1645,12 @@ const StorageManager = (() => {
     );
 
     pick("clockPosition", normalizeClockPosition(raw.clockPosition));
-    pick(
-      "clockFont",
-      [
-        "system",
-        "default",
-        "thin",
-        "light",
-        "app",
-        "serif",
-        "mono",
-        "handwriting",
-      ].includes(raw.clockFont)
-        ? raw.clockFont
-        : undefined,
-    );
+    pick("backupFreq", ["off", "daily", "weekly", "monthly", "custom"].includes(raw.backupFreq) ? raw.backupFreq : undefined);
+    pick("backupDay", Number.isInteger(raw.backupDay) && raw.backupDay >= 0 && raw.backupDay <= 6 ? raw.backupDay : undefined);
+    pick("backupDate", Number.isInteger(raw.backupDate) && raw.backupDate >= 1 && raw.backupDate <= 31 ? raw.backupDate : undefined);
+    pick("backupTime", /^([01]\d|2[0-3]):[0-5]\d$/.test(raw.backupTime || "") ? raw.backupTime : undefined);
+    pick("backupEveryDays", Number.isInteger(raw.backupEveryDays) && raw.backupEveryDays >= 1 && raw.backupEveryDays <= 365 ? raw.backupEveryDays : undefined);
+    pick("clockFont", CLOCK_FONTS.some((f) => f.value === raw.clockFont) ? raw.clockFont : undefined);
     pick(
       "clockColor",
       /^#[0-9a-f]{6}$/i.test(raw.clockColor || "") || raw.clockColor === ""

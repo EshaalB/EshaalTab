@@ -419,18 +419,8 @@
               <label class="st-label" for="stClockFont">Clock font</label>
               ${CustomSelect.render({
                 id: "stClockFont",
-                value: settings.clockFont || "system",
-                options: [
-                  { value: "system", label: "System" },
-                  { value: "outfit", label: "Outfit" },
-                  { value: "thin", label: "Thin (iOS style)" },
-                  { value: "light", label: "Light (Android style)" },
-                  { value: "default", label: "Digital (Orbitron)" },
-                  { value: "app", label: "Match app font" },
-                  { value: "serif", label: "Serif" },
-                  { value: "mono", label: "Monospace" },
-                  { value: "handwriting", label: "Handwriting" },
-                ],
+                value: clockFont(settings.clockFont).value,
+                options: CLOCK_FONTS.map(({ value, label }) => ({ value, label })),
                 style: "width:220px;",
               })}
             </div>
