@@ -44,7 +44,12 @@ body:is(.view-boards, .view-notes) #photo-bg::after {
   opacity: 1;
 }
 
-body:is(.view-boards, .view-notes) #video-bg {
+body.wp-baked #photo-bg::after {
+  background-image: var(--wp-page-img);
+  filter: none;
+}
+
+body:is(.view-boards, .view-notes) #video-bg.active {
   filter: blur(var(--wp-page-blur, 8px));
   transform: translateZ(0) scale(var(--wp-page-scale, 1.04));
 }

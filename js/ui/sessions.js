@@ -17,59 +17,6 @@ const SessionManager = (() => {
     return [...list()].sort((a, b) => b.ts - a.ts);
   }
 
-  function countTabs() {
-    return list().reduce((n, s) => n + (s.tabs?.length || 0), 0);
-  }
-
-  async function saveCurrentWindow({ name = "", closeAfter = true } = {}) {
-    if (!(HAS_EXT && EXT.tabs)) {
-      ToastSystem.error("Saving sessions needs the installed extension.");
-      return null;
-    }
-
-    let tabs = [];
-    try {
-      tabs = (await EXT.tabs.query({ currentWindow: true })).filter((t) =>
-        isWeb(t.url),
-      );
-    } catch {
-      ToastSystem.error("Could not read the tabs in this window.");
-      return null;
-    }
-
-    const saveable = tabs.filter((t) => t.url !== location.href);
-    if (!saveable.length) {
-      ToastSystem.info("No open web pages to save.");
-      return null;
-    }
-
-    const session = {
-      id: uuid(),
-      name: String(name || "").trim().slice(0, 60),
-      ts: Date.now(),
-      tabs: saveable.map((t) => ({ title: t.title || t.url, url: t.url })),
-    };
-
-    const arr = list();
-    arr.unshift(session);
-    if (arr.length > StorageManager.MAX_SESSIONS)
-      arr.length = StorageManager.MAX_SESSIONS;
-    StorageManager.saveImmediate();
-
-    let closed = 0;
-    if (closeAfter) {
-      const ids = saveable.map((t) => t.id).filter((id) => id != null);
-      try {
-        if (ids.length) {
-          await EXT.tabs.remove(ids);
-          closed = ids.length;
-        }
-      } catch {}
-    }
-
-    return { session, closed };
-  }
-
   async function restore(id, { newWindow = false } = {}) {
     const s = find(id);
     if (!s) return false;
@@ -176,8 +123,6 @@ const SessionManager = (() => {
   return {
     getAll,
     find,
-    countTabs,
-    saveCurrentWindow,
     restore,
     openTab,
     rename,

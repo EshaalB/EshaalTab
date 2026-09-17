@@ -6,31 +6,39 @@ const uiMode = () =>
 const boardPreset = (hex) => BoardManager.BOARD_PAINT[String(hex).toLowerCase()];
 const boardTint = (hex) => boardPreset(hex)?.[uiMode()] || hex;
 
-const CARD_GROUND = { dark: "#121318", light: "#f7f8fa" };
-const CARD_TINT = { dark: 0.9, light: 0.9 };
+const mixRgb = (a, b, t) => ({
+  r: a.r * t + b.r * (1 - t),
+  g: a.g * t + b.g * (1 - t),
+  b: a.b * t + b.b * (1 - t),
+});
 
-const INK_LIGHT = "#ffffff";
-const INK_DARK = "#14151a";
-
-function relLum({ r, g, b }) {
-  const lin = (v) => {
-    const s = v / 255;
-    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+function boardBackdrop() {
+  const s = StorageManager.getSettings();
+  const root = getComputedStyle(document.documentElement);
+  if (["image", "video"].includes(s.backgroundType) && s.wpTone) {
+    const scrim = s.wallpaperOverlay ? (s.wallpaperOverlayOpacity ?? 35) / 100 : 0;
+    return mixRgb(Contrast.toRgb(s.wpTone.middle || s.wpTone.overall), { r: 0, g: 0, b: 0 }, 1 - scrim);
+  }
+  return Contrast.toRgb(root.getPropertyValue("--page-bg").trim() || (uiMode() === "light" ? "#f7f8fa" : "#121318"));
 }
 
-function boardCardInk(hex, t = CARD_TINT[uiMode()]) {
-  const c = Contrast.toRgb(hex);
-  const g = Contrast.toRgb(CARD_GROUND[uiMode()]);
-  const card = relLum({
-    r: c.r * t + g.r * (1 - t),
-    g: c.g * t + g.g * (1 - t),
-    b: c.b * t + g.b * (1 - t),
-  });
-  const onLight = (card + 0.05) / (relLum(Contrast.toRgb(INK_DARK)) + 0.05);
-  const onDark = 1.05 / (card + 0.05);
-  return onLight >= onDark ? INK_DARK : INK_LIGHT;
+function paintBoardInk(card) {
+  const light = uiMode() === "light";
+  const color = card.dataset.color;
+  const root = getComputedStyle(document.documentElement);
+  const alpha = parseFloat(root.getPropertyValue("--board-opacity"));
+  const backdrop = boardBackdrop();
+  const solid = color
+    ? mixRgb(Contrast.toRgb(boardTint(color)), Contrast.toRgb(light ? "#f7f8fa" : "#18191f"), boardPreset(color) ? 1 : 0.9)
+    : mixRgb(Contrast.toRgb(effectiveBoardAccent()), Contrast.toRgb(light ? "#ffffff" : "#17181e"), light ? 0.17 : 0.35);
+  const ink = Contrast.ink(Contrast.toHex(mixRgb(solid, backdrop, Number.isFinite(alpha) ? alpha : 1)));
+  card.classList.toggle("ink-dark", ink !== Contrast.INK_LIGHT);
+  for (const v of ["--board-ink", "--board-title-ink", "--board-text"]) card.style.setProperty(v, ink);
+  card.style.setProperty("--board-text-dim", `color-mix(in srgb, ${ink} 70%, transparent)`);
+}
+
+function repaintBoardInk() {
+  document.querySelectorAll(".et-board-card").forEach(paintBoardInk);
 }
 
 const effectiveBoardAccent = () =>
@@ -1160,10 +1168,9 @@ const BoardRenderer = (() => {
       acc.classList.add("has-own-color");
       acc.classList.toggle("is-pastel", preset);
       acc.style.setProperty("--board-accent", boardTint(board.color));
-      const cardInk = boardCardInk(boardTint(board.color), 1);
-      acc.style.setProperty("--board-title-ink", cardInk);
-      acc.style.setProperty("--board-ink", cardInk);
+      acc.dataset.color = board.color;
     }
+    paintBoardInk(acc);
 
     const linkCount = (board.bookmarks || []).length;
 

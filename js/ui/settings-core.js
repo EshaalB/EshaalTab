@@ -1476,6 +1476,42 @@ const SettingsRenderer = (() => {
       `${Math.sqrt(Math.max(0, pagePx * pagePx - px * px)).toFixed(1)}px`,
     );
     el.setProperty("--wp-page-scale", String(1 + (pagePx * 6) / shortest));
+    bakePageBlur(Math.sqrt(Math.max(0, pagePx * pagePx - px * px)));
+  }
+
+  let bakedKey = "";
+  let bakedUrl = "";
+  async function bakePageBlur(extra) {
+    const photoBg = $("photo-bg");
+    const src = /^url\("(.*)"\)$/.exec(photoBg?.style.backgroundImage || "")?.[1];
+    const key = `${src}|${extra.toFixed(1)}|${innerWidth}x${innerHeight}`;
+    if (key === bakedKey) return;
+    bakedKey = key;
+    document.body.classList.remove("wp-baked");
+    if (!src) return;
+    try {
+      const img = new Image();
+      img.src = src;
+      await img.decode();
+      if (key !== bakedKey) return;
+      const w = 480;
+      const h = Math.round((w * img.naturalHeight) / img.naturalWidth);
+      const shown = img.naturalWidth * Math.max(innerWidth / img.naturalWidth, innerHeight / img.naturalHeight);
+      const r = (extra * w) / shown;
+      const m = r * 3;
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.filter = `blur(${r}px)`;
+      ctx.drawImage(img, -m, -m, w + m * 2, h + m * 2);
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/webp", 0.9));
+      if (!blob || key !== bakedKey) return;
+      if (bakedUrl) URL.revokeObjectURL(bakedUrl);
+      bakedUrl = URL.createObjectURL(blob);
+      document.documentElement.style.setProperty("--wp-page-img", `url("${bakedUrl}")`);
+      document.body.classList.add("wp-baked");
+    } catch {}
   }
 
   function applyWallpaperTone() {
@@ -1766,6 +1802,7 @@ const SettingsRenderer = (() => {
     if (!metaMs.parentNode) document.head.appendChild(metaMs);
 
     StorageManager.setBootBg(topColor);
+    if (typeof repaintBoardInk === "function") repaintBoardInk();
   }
 
   function setMode(mode) {
@@ -1942,6 +1979,7 @@ const SettingsRenderer = (() => {
         await waitForImagePaint(src);
         photoBg.style.backgroundImage = `url("${String(src).replace(/"/g, "%22")}")`;
         photoBg.classList.add("active");
+        applyWallpaperBlur();
       }
       if (videoBg) {
         videoBg.pause();

@@ -168,18 +168,6 @@ const NoteHTML = (() => {
       .filter((item) => !item.checked && item.text);
   }
 
-  function setChecklistChecked(html, index, checked) {
-    const doc = new DOMParser().parseFromString(
-      "<!doctype html><html><body>" + String(html || "") + "</body></html>",
-      "text/html",
-    );
-    const items = doc.querySelectorAll(CHECKLIST_ITEMS);
-    const li = items[index];
-    if (!li) return null;
-    li.setAttribute("data-checked", checked ? "true" : "false");
-    return doc.body.innerHTML;
-  }
-
   function removeChecklistItem(html, index) {
     const doc = new DOMParser().parseFromString(
       "<!doctype html><html><body>" + String(html || "") + "</body></html>",
@@ -200,7 +188,6 @@ const NoteHTML = (() => {
     toText,
     looksLikeHtml,
     pendingChecklistItems,
-    setChecklistChecked,
     removeChecklistItem,
   };
 })();

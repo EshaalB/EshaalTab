@@ -133,24 +133,6 @@ const BoardManager = (() => {
     }
     StorageManager.save();
   }
-  function reorder(fromId, toId, after) {
-    const arr = boards();
-    const from = arr.findIndex((b) => b.id === fromId);
-    if (from < 0) return;
-    const [moved] = arr.splice(from, 1);
-    const to = arr.findIndex((b) => b.id === toId);
-    if (to < 0) {
-      arr.splice(from, 0, moved);
-      return;
-    }
-    const targetBoard = arr[to];
-    if (targetBoard && targetBoard.col != null) {
-      moved.col = targetBoard.col;
-    }
-    arr.splice(after ? to + 1 : to, 0, moved);
-    arr.forEach((b, i) => (b.order = i));
-    StorageManager.save();
-  }
   function shift(id, delta) {
     const arr = boards();
     const i = arr.findIndex((b) => b.id === id);
@@ -277,7 +259,6 @@ const BoardManager = (() => {
     deleteBoard,
     rename,
     restoreBoard,
-    reorder,
     shift,
     applyColumnLayout,
     compactColumns,

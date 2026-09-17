@@ -341,6 +341,31 @@ function remoteFaviconsAllowed() {
   }
 }
 
+const FAV_MEMO_KEY = "et-fav-memo";
+let favMemo = null;
+function favMemoGet(domain) {
+  try {
+    favMemo ??= JSON.parse(localStorage.getItem(FAV_MEMO_KEY) || "{}");
+  } catch {
+    favMemo = {};
+  }
+  return favMemo[domain] || "";
+}
+function favMemoSet(domain, src) {
+  if (!domain || favMemoGet(domain) === src) return;
+  favMemo[domain] = src;
+  try {
+    localStorage.setItem(FAV_MEMO_KEY, JSON.stringify(favMemo));
+  } catch {}
+}
+function favDomain(url) {
+  try {
+    return new URL(url.startsWith("http") ? url : "https://" + url).hostname;
+  } catch {
+    return "";
+  }
+}
+
 function faviconSrcSet(url) {
   let origin = "",
     domain = "";
@@ -350,7 +375,7 @@ function faviconSrcSet(url) {
     domain = u.hostname;
   } catch {}
 
-  const chain = [];
+  const chain = [favMemoGet(domain)];
   const bundledIcons = {
     "youtube.com": "icons/favicons/youtube.svg",
     "www.youtube.com": "icons/favicons/youtube.svg",
@@ -425,6 +450,8 @@ function wireFavicons(root) {
       .split("|")
       .filter(Boolean);
     const triedUrls = new Set([img.src]);
+    const domain = favDomain(img.getAttribute("data-fav-url") || "");
+    const remembered = favMemoGet(domain);
     let fbIndex = 0;
     let attempts = 0;
 
@@ -465,12 +492,13 @@ function wireFavicons(root) {
       }
 
       const natural = Math.max(img.naturalWidth || 0, img.naturalHeight || 0);
-      if (natural > 0 && natural < 32 && fbIndex < fbs.length) {
+      if (natural > 0 && natural < 32 && fbIndex < fbs.length && img.src !== remembered) {
         smallButReal = img.src;
         tryNextFallback();
         return;
       }
       clearFallback(img);
+      favMemoSet(domain, img.src);
     };
 
     const handleError = () => {
@@ -1027,11 +1055,7 @@ const PopoverRegistry = (() => {
     return true;
   }
 
-  function anyOpen() {
-    return entries.some((e) => e.el()?.classList.contains("open"));
-  }
-
-  return { register, position, closeAll, closeTop, anyOpen };
+  return { register, position, closeAll, closeTop };
 })();
 
 const Contrast = (() => {
