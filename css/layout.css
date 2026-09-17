@@ -229,7 +229,7 @@ body.loaded .app {
 .et-topbar-btn {
   width: calc(44px * var(--ui-scale));
   height: calc(44px * var(--ui-scale));
-  border-radius: var(--r-md, 14px);
+  border-radius: var(--r-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -280,7 +280,7 @@ body.theme-light .et-topbar-btn {
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm);
 
   font-size: calc(16px * var(--ui-scale));
   font-weight: 500;
@@ -420,7 +420,7 @@ body.theme-light .et-search-pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--sp-6, 24px);
+  padding: var(--sp-6);
 
   background: rgba(8, 10, 14, 0.82);
   backdrop-filter: blur(24px) saturate(115%);
@@ -449,7 +449,7 @@ body.theme-light .et-search-pill {
 
 .et-welcome-mark {
   border-radius: 50%;
-  margin-bottom: var(--sp-6, 24px);
+  margin-bottom: var(--sp-6);
   box-shadow: 0 6px 24px -8px rgba(0, 0, 0, 0.5);
 }
 
@@ -501,10 +501,10 @@ body.theme-light .et-search-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: var(--sp-5, 20px);
+  margin-top: var(--sp-5);
   padding: 11px 22px;
   border: none;
-  border-radius: var(--r-pill, 999px);
+  border-radius: var(--r-pill);
   background: #fff;
   color: #111;
   font-family: inherit;
@@ -834,7 +834,7 @@ body.wallpaper-mode .et-home-greeting {
   gap: calc(6px * var(--ui-scale));
   padding: calc(3px * var(--ui-scale)) calc(9px * var(--ui-scale));
   margin: calc(-3px * var(--ui-scale)) calc(-9px * var(--ui-scale));
-  border-radius: var(--r-pill, 999px);
+  border-radius: var(--r-pill);
   cursor: pointer;
   transition:
     opacity var(--dur-2) var(--ease-out),
@@ -1328,7 +1328,7 @@ body.wallpaper-mode .et-home-pinned {
 .et-home-todo-due {
   flex-shrink: 0;
   padding: 2px calc(8px * var(--ui-scale));
-  border-radius: var(--r-pill, 999px);
+  border-radius: var(--r-pill);
   background: color-mix(in srgb, currentColor 14%, transparent);
   font-size: calc(11px * var(--ui-scale));
   font-weight: 600;
@@ -1355,7 +1355,7 @@ body.wallpaper-mode .et-home-pinned {
   padding: 0;
   border: none;
   background: none;
-  border-radius: var(--r-lg, 20px);
+  border-radius: var(--r-lg);
 }
 
 .dock-pin {
@@ -1379,7 +1379,7 @@ body.wallpaper-mode .et-home-pinned {
   place-items: center;
   width: calc(52px * var(--ui-scale));
   height: calc(52px * var(--ui-scale));
-  border-radius: var(--r-md, 14px);
+  border-radius: var(--r-md);
 
   background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.14);
   backdrop-filter: none;
@@ -2134,11 +2134,11 @@ body.wallpaper-mode .et-top-left,
 body.wallpaper-mode .et-main-tabs,
 body.wallpaper-mode .et-top-right {
   padding: 0;
-  border-radius: var(--r-pill, 999px);
+  border-radius: var(--r-pill);
 }
 
 body.wallpaper-mode :is(.et-top-left, .et-main-tabs, .et-top-right) :is(.et-topbar-btn, .et-main-tab) {
-  border-radius: var(--r-pill, 999px);
+  border-radius: var(--r-pill);
 }
 
 body.wallpaper-mode.topbar-plate .et-top-left,
@@ -2249,7 +2249,7 @@ body.has-meta-color #clockWidget :is(.et-home-date, .et-weather-inline, .et-weat
 .et-home-todos-more {
   padding: calc(4px * var(--ui-scale)) calc(12px * var(--ui-scale));
   border: none;
-  border-radius: var(--r-pill, 999px);
+  border-radius: var(--r-pill);
   background: color-mix(in srgb, currentColor 12%, transparent);
   color: inherit;
   font: inherit;

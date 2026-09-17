@@ -79,7 +79,7 @@
   flex: 1;
   background: none;
   border: none;
-  font-size: var(--fs-base, 15px);
+  font-size: var(--fs-base);
   font-weight: 500;
   color: var(--text, #ffffff);
   font-family: inherit;
@@ -97,7 +97,7 @@
   color: var(--text-dim, rgba(255, 255, 255, 0.8));
   background: color-mix(in srgb, var(--text) 9%, transparent);
   border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.18));
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm);
   padding: 3px 8px;
   font-family: inherit;
 }
@@ -524,8 +524,8 @@
   line-height: 1;
   cursor: pointer;
   transition:
-    background var(--dur-1, 70ms) var(--ease-out),
-    color var(--dur-1, 70ms) var(--ease-out);
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
 }
 
 .et-notes-tool:hover {
@@ -658,7 +658,7 @@
   font-family: var(--font-mono);
   font-size: 0.92em;
   background: rgba(var(--board-rgb, 255, 255, 255), 0.1);
-  border-radius: var(--r-xs, 6px);
+  border-radius: var(--r-xs);
   padding: 0.1em 0.35em;
 }
 
@@ -835,7 +835,7 @@ body.theme-light {
   width: 1em;
   height: 1em;
   border: 1.5px solid var(--border-strong, var(--border-soft));
-  border-radius: var(--r-xs, 6px);
+  border-radius: var(--r-xs);
   cursor: pointer;
 }
 

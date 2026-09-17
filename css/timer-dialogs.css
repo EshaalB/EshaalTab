@@ -476,7 +476,7 @@
   gap: clamp(var(--sp-4), 2.5vw, var(--sp-8));
   cursor: pointer;
   user-select: none;
-  transition: transform var(--dur-4, 240ms) var(--ease-out);
+  transition: transform var(--dur-4) var(--ease-out);
 }
 
 .et-flip-colon {
@@ -621,9 +621,9 @@
   opacity: 1;
   visibility: visible;
   transition:
-    opacity var(--dur-4, 240ms) var(--ease-out),
-    transform var(--dur-4, 240ms) var(--ease-out),
-    visibility var(--dur-4, 240ms) var(--ease-out);
+    opacity var(--dur-4) var(--ease-out),
+    transform var(--dur-4) var(--ease-out),
+    visibility var(--dur-4) var(--ease-out);
 }
 
 .et-pomo-status-badge {
@@ -674,8 +674,8 @@
 .et-pomo-close-btn,
 .et-pomo-reset-fab{
   transition:
-    opacity var(--dur-4, 240ms) var(--ease-out),
-    transform var(--dur-4, 240ms) var(--ease-out);
+    opacity var(--dur-4) var(--ease-out),
+    transform var(--dur-4) var(--ease-out);
 }
 
 .et-pomo-overlay.is-zen .et-flip-container {

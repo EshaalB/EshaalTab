@@ -7,7 +7,7 @@
   min-height: 46px;
   height: calc(46px * var(--ui-scale));
   padding: 0 var(--sp-2) 0 6px;
-  border-radius: var(--r-md, 14px);
+  border-radius: var(--r-md);
   pointer-events: all;
   position: relative;
   margin: 0 auto;
@@ -27,7 +27,7 @@ body.radius-round .et-search-pill,
 body.radius-round .et-search-engine,
 body.radius-round .et-search-btn,
 body.radius-round .et-search-submit {
-  border-radius: var(--r-pill, 999px) !important;
+  border-radius: var(--r-pill) !important;
 }
 
 body.radius-sharp .et-search-pill,
@@ -72,7 +72,7 @@ body.radius-sharp .et-search-submit {
   flex-shrink: 0;
   height: calc(30px * var(--ui-scale));
   max-width: 40%;
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm);
   border: none;
   display: flex;
   align-items: center;
@@ -176,9 +176,9 @@ body.radius-sharp .et-search-submit {
   padding: 8px 12px;
   background: var(--surface-3, rgba(255, 255, 255, 0.1));
   border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.15));
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm);
   color: var(--text, #fff);
-  font-size: var(--fs-sm, 14px);
+  font-size: var(--fs-sm);
   font-family: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -313,9 +313,9 @@ body.radius-sharp .et-search-submit {
 
 .et-select-option {
   padding: 9px 11px;
-  border-radius: calc(var(--r-sm, 8px) - 2px);
+  border-radius: calc(var(--r-sm) - 2px);
   color: var(--text-dim, rgba(255, 255, 255, 0.8));
-  font-size: var(--fs-sm, 14px);
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition:
     background var(--dur-1) var(--ease-out),
@@ -361,7 +361,7 @@ body.radius-sharp .et-search-submit {
 .et-search-btn {
   width: 32px;
   height: 32px;
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm);
   border: none;
   background: transparent;
   color: var(--text);
@@ -396,7 +396,7 @@ body.radius-sharp .et-search-submit {
   background: var(--surface-2) !important;
   color: var(--text-dim);
   opacity: 1;
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm);
   cursor: pointer;
   border: none;
   transition:

@@ -659,7 +659,7 @@ button,
   justify-content: center;
   gap: 7px;
   padding: 8px 14px;
-  border-radius: var(--r-md, 14px);
+  border-radius: var(--r-md);
 
 
   background: color-mix(in srgb, currentColor 8%, transparent);

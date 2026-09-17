@@ -111,7 +111,7 @@
   width: 26px;
   height: 26px;
   border: none;
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
   cursor: pointer;
@@ -142,7 +142,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 4px 4px 24px;
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 

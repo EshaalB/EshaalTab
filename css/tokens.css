@@ -104,9 +104,9 @@ body {
 
 body.font-handwriting {
   --font-app: "Caveat", ui-rounded, cursive, sans-serif;
-  --fs-xs: 13px;
-  --fs-sm: 15px;
-  --fs-base: 16px;
+  --fs-xs: calc(13px * var(--ui-scale));
+  --fs-sm: calc(15px * var(--ui-scale));
+  --fs-base: calc(16px * var(--ui-scale));
   letter-spacing: 0.015em;
   font-weight: 500;
   font-style: normal;
@@ -283,7 +283,6 @@ textarea::placeholder {
   --r-sm: 8px;
   --r-md: 14px;
   --r-lg: 20px;
-  --r-xl: 20px;
   --r-pill: 999px;
 
   --sp-1: 4px;
