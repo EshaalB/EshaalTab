@@ -164,6 +164,8 @@ body.radius-sharp .et-search-submit {
   width: 100%;
   user-select: none;
   font-family: inherit;
+  position: relative;
+  display: inline-block;
 }
 
 .et-select-trigger {
@@ -218,17 +220,11 @@ body.radius-sharp .et-search-submit {
   text-overflow: ellipsis;
 }
 
-.et-custom-select {
-  position: relative;
-  display: inline-block;
-}
-
 .et-custom-select.open {
   z-index: var(--z-dropdown);
 }
 
 .et-select-menu {
-  display: block;
   position: absolute;
   top: calc(100% + 4px);
   left: 0;

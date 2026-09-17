@@ -206,6 +206,14 @@ body.loaded .app {
 
 .et-main-tabs {
   grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-self: center;
+  gap: var(--sp-1);
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
 }
 
 .et-top-right {
@@ -264,18 +272,6 @@ body.theme-light .et-topbar-btn {
 
 .et-topbar-btn:active svg {
   transform: scale(0.9);
-}
-
-.et-main-tabs {
-  display: flex;
-  align-items: center;
-  justify-self: center;
-  gap: var(--sp-1);
-
-  padding: 0;
-  background: none;
-  border: none;
-  box-shadow: none;
 }
 
 .et-main-tab {
@@ -709,6 +705,13 @@ body.solid-mode * {
 
 body.wallpaper-mode {
   --home-ink: color-mix(in srgb, var(--accent-color) 25%, var(--wp-ink-mid, #ffffff));
+  --accent-on-wp: color-mix(
+    in srgb,
+    var(--accent-ink, var(--accent-color)) 62%,
+    var(--wp-ink-mid, #fff)
+  );
+  --plate-rgb: 0, 0, 0;
+  --plate-ink: #ffffff;
 }
 
 body.wallpaper-mode .et-home-todos {
@@ -832,20 +835,17 @@ body.wallpaper-mode .et-home-greeting {
   padding: calc(3px * var(--ui-scale)) calc(9px * var(--ui-scale));
   margin: calc(-3px * var(--ui-scale)) calc(-9px * var(--ui-scale));
   border-radius: var(--r-pill, 999px);
+  cursor: pointer;
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
 }
 
 .et-weather-inline svg {
   width: calc(18px * var(--ui-scale));
   height: calc(18px * var(--ui-scale));
   flex-shrink: 0;
-}
-
-.et-weather-inline {
-  cursor: pointer;
-  transition:
-    opacity var(--dur-2) var(--ease-out),
-    background var(--dur-2) var(--ease-out),
-    color var(--dur-2) var(--ease-out);
 }
 
 .et-weather-inline:hover {
@@ -915,9 +915,6 @@ body.clock-pos-fixed .et-home-clock {
   background: transparent;
   border: none;
   box-shadow: none;
-}
-
-body.clock-pos-fixed .et-home-clock {
   --clock-size: clamp(60px, 10vw, calc(160px * var(--ui-scale)));
 }
 
@@ -1094,14 +1091,6 @@ body.clock-pos-bottom-right .et-toast-container {
   body.clock-pos-bottom-right .et-toast-container {
     bottom: var(--sp-6);
   }
-}
-
-body.wallpaper-mode {
-  --accent-on-wp: color-mix(
-    in srgb,
-    var(--accent-ink, var(--accent-color)) 62%,
-    var(--wp-ink-mid, #fff)
-  );
 }
 
 @supports (color: oklch(from red l max(c, 0.14) h)) {
@@ -2139,11 +2128,6 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
 
 body.wallpaper-mode .et-top-right #topSettingsBtn::before {
   background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.22);
-}
-
-body.wallpaper-mode {
-  --plate-rgb: 0, 0, 0;
-  --plate-ink: #ffffff;
 }
 
 body.wallpaper-mode.theme-light {

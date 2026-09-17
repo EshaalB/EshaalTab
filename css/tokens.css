@@ -420,5 +420,3 @@ body.has-custom-cursor .app,
 body.has-custom-cursor .view {
   cursor: var(--app-cursor, default);
 }
-body.solid-mode {
-}

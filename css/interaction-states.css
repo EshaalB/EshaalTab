@@ -663,7 +663,6 @@ button,
   padding: 8px 14px;
   border-radius: var(--r-md, 14px);
 
-  border: none;
 
   background: color-mix(in srgb, currentColor 8%, transparent);
   border: 1px dashed color-mix(in srgb, currentColor 28%, transparent);

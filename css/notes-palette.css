@@ -298,12 +298,15 @@
   border: none;
   color: var(--text);
   font-family: inherit;
-
   font-size: var(--notes-font-size, var(--fs-md));
   line-height: 1.6;
   padding: var(--sp-5) var(--sp-6);
   caret-color: var(--accent-ink, var(--accent-color));
   background: transparent;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  position: relative;
 }
 
 .et-clip-add-wrap {
@@ -593,18 +596,8 @@
   }
 }
 
-.et-notes-area {
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 .et-notes-area:focus {
   outline: none;
-}
-
-.et-notes-area {
-  position: relative;
 }
 
 .et-notes-area.is-empty::before {

@@ -477,6 +477,7 @@
   gap: clamp(var(--sp-4), 2.5vw, var(--sp-8));
   cursor: pointer;
   user-select: none;
+  transition: transform var(--dur-4, 240ms) var(--ease-out);
 }
 
 .et-flip-colon {
@@ -677,10 +678,6 @@
   transition:
     opacity var(--dur-4, 240ms) var(--ease-out),
     transform var(--dur-4, 240ms) var(--ease-out);
-}
-
-.et-flip-container {
-  transition: transform var(--dur-4, 240ms) var(--ease-out);
 }
 
 .et-pomo-overlay.is-zen .et-flip-container {
