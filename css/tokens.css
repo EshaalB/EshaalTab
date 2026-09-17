@@ -6,8 +6,8 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "Space Grotesk";
-  src: url("../fonts/space-grotesk-latin.woff2") format("woff2");
+  font-family: "Bricolage Grotesque";
+  src: url("../fonts/bricolage-grotesque-latin.woff2") format("woff2");
   font-style: normal;
   font-weight: 300 700;
   font-display: swap;
@@ -36,10 +36,10 @@
 }
 
 @font-face {
-  font-family: "Fraunces";
-  src: url("../fonts/fraunces-latin.woff2") format("woff2");
+  font-family: "Young Serif";
+  src: url("../fonts/young-serif-latin.woff2") format("woff2");
   font-style: normal;
-  font-weight: 300 700;
+  font-weight: 400;
   font-display: swap;
 }
 @font-face {
