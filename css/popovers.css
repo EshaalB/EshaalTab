@@ -908,8 +908,7 @@
 .et-pb-tab + .et-pb-tab::before {
   content: "";
   position: absolute;
-  top: 22%;
-  bottom: 22%;
+  inset-block: 22%;
   left: 0;
   width: 1px;
   background: var(--menu-border);

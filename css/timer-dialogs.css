@@ -460,8 +460,7 @@
 .et-pomo-wheel-selection {
   position: absolute;
   top: 72px;
-  right: 18px;
-  left: 18px;
+  inset-inline: 18px;
   height: 36px;
   z-index: 1;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
@@ -570,8 +569,7 @@
 .et-flip-seam {
   position: absolute;
   top: 50%;
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   height: 3px;
   margin-top: -1px;
   box-shadow:

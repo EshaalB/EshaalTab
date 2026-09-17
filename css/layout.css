@@ -941,9 +941,8 @@ body:not(.view-home) .et-home-clock {
   flex-wrap: wrap;
 
   gap: clamp(18px, calc(var(--clock-size) * 0.3), 34px);
-  margin-top: 0;
+  margin-block: 0 calc(var(--clock-size) * 0.1);
 
-  margin-bottom: calc(var(--clock-size) * 0.1);
   color: var(--text-dim);
   font-size: clamp(14px, calc(var(--clock-size) * 0.19), 21px);
   font-weight: 500;
@@ -1644,8 +1643,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
 
 .toast-progress {
   position: absolute;
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   bottom: 0;
   height: 3px;
   background: var(--toast-tone);
@@ -1832,8 +1830,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
 
 @media (max-width: 768px) {
   .app {
-    padding-top: 8px;
-    padding-bottom: 8px;
+    padding-block: 8px;
   }
 
   .et-topbar {
@@ -1981,8 +1978,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
 @media (max-height: 480px) {
   .et-view-home.active {
     justify-content: flex-start;
-    padding-top: 12px;
-    padding-bottom: 20px;
+    padding-block: 12px 20px;
   }
   .et-home-center {
     justify-content: flex-start;
@@ -1994,8 +1990,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
 
 @media (max-width: 600px) {
   .app {
-    padding-top: max(4px, env(safe-area-inset-top));
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-block: max(4px, env(safe-area-inset-top)) env(safe-area-inset-bottom);
   }
 
   .et-topbar {
@@ -2231,8 +2226,7 @@ body.has-meta-color #clockWidget :is(.et-home-date, .et-weather-inline, .et-weat
 }
 
 #clockWidget .et-home-time {
-  margin-top: calc(var(--clock-ink-top, 0px) * -1);
-  margin-bottom: calc(var(--clock-ink-bottom, 0px) * -1);
+  margin-block: calc(var(--clock-ink-top, 0px) * -1) calc(var(--clock-ink-bottom, 0px) * -1);
 }
 
 #clockWidget .et-home-greeting {
@@ -2458,8 +2452,7 @@ body.pins-pos-bottom #homePinned {
   bottom: auto;
   transform: none;
   max-width: min(100%, calc(100% - 24px));
-  margin-top: clamp(20px, 5.5vh, 64px);
-  margin-bottom: auto;
+  margin-block: clamp(20px, 5.5vh, 64px) auto;
 }
 
 body.pins-pos-bottom .et-view-home.active {
@@ -2467,8 +2460,7 @@ body.pins-pos-bottom .et-view-home.active {
 }
 
 body.pins-pos-bottom .et-view-home.active > .et-home-center {
-  margin-top: auto;
-  margin-bottom: 0;
+  margin-block: auto 0;
 }
 
 body.pins-pos-left .et-view-home.active,

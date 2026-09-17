@@ -106,8 +106,7 @@ body.radius-sharp .et-search-submit {
 .nsb-eng-menu {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   z-index: var(--z-dropdown);
   display: none;
   flex-direction: column;
@@ -227,8 +226,7 @@ body.radius-sharp .et-search-submit {
 .et-select-menu {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   min-width: 100%;
   z-index: var(--z-dropdown);
   background: var(--menu-bg);

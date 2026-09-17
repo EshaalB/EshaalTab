@@ -133,8 +133,7 @@
 .et-notes-binder-strip {
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   height: 22px;
   background: rgba(0, 0, 0, 0.08);
   display: flex;
