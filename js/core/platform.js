@@ -421,6 +421,16 @@ function faviconSrcSet(url) {
   const uniq = [...new Set(chain.filter(Boolean))];
   return { src: uniq[0] || "", fallbacks: uniq.slice(1) };
 }
+const warmedFavicons = [];
+function warmFavicons(urls) {
+  const srcs = new Set(urls.map((u) => faviconSrcSet(u).src).filter((s) => /^https?:/.test(s)));
+  srcs.forEach((src) => {
+    const img = new Image();
+    img.referrerPolicy = "no-referrer";
+    img.src = src;
+    warmedFavicons.push(img);
+  });
+}
 function faviconAttr(url) {
   const { src, fallbacks } = faviconSrcSet(url);
   return (

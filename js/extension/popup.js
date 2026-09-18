@@ -52,6 +52,9 @@ function applyPopupTheme(settings) {
   root.setProperty("--accent-color", accent);
   root.setProperty("--accent-contrast", contrastText(accent));
   root.setProperty("--accent-fill", accent);
+  root.setProperty("--accent-ink", Contrast.readable(accent, light ? "#ffffff" : "#161b22"));
+  root.setProperty("--ok", light ? "#15803d" : "#4ade80");
+  root.setProperty("--bad", light ? "#b91c1c" : "#f87171");
   root.setProperty("--bg", light ? "#f8fafc" : "#0d1117");
   root.setProperty("--page-bg", light ? "#f8fafc" : "#0d1117");
   root.setProperty("--surface-base", light ? "#ffffff" : "#161b22");

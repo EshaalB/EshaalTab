@@ -61,6 +61,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     ViewController.init();
     BackupReminder.init();
+    (window.requestIdleCallback || setTimeout)(() =>
+      warmFavicons(BoardManager.getAll().flatMap((b) => (b.bookmarks || []).map((bm) => bm.url))),
+    );
 
     const welcoming = WelcomeScreen.maybeShow();
 

@@ -315,9 +315,9 @@
         border-color: var(--text-dim);
       }
       .qs-stash-icon-btn.qs-del-btn:hover {
-        color: #ef4444;
-        border-color: #ef4444;
-        background: rgba(239, 68, 68, 0.1);
+        color: var(--bad, #f87171);
+        border-color: var(--bad, #f87171);
+        background: color-mix(in srgb, var(--bad, #f87171) 10%, transparent);
       }
       .qs-stash-icon-btn[disabled] {
         opacity: 0.5;
@@ -327,7 +327,7 @@
         display: none;
         text-align: center;
         padding: 12px 0;
-        color: #22c55e;
+        color: var(--ok, #4ade80);
         font-size: 14px;
         font-weight: 600;
       }
@@ -335,7 +335,7 @@
         display: none;
         text-align: center;
         padding: 10px 0 0;
-        color: #ef4444;
+        color: var(--bad, #f87171);
         font-size: 13px;
       }
       .qs-error.qs-info {

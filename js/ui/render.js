@@ -1209,7 +1209,7 @@ const BoardRenderer = (() => {
                 <button type="button" class="et-board-tile-more" data-more="${bm.id}"
                         tabindex="-1" aria-hidden="true"
                         title="More actions for ${escapeHtml(name)} (or right-click)">${icon("more", 12)}</button>
-                <img class="et-board-tile-icon" ${faviconAttr(bm.url)} alt="" width="26" height="26" loading="lazy" />
+                <img class="et-board-tile-icon" ${faviconAttr(bm.url)} alt="" width="26" height="26" />
                 <span class="et-board-tile-title" title="${escapeHtml(rawTitle)}">${escapeHtml(rawTitle)}</span>
                 <button type="button" class="board-pin-badge${bm.pinnedToHome ? " is-pinned" : ""}" data-pin="${bm.id}"
                         aria-pressed="${!!bm.pinnedToHome}"

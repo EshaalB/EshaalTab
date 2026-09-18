@@ -367,21 +367,6 @@ body.wallpaper-mode .et-main-tab:hover {
   background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.12);
 }
 
-.et-main-tab-home {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.et-main-tab-home svg {
-  display: block;
-
-  width: calc(25px * var(--ui-scale));
-  height: calc(25px * var(--ui-scale));
-
-  transform: translateY(-1px);
-}
-
 body.theme-light .et-main-tab:not(.active) {
   color: var(--text-dim, #475569);
 }
@@ -2149,8 +2134,7 @@ body.wallpaper-mode.topbar-plate .et-top-right {
   -webkit-backdrop-filter: blur(12px);
 }
 
-body.wallpaper-mode .et-topbar-btn,
-body.wallpaper-mode .et-main-tab-home {
+body.wallpaper-mode .et-topbar-btn {
   color: var(--wp-ink, #ffffff);
 }
 
@@ -2167,8 +2151,7 @@ body.wallpaper-mode.topbar-plate .et-main-tab:hover {
   background: color-mix(in srgb, var(--plate-ink) 10%, transparent);
 }
 
-body.wallpaper-mode.topbar-plate .et-topbar-btn svg,
-body.wallpaper-mode.topbar-plate .et-main-tab-home svg {
+body.wallpaper-mode.topbar-plate .et-topbar-btn svg {
   stroke: var(--plate-ink);
   filter: none;
 }
