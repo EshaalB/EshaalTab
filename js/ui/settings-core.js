@@ -509,33 +509,115 @@ const SettingsRenderer = (() => {
     if (overlay) {
       const isPicker = (el) => el?.matches?.('input[type="color"]');
       const stopPicking = () => overlay.classList.remove("is-picking");
-      overlay.addEventListener(
-        "pointerdown",
-        (e) => {
-          if (isPicker(e.target)) overlay.classList.add("is-picking");
-        },
-        true,
-      );
+      let menu = null;
+      let menuInput = null;
+      let bypass = false;
+
+      const closeMenu = () => {
+        menu?.remove();
+        menu = null;
+        menuInput = null;
+      };
+
+      const commit = (input, hex) => {
+        if (!HEX6_RE.test(hex)) return;
+        input.value = hex.toLowerCase();
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+
+      function openMenu(input) {
+        closeMenu();
+        menuInput = input;
+        menu = document.createElement("div");
+        menu.className = "st-color-menu";
+        menu.innerHTML = `
+          <div class="st-color-menu-row">
+            ${recentColors()
+              .map(
+                (c) =>
+                  `<button type="button" class="st-recent-swatch" data-color="${c}" style="background:${c}" title="Use ${c}" aria-label="Use colour ${c}"></button>`,
+              )
+              .join("")}
+          </div>
+          <label class="st-color-menu-hex">
+            <span>Hex</span>
+            <input type="text" value="${input.value}" maxlength="7" spellcheck="false" />
+          </label>
+          ${"EyeDropper" in window ? '<button type="button" class="st-color-menu-btn" data-act="screen">Pick from screen</button>' : ""}
+          <button type="button" class="st-color-menu-btn" data-act="more">More colours…</button>`;
+        const r = input.getBoundingClientRect();
+        menu.style.top = `${Math.min(r.bottom + 6, innerHeight - 200)}px`;
+        menu.style.left = `${Math.min(r.left, innerWidth - 240)}px`;
+        document.body.append(menu);
+        menu.querySelector(".st-color-menu-hex input")?.focus();
+      }
+
+      overlay.addEventListener("click", (e) => {
+        const input = e.target.closest?.('input[type="color"]');
+        if (!input || bypass) return;
+        e.preventDefault();
+        if (menuInput === input) closeMenu();
+        else openMenu(input);
+      });
+
+      document.addEventListener("click", async (e) => {
+        if (!menu) return;
+        const input = menuInput;
+        const swatch = e.target.closest?.(".st-recent-swatch");
+        if (swatch && menu.contains(swatch)) {
+          commit(input, swatch.dataset.color);
+          closeMenu();
+          return;
+        }
+        const act = e.target.closest?.(".st-color-menu-btn")?.dataset.act;
+        if (act === "more") {
+          closeMenu();
+          bypass = true;
+          try {
+            input.showPicker ? input.showPicker() : input.click();
+          } catch {
+            input.click();
+          }
+          setTimeout(() => (bypass = false), 0);
+          return;
+        }
+        if (act === "screen") {
+          closeMenu();
+          overlay.classList.add("is-picking");
+          try {
+            const { sRGBHex } = await new window.EyeDropper().open();
+            commit(input, sRGBHex);
+          } catch {
+          } finally {
+            stopPicking();
+            input.focus();
+          }
+          return;
+        }
+        if (!menu.contains(e.target) && !e.target.closest('input[type="color"]')) closeMenu();
+      });
+
+      document.addEventListener("input", (e) => {
+        if (!menu || !menu.contains(e.target) || e.target.type !== "text") return;
+        const hex = e.target.value.trim().replace(/^#?/, "#");
+        if (HEX6_RE.test(hex)) commit(menuInput, hex);
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && menu) {
+          closeMenu();
+          stopPicking();
+        }
+      });
+
       overlay.addEventListener("change", (e) => {
         if (!isPicker(e.target)) return;
         stopPicking();
         rememberColor(e.target.value);
       });
-      overlay.addEventListener("focusout", (e) => {
-        if (isPicker(e.target)) stopPicking();
-      });
       window.addEventListener("focus", stopPicking);
       document.addEventListener("visibilitychange", stopPicking);
-
-      overlay.addEventListener("click", (e) => {
-        const swatch = e.target.closest?.(".st-recent-swatch");
-        if (!swatch) return;
-        const input = swatch.closest(".st-color-row")?.querySelector("input.st-color");
-        if (!input) return;
-        input.value = swatch.dataset.color;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.dispatchEvent(new Event("change", { bubbles: true }));
-      });
 
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay && !gestureStartedIn($("sidesheetPanel")))
@@ -718,30 +800,6 @@ const SettingsRenderer = (() => {
     StorageManager.saveSettings();
   }
 
-  function paintRecentSwatches(root) {
-    const colors = recentColors();
-    root.querySelectorAll("input.st-color").forEach((input) => {
-      const row = input.parentElement;
-      if (!row) return;
-      row.classList.add("st-color-row");
-      row.querySelector(".st-recent")?.remove();
-      if (!colors.length) return;
-      const strip = document.createElement("span");
-      strip.className = "st-recent";
-      colors.forEach((c) => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "st-recent-swatch";
-        b.dataset.color = c;
-        b.style.background = c;
-        b.title = `Use ${c}`;
-        b.setAttribute("aria-label", `Use colour ${c}`);
-        strip.append(b);
-      });
-      row.append(strip);
-    });
-  }
-
   function paintPage(mods, page, token, savedScrollTop) {
     const body = $("sidesheetBody");
     if (!body || token !== renderToken || activePage !== page) return;
@@ -759,7 +817,7 @@ const SettingsRenderer = (() => {
       if (el.dataset.page !== page) el.remove();
     });
 
-    paintRecentSwatches(body);
+
 
     body.querySelectorAll(".st-container").forEach((el) => {
       if (!el.children.length) el.remove();
