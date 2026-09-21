@@ -18,24 +18,25 @@
   visibility: hidden;
 }
 
-.st-eyedrop {
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  margin-left: 6px;
-  padding: 0;
-  color: var(--text-dim);
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  vertical-align: middle;
+.st-recent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: var(--sp-1);
 }
 
-.st-eyedrop:hover {
-  color: var(--text);
-  background: var(--panel-hover);
+.st-recent-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+
+.st-recent-swatch:hover {
+  border-color: var(--border-strong);
+  transform: scale(1.08);
 }
 
 .et-set-panel {

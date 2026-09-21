@@ -507,40 +507,36 @@ const SettingsRenderer = (() => {
     if (closeBtn) closeBtn.addEventListener("click", closeSideSheet);
 
     if (overlay) {
-      if ("EyeDropper" in window) {
-        const addDroppers = () => {
-          overlay.querySelectorAll("input.st-color").forEach((input) => {
-            if (input.nextElementSibling?.classList.contains("st-eyedrop")) return;
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "st-eyedrop";
-            btn.title = "Pick a colour from the screen";
-            btn.setAttribute("aria-label", "Pick a colour from the screen");
-            btn.innerHTML =
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>';
-            input.after(btn);
-          });
-        };
-        new MutationObserver(addDroppers).observe(overlay, { childList: true, subtree: true });
-        addDroppers();
-        overlay.addEventListener("click", async (e) => {
-          const btn = e.target.closest?.(".st-eyedrop");
-          if (!btn) return;
-          e.stopPropagation();
-          const input = btn.previousElementSibling;
-          overlay.classList.add("is-picking");
-          try {
-            const { sRGBHex } = await new window.EyeDropper().open();
-            input.value = sRGBHex;
-            input.dispatchEvent(new Event("input", { bubbles: true }));
-            input.dispatchEvent(new Event("change", { bubbles: true }));
-          } catch {
-          } finally {
-            overlay.classList.remove("is-picking");
-            btn.focus();
-          }
-        });
-      }
+      const isPicker = (el) => el?.matches?.('input[type="color"]');
+      const stopPicking = () => overlay.classList.remove("is-picking");
+      overlay.addEventListener(
+        "pointerdown",
+        (e) => {
+          if (isPicker(e.target)) overlay.classList.add("is-picking");
+        },
+        true,
+      );
+      overlay.addEventListener("change", (e) => {
+        if (!isPicker(e.target)) return;
+        stopPicking();
+        rememberColor(e.target.value);
+      });
+      overlay.addEventListener("focusout", (e) => {
+        if (isPicker(e.target)) stopPicking();
+      });
+      window.addEventListener("focus", stopPicking);
+      document.addEventListener("visibilitychange", stopPicking);
+
+      overlay.addEventListener("click", (e) => {
+        const swatch = e.target.closest?.(".st-recent-swatch");
+        if (!swatch) return;
+        const input = swatch.closest(".st-color-row")?.querySelector("input.st-color");
+        if (!input) return;
+        input.value = swatch.dataset.color;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay && !gestureStartedIn($("sidesheetPanel")))
           closeSideSheet();
@@ -707,6 +703,45 @@ const SettingsRenderer = (() => {
     StorageManager.saveSettings();
   }
 
+  const HEX6_RE = /^#[0-9a-f]{6}$/i;
+
+  function recentColors() {
+    const list = StorageManager.getSettings().recentColors;
+    return Array.isArray(list) ? list.filter((c) => HEX6_RE.test(c)).slice(0, 5) : [];
+  }
+
+  function rememberColor(hex) {
+    if (!HEX6_RE.test(hex)) return;
+    const settings = StorageManager.getSettings();
+    const next = [hex.toLowerCase(), ...recentColors().filter((c) => c !== hex.toLowerCase())];
+    settings.recentColors = next.slice(0, 5);
+    StorageManager.saveSettings();
+  }
+
+  function paintRecentSwatches(root) {
+    const colors = recentColors();
+    root.querySelectorAll("input.st-color").forEach((input) => {
+      const row = input.parentElement;
+      if (!row) return;
+      row.classList.add("st-color-row");
+      row.querySelector(".st-recent")?.remove();
+      if (!colors.length) return;
+      const strip = document.createElement("span");
+      strip.className = "st-recent";
+      colors.forEach((c) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "st-recent-swatch";
+        b.dataset.color = c;
+        b.style.background = c;
+        b.title = `Use ${c}`;
+        b.setAttribute("aria-label", `Use colour ${c}`);
+        strip.append(b);
+      });
+      row.append(strip);
+    });
+  }
+
   function paintPage(mods, page, token, savedScrollTop) {
     const body = $("sidesheetBody");
     if (!body || token !== renderToken || activePage !== page) return;
@@ -723,6 +758,8 @@ const SettingsRenderer = (() => {
     body.querySelectorAll("[data-page]").forEach((el) => {
       if (el.dataset.page !== page) el.remove();
     });
+
+    paintRecentSwatches(body);
 
     body.querySelectorAll(".st-container").forEach((el) => {
       if (!el.children.length) el.remove();

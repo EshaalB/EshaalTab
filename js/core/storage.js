@@ -252,6 +252,7 @@ const StorageManager = (() => {
     hidePinnedOnHome: false,
     clockPosition: "center",
     clockFont: "system",
+    recentColors: [],
     backupFreq: "weekly",
     backupDay: 1,
     backupDate: 1,
@@ -1645,6 +1646,12 @@ const StorageManager = (() => {
     );
 
     pick("clockPosition", normalizeClockPosition(raw.clockPosition));
+    pick(
+      "recentColors",
+      Array.isArray(raw.recentColors)
+        ? raw.recentColors.filter((c) => /^#[0-9a-f]{6}$/i.test(c)).slice(0, 5)
+        : undefined,
+    );
     pick("backupFreq", ["off", "daily", "weekly", "monthly", "custom"].includes(raw.backupFreq) ? raw.backupFreq : undefined);
     pick("backupDay", Number.isInteger(raw.backupDay) && raw.backupDay >= 0 && raw.backupDay <= 6 ? raw.backupDay : undefined);
     pick("backupDate", Number.isInteger(raw.backupDate) && raw.backupDate >= 1 && raw.backupDate <= 31 ? raw.backupDate : undefined);
