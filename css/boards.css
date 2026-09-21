@@ -157,16 +157,11 @@ body.dragging-board .et-board-card,
 .et-board-card.has-own-color,
 body.theme-light .et-board-card.has-own-color {
   --board-ground: var(--board-neutral-rgb, 24, 26, 32);
-  --board-tint: 90%;
+  --board-tint: 100%;
   --board-text: var(--board-ink);
   --board-text-dim: color-mix(in srgb, var(--board-ink) 70%, transparent);
   --board-inset-ground: color-mix(in srgb, var(--board-ink) 10%, transparent);
   --board-wash-strong: color-mix(in srgb, var(--board-ink) 14%, transparent);
-}
-
-.et-board-card.has-own-color.is-pastel,
-body.theme-light .et-board-card.has-own-color.is-pastel {
-  --board-tint: 100%;
 }
 
 body.wallpaper-mode .et-board-card:not(.ink-dark) :is(.et-board-card-title, .et-board-count, .et-board-tile-title, .et-board-menu-btn) {

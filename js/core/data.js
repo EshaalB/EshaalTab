@@ -31,16 +31,6 @@ const BoardManager = (() => {
     "#64748b",
   ];
 
-  const BOARD_PAINT = {
-    "#6366f1": { dark: "#3b3d6b", light: "#dfe0fb" },
-    "#0ea5e9": { dark: "#28456c", light: "#d4e8f7" },
-    "#14b8a6": { dark: "#1f4f4a", light: "#cdeee8" },
-    "#22c55e": { dark: "#2b593f", light: "#d8f0dc" },
-    "#f59e0b": { dark: "#7a5a25", light: "#fbefc8" },
-    "#f43f5e": { dark: "#6e3630", light: "#fbdadd" },
-    "#a855f7": { dark: "#492f64", light: "#ebdefa" },
-    "#64748b": { dark: "#3a3d42", light: "#e4e7eb" },
-  };
 
   function setColor(boardId, color) {
     const b = find(boardId);
@@ -273,7 +263,6 @@ const BoardManager = (() => {
     getAll: boards,
     MAX_NAME,
     BOARD_COLORS,
-    BOARD_PAINT,
   };
 })();
 

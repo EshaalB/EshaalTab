@@ -78,7 +78,7 @@ const WidgetsRenderer = (() => {
       }
       const name = capitalName(StorageManager.getSettings().displayName);
 
-      const fullText = name ? `${greetingText}, ${name}.` : greetingText;
+      const fullText = name ? `${greetingText}, ${name}` : greetingText;
       greetingEl.textContent = fullText;
     }
 
@@ -935,7 +935,7 @@ const WidgetsRenderer = (() => {
 
     if (clock) clock.style.display = w.clock !== false ? "" : "none";
     const greetingEl = $("clockGreeting");
-    if (greetingEl) greetingEl.style.display = w.greeting === false ? "none" : "";
+    if (greetingEl) greetingEl.classList.toggle("is-off", w.greeting === false);
     if (search) search.style.display = w.navSearch !== false ? "" : "none";
     if (weather) weather.style.display = w.weather ? "" : "none";
 

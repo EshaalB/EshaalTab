@@ -3,8 +3,6 @@
 const uiMode = () =>
   document.body.classList.contains("theme-light") ? "light" : "dark";
 
-const boardPreset = (hex) => BoardManager.BOARD_PAINT[String(hex).toLowerCase()];
-const boardTint = (hex) => boardPreset(hex)?.[uiMode()] || hex;
 
 const mixRgb = (a, b, t) => ({
   r: a.r * t + b.r * (1 - t),
@@ -29,7 +27,7 @@ function paintBoardInk(card) {
   const alpha = parseFloat(root.getPropertyValue("--board-opacity"));
   const backdrop = boardBackdrop();
   const solid = color
-    ? mixRgb(Contrast.toRgb(boardTint(color)), Contrast.toRgb(light ? "#f7f8fa" : "#18191f"), boardPreset(color) ? 1 : 0.9)
+    ? Contrast.toRgb(color)
     : mixRgb(Contrast.toRgb(effectiveBoardAccent()), Contrast.toRgb(light ? "#ffffff" : "#17181e"), light ? 0.17 : 0.35);
   const ink = Contrast.ink(Contrast.toHex(mixRgb(solid, backdrop, Number.isFinite(alpha) ? alpha : 1)));
   card.classList.toggle("ink-dark", ink !== Contrast.INK_LIGHT);
@@ -1166,10 +1164,8 @@ const BoardRenderer = (() => {
     acc.classList.toggle("hide-titles", !!board.hideTitles);
 
     if (board.color) {
-      const preset = !!boardPreset(board.color);
       acc.classList.add("has-own-color");
-      acc.classList.toggle("is-pastel", preset);
-      acc.style.setProperty("--board-accent", boardTint(board.color));
+      acc.style.setProperty("--board-accent", board.color);
       acc.dataset.color = board.color;
     }
     paintBoardInk(acc);
