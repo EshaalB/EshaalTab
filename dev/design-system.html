@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../css/tokens.css" />
     <style>
       body {
+        --checker: color-mix(in srgb, var(--text-dim) 30%, transparent);
         margin: 0;
         background: var(--surface-base);
         color: var(--text);
@@ -14,50 +15,157 @@
         font-size: var(--fs-base);
         line-height: var(--lh-body);
       }
-      .ds-shell {
-        display: grid;
-        grid-template-columns: 220px minmax(0, 1fr);
-        gap: var(--sp-8);
-        max-width: 1240px;
-        margin-inline: auto;
-        padding: var(--sp-6);
-      }
-      .ds-side {
+      .ds-top {
         position: sticky;
-        top: var(--sp-6);
-        align-self: start;
-        display: flex;
-        flex-direction: column;
-        gap: var(--sp-1);
-      }
-      .ds-side a {
-        color: var(--text-dim);
-        text-decoration: none;
-        font-size: var(--fs-sm);
-        padding: 6px var(--sp-2);
-        border-radius: var(--r-sm);
-      }
-      .ds-side a:hover {
-        color: var(--text);
-        background: var(--panel-hover);
-      }
-      .ds-head {
+        top: 0;
+        z-index: 5;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: var(--sp-4);
-        margin-bottom: var(--sp-5);
+        gap: var(--sp-3);
+        padding: var(--sp-3) var(--sp-5);
+        background: var(--panel-solid);
+        border-bottom: var(--hair);
+        flex-wrap: wrap;
       }
-      h1 {
-        font-size: var(--fs-xl);
-        line-height: var(--lh-tight);
+      .ds-top h1 {
+        font-size: var(--fs-md);
         margin: 0;
+      }
+      .ds-shell {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: var(--sp-5);
+        align-items: start;
+        padding: var(--sp-5);
+      }
+      .ds-preview {
+        position: sticky;
+        top: 76px;
+        border: var(--hair);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+        background: var(--panel-solid);
+        box-shadow: var(--e2);
+      }
+      .ds-preview-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-2);
+        padding: 8px 10px;
+        border-bottom: var(--hair);
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+        flex-wrap: wrap;
+      }
+      #stage {
+        width: 100%;
+        height: min(70vh, 720px);
+        border: 0;
+        display: block;
+        background: var(--surface-base);
+      }
+      .ds-panel {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sp-2);
+        max-height: calc(100vh - 96px);
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+      .grp {
+        border: var(--hair);
+        border-radius: var(--r-md);
+        background: var(--surface-panel);
+        padding: var(--sp-3);
+      }
+      .grp > h3 {
+        margin: 0 0 var(--sp-2);
+        font-size: var(--fs-sm);
+        font-weight: var(--fw-semi);
+      }
+      .ctl {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 6px 10px;
+        margin: 6px 0;
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+      }
+      .ctl input[type="range"] {
+        grid-column: 1 / -1;
+        width: 100%;
+        accent-color: var(--accent-color);
+      }
+      .ctl input[type="color"] {
+        width: 44px;
+        height: 26px;
+        padding: 0;
+        background: none;
+        border: 1px solid var(--border-soft);
+        border-radius: var(--r-xs);
+      }
+      .ctl select,
+      .ctl input[type="text"] {
+        font: inherit;
+        font-size: var(--fs-xs);
+        color: var(--text);
+        background: var(--surface-panel-2);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--r-sm);
+        padding: 5px 8px;
+      }
+      .val {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text);
+      }
+      button {
+        font: inherit;
+        font-size: var(--fs-xs);
+        font-weight: var(--fw-semi);
+        padding: 8px 12px;
+        border-radius: var(--r-sm);
+        border: 1px solid var(--border-soft);
+        background: var(--surface-panel-2);
+        color: var(--text);
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--accent-fill);
+        color: var(--accent-contrast);
+        border-color: transparent;
+      }
+      button:hover {
+        border-color: var(--border-strong);
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+      }
+      .tabs button[aria-selected="true"] {
+        background: var(--menu-active-bg);
+        color: var(--menu-active-ink);
+      }
+      .docs {
+        display: none;
+      }
+      body.view-docs .docs {
+        display: block;
+      }
+      body.view-docs .ds-shell {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      body.view-docs .ds-panel,
+      body.view-docs .ds-preview {
+        display: none;
       }
       h2 {
         font-size: var(--fs-lg);
         line-height: var(--lh-tight);
         margin: var(--sp-8) 0 var(--sp-2);
-        scroll-margin-top: var(--sp-6);
+        scroll-margin-top: 80px;
       }
       h3 {
         font-size: var(--fs-md);
@@ -99,8 +207,8 @@
       }
       .sw-chip {
         height: 62px;
-        background-image: linear-gradient(45deg, #8884 25%, transparent 25%, transparent 75%, #8884 75%),
-          linear-gradient(45deg, #8884 25%, transparent 25%, transparent 75%, #8884 75%);
+        background-image: linear-gradient(45deg, var(--checker) 25%, transparent 25%, transparent 75%, var(--checker) 75%),
+          linear-gradient(45deg, var(--checker) 25%, transparent 25%, transparent 75%, var(--checker) 75%);
         background-size: 12px 12px;
         background-position: 0 0, 6px 6px;
         position: relative;
@@ -136,15 +244,6 @@
         text-align: left;
         padding: 8px 10px;
         border-bottom: var(--hair);
-        vertical-align: middle;
-      }
-      th {
-        color: var(--text-dim);
-        font-weight: var(--fw-medium);
-        font-size: var(--fs-xs);
-      }
-      td code {
-        white-space: nowrap;
       }
       .ds-btn {
         font: inherit;
@@ -164,10 +263,6 @@
         border: 1px solid var(--border-soft);
         box-shadow: none;
       }
-      .ds-btn.ghost:hover {
-        color: var(--text);
-        border-color: var(--border-strong);
-      }
       .ds-row {
         display: flex;
         align-items: center;
@@ -178,15 +273,13 @@
         height: 40px;
         display: flex;
         align-items: center;
-        gap: var(--sp-2);
         padding: 0 var(--sp-3);
-        min-width: 260px;
+        min-width: 240px;
         border-radius: var(--r-md);
         background: var(--surface-search);
         border: var(--hair);
         color: var(--text-dim);
       }
-      .ds-pill:focus-within,
       .ds-pill:hover {
         border-color: var(--accent-color);
       }
@@ -196,10 +289,7 @@
         border: var(--hair);
         box-shadow: var(--e1);
         padding: var(--sp-3);
-        min-width: 180px;
-      }
-      .ds-board:hover {
-        box-shadow: var(--e2);
+        min-width: 170px;
       }
       .elev {
         height: 72px;
@@ -263,46 +353,188 @@
         font-size: 11px;
         color: var(--text-dim);
       }
-      @media (max-width: 860px) {
+      dialog {
+        border: var(--hair);
+        border-radius: var(--r-lg);
+        background: var(--panel-solid);
+        color: var(--text);
+        padding: var(--sp-4);
+        max-width: min(680px, 92vw);
+      }
+      dialog::backdrop {
+        background: var(--scrim);
+      }
+      textarea {
+        width: 100%;
+        min-height: 240px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text);
+        background: var(--surface-panel-2);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--r-sm);
+        padding: var(--sp-2);
+      }
+      @media (max-width: 1080px) {
         .ds-shell {
           grid-template-columns: minmax(0, 1fr);
         }
-        .ds-side {
+        .ds-preview,
+        .ds-panel {
           position: static;
-          flex-direction: row;
-          flex-wrap: wrap;
+          max-height: none;
         }
       }
     </style>
   </head>
-  <body class="theme-dark">
-    <div class="ds-shell">
-      <nav class="ds-side">
-        <a href="#overview">Overview</a>
-        <a href="#colors">Colours</a>
-        <a href="#exceptions">Scoped exceptions</a>
-        <a href="#type">Typography</a>
-        <a href="#shape">Shape &amp; spacing</a>
-        <a href="#elevation">Elevation</a>
-        <a href="#motion">Motion &amp; layering</a>
-        <a href="#layout">Layout</a>
-        <a href="#components">Components</a>
-        <a href="#rules">Do &amp; don't</a>
-      </nav>
+  <body class="theme-dark view-edit">
+    <header class="ds-top">
+      <h1>EshaalTab Design System</h1>
+      <div class="tabs" role="tablist">
+        <button id="tabEdit" role="tab" aria-selected="true">Editor</button>
+        <button id="tabDocs" role="tab" aria-selected="false">Documentation</button>
+      </div>
+      <div class="ds-row">
+        <button id="themeBtn" type="button">Light mode</button>
+        <button id="resetBtn" type="button">Reset all</button>
+        <button id="exportBtn" class="primary" type="button">Copy CSS</button>
+      </div>
+    </header>
 
-      <main>
-        <div class="ds-head">
-          <div>
-            <h1>EshaalTab Design System</h1>
-            <p style="margin: 4px 0 0">
-              Live page: every swatch and value below is read from
-              <code>css/tokens.css</code> at load, so it can never drift from the product.
-            </p>
+    <div class="ds-shell">
+      <aside class="ds-panel">
+        <div class="grp">
+          <h3>Colour</h3>
+          <div class="ctl">
+            <label for="cAccent">Accent</label>
+            <input type="color" id="cAccent" data-token="--accent-color" value="#ffffff" />
           </div>
-          <div class="ds-row">
-            <button class="ds-btn ghost" id="themeBtn" type="button">Light mode</button>
+          <div class="ctl">
+            <label for="cContrast">Accent contrast (text on accent)</label>
+            <input type="color" id="cContrast" data-token="--accent-contrast" value="#14151a" />
+          </div>
+          <div class="ctl">
+            <label for="cBase">Page background</label>
+            <input type="color" id="cBase" data-token="--page-bg" value="#090a0f" />
+          </div>
+          <div class="ctl">
+            <label for="cBoardOpacity">Surface strength <code>--board-opacity</code></label>
+            <span class="val" data-for="cBoardOpacity"></span>
+            <input type="range" id="cBoardOpacity" data-token="--board-opacity" min="0" max="1" step="0.01" value="0.08" data-unit="" />
           </div>
         </div>
+
+        <div class="grp">
+          <h3>Shape</h3>
+          <div class="ctl"><label>Extra small <code>--r-xs</code></label><span class="val" data-for="rXs"></span>
+            <input type="range" id="rXs" data-token="--r-xs" min="0" max="20" step="1" value="6" data-unit="px" /></div>
+          <div class="ctl"><label>Small <code>--r-sm</code></label><span class="val" data-for="rSm"></span>
+            <input type="range" id="rSm" data-token="--r-sm" min="0" max="24" step="1" value="8" data-unit="px" /></div>
+          <div class="ctl"><label>Medium <code>--r-md</code></label><span class="val" data-for="rMd"></span>
+            <input type="range" id="rMd" data-token="--r-md" min="0" max="32" step="1" value="14" data-unit="px" /></div>
+          <div class="ctl"><label>Large <code>--r-lg</code></label><span class="val" data-for="rLg"></span>
+            <input type="range" id="rLg" data-token="--r-lg" min="0" max="40" step="1" value="20" data-unit="px" /></div>
+        </div>
+
+        <div class="grp">
+          <h3>Spacing &amp; scale</h3>
+          <div class="ctl"><label>Spacing scale (multiplies <code>--sp-*</code>)</label><span class="val" data-for="spScale"></span>
+            <input type="range" id="spScale" min="0.6" max="1.8" step="0.05" value="1" /></div>
+          <div class="ctl"><label>Interface scale <code>--ui-scale</code></label><span class="val" data-for="uiScale"></span>
+            <input type="range" id="uiScale" data-token="--ui-scale" min="0.8" max="1.8" step="0.05" value="1" data-unit="" /></div>
+          <div class="ctl"><label>Board gutter <code>--boards-gutter</code></label><span class="val" data-for="gutter"></span>
+            <input type="range" id="gutter" data-token="--boards-gutter" min="4" max="64" step="2" value="24" data-unit="px" /></div>
+        </div>
+
+        <div class="grp">
+          <h3>Typography</h3>
+          <div class="ctl"><label>Type scale (multiplies <code>--fs-*</code>)</label><span class="val" data-for="fsScale"></span>
+            <input type="range" id="fsScale" min="0.8" max="1.4" step="0.02" value="1" /></div>
+          <div class="ctl"><label>Clock size <code>--clock-size</code></label><span class="val" data-for="clockSize"></span>
+            <input type="range" id="clockSize" data-token="--clock-size" min="40" max="240" step="4" value="120" data-unit="px" /></div>
+          <div class="ctl">
+            <label for="fontApp">Interface font <code>--font-app</code></label>
+            <select id="fontApp" data-token="--font-app">
+              <option value="">Inter (default)</option>
+              <option value="'Bricolage Grotesque', system-ui, sans-serif">Bricolage Grotesque</option>
+              <option value="'Nunito', system-ui, sans-serif">Nunito</option>
+              <option value="'Lora', Georgia, serif">Lora</option>
+              <option value="'Roboto Slab', Georgia, serif">Roboto Slab</option>
+              <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+              <option value="'Caveat', cursive">Caveat</option>
+            </select>
+          </div>
+          <div class="ctl">
+            <label for="clockFont">Clock font <code>--clock-font</code></label>
+            <select id="clockFont" data-token="--clock-font">
+              <option value="">System (default)</option>
+              <option value="'Orbitron', sans-serif">Orbitron</option>
+              <option value="'Bebas Neue', sans-serif">Bebas Neue</option>
+              <option value="'Bricolage Grotesque', sans-serif">Bricolage Grotesque</option>
+              <option value="'Nunito', sans-serif">Nunito</option>
+              <option value="'Young Serif', serif">Young Serif</option>
+              <option value="'Lora', serif">Lora</option>
+              <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+              <option value="'Caveat', cursive">Caveat</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grp">
+          <h3>Alignment</h3>
+          <div class="ctl">
+            <label for="clockPos">Clock position</label>
+            <select id="clockPos" data-class-group="clock-pos">
+              <option value="center">Centre</option>
+              <option value="top-left">Top left</option>
+              <option value="top-right">Top right</option>
+              <option value="bottom-left">Bottom left</option>
+              <option value="bottom-right">Bottom right</option>
+            </select>
+          </div>
+          <div class="ctl">
+            <label for="pinsPos">Pinned links position</label>
+            <select id="pinsPos" data-class-group="pins-pos">
+              <option value="center">Centre</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+          <div class="ctl">
+            <label for="previewView">Preview page</label>
+            <select id="previewView">
+              <option value="home">Home</option>
+              <option value="boards">Boards</option>
+              <option value="notes">Notes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grp">
+          <h3>Motion &amp; depth</h3>
+          <div class="ctl"><label>Speed (multiplies <code>--dur-*</code>)</label><span class="val" data-for="durScale"></span>
+            <input type="range" id="durScale" min="0" max="2" step="0.1" value="1" /></div>
+          <div class="ctl"><label>Shadow strength</label><span class="val" data-for="shadowScale"></span>
+            <input type="range" id="shadowScale" min="0" max="2" step="0.1" value="1" /></div>
+        </div>
+      </aside>
+
+      <section class="ds-preview">
+        <div class="ds-preview-bar">
+          <strong style="color: var(--text)">Live preview</strong>
+          <span>the real new tab — edits apply instantly</span>
+          <button id="reloadBtn" type="button" style="margin-left: auto">Reload</button>
+          <button id="openBtn" type="button">Open full size</button>
+        </div>
+        <iframe id="stage" src="../index.html" title="EshaalTab preview"></iframe>
+      </section>
+
+      <main class="docs">
+        <p>
+          Live page: every swatch and value below is read from <code>css/tokens.css</code> at load,
+          so it can never drift from the product. Switch to <strong>Editor</strong> to change tokens
+          against the real new tab and copy the CSS back.
+        </p>
 
         <section id="overview">
           <h2>Creative north star: the personal instrument panel</h2>
@@ -312,11 +544,6 @@
             search pill — stays constant; wallpaper, accent colour and clock typeface change per
             user. The system's job is to stay legible and out of the way, the way an instrument
             panel's layout doesn't change even though the view out of the window does.
-          </p>
-          <p>
-            This is a power-user utility, not a mood board. Density and information access
-            (Ctrl+K search, board cards, popovers) beat decorative flourish, and depth encodes
-            real hierarchy rather than richness.
           </p>
           <div class="ds-card">
             <strong>Key characteristics</strong>
@@ -335,68 +562,56 @@
           <p>
             Near-monochrome at rest: one neutral surface family plus a single user-chosen accent.
             There is no secondary brand colour — the accent is the only colour decision an install
-            makes. Toggle the theme above to check every swatch in both modes.
+            makes.
           </p>
-
           <h3>Accent <span class="tag">user-chosen</span></h3>
           <div class="ds-grid" data-swatches="--accent-color,--accent-contrast,--accent-fill,--menu-active-bg,--menu-active-ink"></div>
-
           <h3>Surfaces</h3>
           <div class="ds-grid" data-swatches="--page-bg,--surface-base,--surface,--surface-2,--surface-3,--surface-panel,--panel-solid,--panel-hover,--surface-card,--surface-search,--scrim"></div>
-
           <h3>Text and borders</h3>
           <div class="ds-grid" data-swatches="--text,--text-dim,--text-faint,--border-soft,--border-strong,--track"></div>
-
           <h3>Board surfaces</h3>
           <p>
             Board cards tint themselves from <code>--board-rgb</code> and
-            <code>--board-opacity</code>, so each board reads as its own place without a second
-            brand colour. Text ink on a board is computed for contrast against the card's real
-            backdrop, including the wallpaper behind a translucent card.
+            <code>--board-opacity</code>. Text ink on a board is computed for contrast against the
+            card's real backdrop, including the wallpaper behind a translucent card.
           </p>
           <div class="ds-grid" data-swatches="--board-text,--board-text-secondary,--board-text-dim,--board-hover-bg"></div>
-
           <h3>Status</h3>
           <div class="ds-grid" data-swatches="--danger,--danger-text,--danger-fill,--danger-border,--success,--warning,--warning-text"></div>
-
           <div class="rule">
-            <strong>The One Signal Rule.</strong> The accent appears on focus states, hover
-            borders, primary actions and active toggles — never as a page background, a card fill
-            or body text. More than one or two accent-coloured elements visible at once means
-            something has drifted.
+            <strong>The One Signal Rule.</strong> The accent appears on focus states, hover borders,
+            primary actions and active toggles — never as a page background, a card fill or body
+            text.
           </div>
         </section>
 
         <section id="exceptions">
           <h2>Scoped exceptions</h2>
-          <p>Three surfaces are allowed to leave the token set. Each is documented, and the list is closed.</p>
+          <p>Three surfaces may leave the token set. Each is documented, and the list is closed.</p>
           <div class="cols">
             <div class="ds-card">
               <strong>Command palette (light theme)</strong>
               <p>
-                Cool-slate ink instead of the alpha-on-white neutrals, because the palette floats
-                above an arbitrary page and needs colder, higher-contrast ink at small sizes:
-                <code>#0f172a</code> titles, <code>#475569</code> meta, <code>#64748b</code> dim,
-                <code>#cbd5e1</code> lines, <code>#f1f5f9</code> hover.
+                Cool-slate ink instead of alpha-on-white neutrals, because the palette floats above
+                an arbitrary page: <code>#0f172a</code>, <code>#475569</code>, <code>#64748b</code>,
+                <code>#cbd5e1</code>, <code>#f1f5f9</code>.
               </p>
             </div>
             <div class="ds-card">
               <strong>Focus timer</strong>
               <p>
-                A full-screen blackout that ignores theme and accent so a focus session looks
-                identical everywhere: <code>#000</code> ground, flip face
-                <code>#151618</code> with seam <code>#292a2d</code> / <code>#25262a</code>.
-                Its corners are viewport-relative (<code>1.2vw</code>) and it uses sub-<code>--r-sm</code>
-                radii (2px, 7px) found nowhere else.
+                A blackout overlay that ignores theme and accent so a session looks identical
+                everywhere: <code>#000</code> ground, flip face <code>#151618</code>, seams
+                <code>#292a2d</code> / <code>#25262a</code>, viewport-relative corners.
               </p>
             </div>
             <div class="ds-card">
               <strong>Toolbar popup</strong>
               <p>
-                A fixed 320–360px shell, not a new-tab surface. Its outer corner is 12px, between
-                <code>--r-sm</code> and <code>--r-md</code>, sized for the browser's popup frame. It
+                A fixed-width shell with a 12px outer corner sized for the browser's popup frame. It
                 mirrors the page tokens through its own theme function, including a readable accent
-                ink so selected rows stay visible on white.
+                ink.
               </p>
             </div>
           </div>
@@ -405,29 +620,13 @@
         <section id="type">
           <h2>Typography</h2>
           <p>
-            <strong>Interface:</strong> Inter, with system fallbacks. Users may switch the whole
-            interface to one of eight bundled faces via <code>--font-app</code>.
-            <strong>Clock:</strong> ten faces via <code>--clock-font</code>, the one typographic
-            choice exposed to the user, scoped to the clock.
-            <strong>Mono:</strong> <code>--font-mono</code> for keyboard chips and literal input only.
-            All bundled fonts are SIL Open Font License, except Roboto Slab (Apache 2.0).
+            <strong>Interface:</strong> Inter, with eight bundled alternatives via
+            <code>--font-app</code>. <strong>Clock:</strong> ten faces via <code>--clock-font</code>,
+            the one typographic choice exposed to users. <strong>Mono:</strong>
+            <code>--font-mono</code> for keyboard chips and literal input only. All bundled fonts are
+            SIL Open Font License, except Roboto Slab (Apache 2.0).
           </p>
           <div class="ds-card" id="typeRamp"></div>
-          <h3>Outside the ramp</h3>
-          <ul>
-            <li>
-              <strong>Clock</strong> — <code>--clock-size</code>, viewport-relative and scaled by
-              the user's clock-size slider.
-            </li>
-            <li>
-              <strong>Countdown</strong> — the focus timer's flip clock, sized against the viewport
-              so it reads across a room.
-            </li>
-            <li>
-              <strong>Micro (10–11px)</strong> — compact popover hints and the toolbar popup only,
-              never on the main page.
-            </li>
-          </ul>
           <div class="rule">
             <strong>No near-duplicate steps.</strong> Don't let 2–3 font sizes cluster within a few
             pixels on one surface. Pick fewer steps with real contrast (≥1.25×).
@@ -436,37 +635,30 @@
 
         <section id="shape">
           <h2>Shape &amp; spacing</h2>
-          <p>
-            Four radius steps, no sharp corners. Borders are hairline (<code>--hair</code>) and
-            low-contrast at rest, strengthening only on hover, focus or accent states.
-          </p>
+          <p>Four radius steps, no sharp corners. Borders are hairline and strengthen only on hover, focus or accent states.</p>
           <div class="ds-grid" id="radiusGrid"></div>
           <h3>Spacing scale</h3>
-          <p>
-            UI chrome (buttons, pills, tight lists) sits in the 4–16px range; section-level gaps use
-            20px and above. Spacing and type scale together through <code>--ui-scale</code>.
-          </p>
+          <p>UI chrome sits in the 4–16px range; section gaps use 20px and above. Spacing and type scale together through <code>--ui-scale</code>.</p>
           <div class="ds-card" id="spacingList"></div>
         </section>
 
         <section id="elevation">
           <h2>Elevation</h2>
           <p>
-            Structural, not decorative. Shadows are built from a shared accent-tinted
-            <code>--shadow-tint</code> with a tight contact shadow plus a soft ambient one, so depth
-            reads as the same light source everywhere. Settings uses flat fills and borders instead.
+            Structural, not decorative. Shadows share one accent-tinted colour with a tight contact
+            layer plus a soft ambient one, so depth reads as a single light source. Settings uses
+            flat fills and borders instead.
           </p>
           <div class="ds-grid" id="elevGrid"></div>
           <div class="rule">
             <strong>The Stack-Tells-The-Truth Rule.</strong> A component's shadow step must match
-            its real interaction layer. Don't reach for <code>--e4</code> on a resting card to make
-            it pop; that breaks the cue everywhere else.
+            its real interaction layer.
           </div>
           <h3>Wallpaper legibility</h3>
           <p>
-            Text sitting directly on a photo or video uses a text-shadow driven by
-            <code>--wp-shadow-opacity</code>, <code>--wp-shadow-blur</code> and
-            <code>--wp-shadow-rgb</code>. It is functional, and off in solid-colour mode.
+            Text on a photo or video uses a shadow driven by <code>--wp-shadow-opacity</code>,
+            <code>--wp-shadow-blur</code> and <code>--wp-shadow-rgb</code>. It is functional, and off
+            in solid-colour mode.
           </p>
         </section>
 
@@ -478,8 +670,7 @@
               <div id="motionList"></div>
               <p style="margin-bottom: 0">
                 One easing curve for everything that enters or settles. Page switches fade a
-                pre-blurred wallpaper layer with opacity instead of re-blurring the image, so a
-                switch stays cheap on large screens.
+                pre-blurred wallpaper layer instead of re-blurring the image.
               </p>
             </div>
             <div class="ds-card">
@@ -492,77 +683,30 @@
         <section id="layout">
           <h2>Layout</h2>
           <p>
-            A single-page shell: fixed top bar, centred clock and search pill, a board-card grid,
-            and side sheets that overlay rather than push content. There are no marketing-style
-            breakpoints. Instead <code>--ui-scale</code> steps 1 → 1.12 → 1.3 → 1.55 → 1.8 at
-            1800px, 2200px, 2800px and 3400px, multiplying spacing and type together so dense
-            information stays proportional on very large displays.
-          </p>
-          <p>
-            Board columns and gutters derive from one gutter token so margins stay equal on every
-            screen size. The toolbar popup is a separate, simpler register: a fixed-width
-            single-column stack with no side sheets.
+            A single-page shell: fixed top bar, centred clock and search pill, a board grid, and side
+            sheets that overlay rather than push content. There are no marketing-style breakpoints;
+            <code>--ui-scale</code> steps 1 → 1.12 → 1.3 → 1.55 → 1.8 at 1800px, 2200px, 2800px and
+            3400px, multiplying spacing and type together. Board columns and gutters derive from
+            <code>--boards-gutter</code> so margins stay equal at any size.
           </p>
         </section>
 
         <section id="components">
           <h2>Components</h2>
-
-          <h3>Buttons</h3>
           <div class="ds-card">
             <div class="ds-row">
               <button class="ds-btn" type="button">Primary</button>
               <button class="ds-btn ghost" type="button">Secondary</button>
-            </div>
-            <p style="margin-bottom: 0">
-              <code>--r-sm</code> corners, pill only for compact presets. Primary is an accent fill
-              with accent-contrast text, a neutral elevation shadow, and no gradient or coloured
-              glow. <code>focus-visible</code> always draws a 2px accent outline at 2px offset —
-              the one hard accessibility invariant, set globally in <code>tokens.css</code>.
-            </p>
-          </div>
-
-          <h3>Search pill</h3>
-          <div class="ds-card">
-            <div class="ds-pill">Search or type a URL</div>
-            <p style="margin-bottom: 0">
-              <code>--r-md</code> at 40px tall on <code>--surface-search</code>, deliberately
-              narrower than a full-width bar so the eye reaches the clock first. Its border promotes
-              to the accent on hover or focus — the main place the accent does structural work.
-            </p>
-          </div>
-
-          <h3>Board cards</h3>
-          <div class="ds-card">
-            <div class="ds-row">
+              <div class="ds-pill">Search or type a URL</div>
               <div class="ds-board"><strong>Board</strong><div style="color: var(--text-dim); font-size: var(--fs-xs)">6 links</div></div>
-              <div class="ds-board" style="--board-rgb: 168, 85, 247; --board-opacity: 0.85"><strong>Tinted board</strong><div style="font-size: var(--fs-xs)">own colour</div></div>
             </div>
             <p style="margin-bottom: 0">
-              <code>--r-lg</code> corners, <code>e1</code> at rest promoting on hover, border from
-              the board's own tint rather than the global accent. Title and tile ink are computed
-              against the real backdrop (card colour, its opacity, and the wallpaper behind it), so
-              lowering the background strength never strands unreadable text.
-            </p>
-          </div>
-
-          <h3>Inputs</h3>
-          <div class="ds-card">
-            <p style="margin-top: 0">
-              <code>--surface-panel-2</code> fill, soft border, corners a step tighter than buttons
-              so nested fields read as content rather than chrome. Focus uses the same 2px accent
-              outline as buttons — one focus treatment system-wide, never a glow or a scale change.
-              Placeholders always use <code>--text-dim</code> at full opacity; a hardcoded
-              low-opacity white is what made them vanish in light mode once.
-            </p>
-          </div>
-
-          <h3>Side sheets</h3>
-          <div class="ds-card">
-            <p style="margin: 0">
-              Slide in from the right at full height, overlaying the page rather than reflowing it,
-              so nothing underneath shifts when a sheet opens. Glass or solid depending on
-              <code>solid-mode</code>; the settings sheet is deliberately flat.
+              Buttons use <code>--r-sm</code>, an accent fill with accent-contrast text and a neutral
+              shadow. <code>focus-visible</code> always draws a 2px accent outline at 2px offset —
+              the one hard accessibility invariant. The search pill promotes its border to the accent
+              on hover or focus. Board cards use <code>--r-lg</code>, <code>e1</code> at rest, and a
+              border from their own tint. Inputs sit a radius step tighter than buttons, and
+              placeholders always use <code>--text-dim</code> at full opacity.
             </p>
           </div>
         </section>
@@ -573,13 +717,13 @@
             <div class="ds-card">
               <strong>Do</strong>
               <ul>
-                <li>Let accent and wallpaper be the only strongly personalised choices; keep spacing, radius, elevation and type fixed across installs.</li>
+                <li>Let accent and wallpaper be the only strongly personalised choices.</li>
                 <li>Match the shadow step to the real stacking order.</li>
                 <li>Keep the clock as the one surface with a user-selectable font.</li>
-                <li>Use neutral elevation shadows on interactive elements — depth means layer, not brand.</li>
+                <li>Use neutral elevation shadows — depth means layer, not brand.</li>
                 <li>Compute ink against the real backdrop whenever a surface is translucent.</li>
                 <li>Gate wallpaper text-shadow to wallpaper mode only.</li>
-                <li>Use tokens for radius, spacing, type and timing; a literal value needs a documented reason.</li>
+                <li>Use tokens for radius, spacing, type and timing.</li>
               </ul>
             </div>
             <div class="ds-card">
@@ -598,9 +742,203 @@
       </main>
     </div>
 
+    <dialog id="exportDlg">
+      <h3 style="margin-top: 0">Changed tokens</h3>
+      <p>Paste into <code>:root</code> in <code>css/tokens.css</code>.</p>
+      <textarea id="exportOut" readonly></textarea>
+      <div class="ds-row" style="margin-top: var(--sp-3); justify-content: flex-end">
+        <button id="copyBtn" class="primary" type="button">Copy</button>
+        <button id="closeDlg" type="button">Close</button>
+      </div>
+    </dialog>
+
     <script>
-      const read = (name) =>
-        getComputedStyle(document.body).getPropertyValue(name).trim();
+      const stage = document.getElementById("stage");
+      const overrides = new Map();
+      const SP = ["--sp-1", "--sp-2", "--sp-3", "--sp-4", "--sp-5", "--sp-6", "--sp-8", "--sp-12"];
+      const FS = ["--fs-xs", "--fs-sm", "--fs-base", "--fs-md", "--fs-lg", "--fs-xl"];
+      const DUR = ["--dur-1", "--dur-2", "--dur-3", "--dur-4"];
+      const BASE = {};
+
+      const stageDoc = () => stage.contentDocument;
+      const read = (name, doc = document) =>
+        getComputedStyle(doc.body).getPropertyValue(name).trim();
+
+      function captureBase() {
+        [...SP, ...FS, ...DUR].forEach((t) => {
+          BASE[t] = parseFloat(read(t, stageDoc()) || read(t)) || 0;
+        });
+      }
+
+      function applyOverrides() {
+        const doc = stageDoc();
+        if (!doc) return;
+        let tag = doc.getElementById("ds-overrides");
+        if (!tag) {
+          tag = doc.createElement("style");
+          tag.id = "ds-overrides";
+          doc.head.append(tag);
+        }
+        tag.textContent = `:root, body {\n${[...overrides]
+          .map(([k, v]) => `  ${k}: ${v} !important;`)
+          .join("\n")}\n}`;
+      }
+
+      function setToken(name, value) {
+        if (value === null) overrides.delete(name);
+        else overrides.set(name, value);
+        applyOverrides();
+      }
+
+      function bindControl(input) {
+        const token = input.dataset.token;
+        const unit = input.dataset.unit ?? "";
+        const label = document.querySelector(`.val[data-for="${input.id}"]`);
+        const update = () => {
+          const value = input.type === "range" ? input.value + unit : input.value;
+          if (label) label.textContent = value;
+          if (!token) return;
+          if ((input.tagName === "SELECT" && !input.value) || value === input.dataset.initial)
+            setToken(token, null);
+          else setToken(token, value);
+        };
+        input.addEventListener("input", update);
+        input.addEventListener("change", update);
+        return update;
+      }
+
+      function scaleGroup(tokens, factor, unit) {
+        tokens.forEach((t) => {
+          const base = BASE[t];
+          if (!base) return;
+          setToken(t, `${+(base * factor).toFixed(2)}${unit}`);
+        });
+      }
+
+      function initStage() {
+        const doc = stageDoc();
+        if (!doc || !doc.body) return;
+        captureBase();
+        syncControlsFromStage();
+        applyOverrides();
+        syncStageClasses();
+      }
+
+      function syncControlsFromStage() {
+        document.querySelectorAll("[data-token]").forEach((input) => {
+          const unit = input.dataset.unit ?? "";
+          const live = read(input.dataset.token, stageDoc());
+          const label = document.querySelector(`.val[data-for="${input.id}"]`);
+          if (input.type === "range") {
+            const n = parseFloat(live);
+            if (Number.isFinite(n) && n >= +input.min && n <= +input.max)
+              input.value = String(n);
+            input.dataset.initial = input.value + unit;
+          } else if (input.type === "color" && /^#[0-9a-f]{6}$/i.test(live)) {
+            input.value = live.toLowerCase();
+            input.dataset.initial = input.value;
+          }
+          if (label) label.textContent = input.value + unit;
+        });
+      }
+
+      function syncStageClasses() {
+        const doc = stageDoc();
+        if (!doc?.body) return;
+        [
+          ["clock-pos", document.getElementById("clockPos").value],
+          ["pins-pos", document.getElementById("pinsPos").value],
+        ].forEach(([group, value]) => {
+          [...doc.body.classList]
+            .filter((c) => c.startsWith(group + "-"))
+            .forEach((c) => doc.body.classList.remove(c));
+          doc.body.classList.add(`${group}-${value}`);
+          if (group === "clock-pos")
+            doc.body.classList.toggle("clock-pos-fixed", value !== "center");
+        });
+        const view = document.getElementById("previewView").value;
+        doc.querySelector(`.et-main-tab[data-tab="${view}"]`)?.click();
+      }
+
+      document.querySelectorAll("[data-token]").forEach(bindControl);
+      ["clockPos", "pinsPos", "previewView"].forEach((id) =>
+        document.getElementById(id).addEventListener("change", syncStageClasses),
+      );
+
+      const scaleCtl = (id, tokens, unit) => {
+        const input = document.getElementById(id);
+        const label = document.querySelector(`.val[data-for="${id}"]`);
+        const run = () => {
+          if (label) label.textContent = `${(+input.value).toFixed(2)}×`;
+          scaleGroup(tokens, +input.value, unit);
+        };
+        input.addEventListener("input", run);
+        return run;
+      };
+      const runSp = scaleCtl("spScale", SP, "px");
+      const runFs = scaleCtl("fsScale", FS, "px");
+      const runDur = scaleCtl("durScale", DUR, "ms");
+
+      const shadow = document.getElementById("shadowScale");
+      shadow.addEventListener("input", () => {
+        const f = +shadow.value;
+        document.querySelector('.val[data-for="shadowScale"]').textContent = `${f.toFixed(1)}×`;
+        setToken("--shadow-contact", `color-mix(in srgb, var(--shadow-tint) ${(14 * f).toFixed(0)}%, transparent)`);
+        setToken("--shadow-ambient", `color-mix(in srgb, var(--shadow-tint) ${(22 * f).toFixed(0)}%, transparent)`);
+      });
+
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        overrides.clear();
+        applyOverrides();
+        document.querySelectorAll("input[type=range], input[type=color], select").forEach((el) => {
+          el.value = el.getAttribute("value") ?? el.querySelector("option")?.value ?? el.value;
+        });
+        stage.contentWindow.location.reload();
+      });
+
+      document.getElementById("reloadBtn").addEventListener("click", () =>
+        stage.contentWindow.location.reload(),
+      );
+      document.getElementById("openBtn").addEventListener("click", () =>
+        window.open(stage.src, "_blank", "noopener"),
+      );
+
+      const dlg = document.getElementById("exportDlg");
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        const out = document.getElementById("exportOut");
+        out.value = overrides.size
+          ? `:root {\n${[...overrides].map(([k, v]) => `  ${k}: ${v};`).join("\n")}\n}`
+          : "No changes yet — move a control first.";
+        dlg.showModal();
+      });
+      document.getElementById("copyBtn").addEventListener("click", async () => {
+        await navigator.clipboard.writeText(document.getElementById("exportOut").value);
+        document.getElementById("copyBtn").textContent = "Copied";
+        setTimeout(() => (document.getElementById("copyBtn").textContent = "Copy"), 1200);
+      });
+      document.getElementById("closeDlg").addEventListener("click", () => dlg.close());
+
+      const tabEdit = document.getElementById("tabEdit");
+      const tabDocs = document.getElementById("tabDocs");
+      const setView = (docs) => {
+        document.body.classList.toggle("view-docs", docs);
+        document.body.classList.toggle("view-edit", !docs);
+        tabDocs.setAttribute("aria-selected", String(docs));
+        tabEdit.setAttribute("aria-selected", String(!docs));
+        if (docs) paint();
+      };
+      tabEdit.addEventListener("click", () => setView(false));
+      tabDocs.addEventListener("click", () => setView(true));
+
+      document.getElementById("themeBtn").addEventListener("click", (e) => {
+        const light = document.body.classList.toggle("theme-light");
+        document.body.classList.toggle("theme-dark", !light);
+        document.documentElement.style.colorScheme = light ? "light" : "dark";
+        e.target.textContent = light ? "Dark mode" : "Light mode";
+        paint();
+      });
+
+      stage.addEventListener("load", initStage);
 
       function swatches() {
         document.querySelectorAll("[data-swatches]").forEach((grid) => {
@@ -620,7 +958,6 @@
       }
 
       const TYPE = [
-        ["Clock", "--clock-size", 700, "New tab clock only"],
         ["Title / XL", "--fs-xl", 700, "Section headers, modal titles"],
         ["Large", "--fs-lg", 600, "Board titles, group headings"],
         ["Medium", "--fs-md", 500, "Prominent rows, popup body"],
@@ -630,13 +967,11 @@
       ];
 
       function typeRamp() {
-        const box = document.getElementById("typeRamp");
-        box.replaceChildren(
+        document.getElementById("typeRamp").replaceChildren(
           ...TYPE.map(([label, token, weight, use]) => {
             const row = document.createElement("div");
             row.className = "type-sample";
-            const clock = token === "--clock-size";
-            row.innerHTML = `<span style="font-size:${clock ? "min(var(--clock-size), 76px)" : `var(${token})`};font-weight:${weight};line-height:var(--lh-tight)">${label}</span>
+            row.innerHTML = `<span style="font-size:var(${token});font-weight:${weight};line-height:var(--lh-tight)">${label}</span>
               <span style="flex:1">${use}</span>
               <span>${token} · ${read(token)} · ${weight}</span>`;
             return row;
@@ -645,8 +980,7 @@
       }
 
       function radii() {
-        const grid = document.getElementById("radiusGrid");
-        grid.replaceChildren(
+        document.getElementById("radiusGrid").replaceChildren(
           ...["--r-xs", "--r-sm", "--r-md", "--r-lg", "--r-pill"].map((token) => {
             const el = document.createElement("div");
             el.className = "radius-demo";
@@ -658,27 +992,23 @@
       }
 
       function spacing() {
-        const box = document.getElementById("spacingList");
-        box.replaceChildren(
-          ...["--sp-1", "--sp-2", "--sp-3", "--sp-4", "--sp-5", "--sp-6", "--sp-8", "--sp-12"].map(
-            (token) => {
-              const row = document.createElement("div");
-              row.className = "ds-row";
-              row.style.margin = "6px 0";
-              row.innerHTML = `<span style="width:120px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">${token} · ${read(token)}</span>`;
-              const bar = document.createElement("div");
-              bar.className = "sp-bar";
-              bar.style.width = `var(${token})`;
-              row.append(bar);
-              return row;
-            },
-          ),
+        document.getElementById("spacingList").replaceChildren(
+          ...SP.map((token) => {
+            const row = document.createElement("div");
+            row.className = "ds-row";
+            row.style.margin = "6px 0";
+            row.innerHTML = `<span style="width:120px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">${token} · ${read(token)}</span>`;
+            const bar = document.createElement("div");
+            bar.className = "sp-bar";
+            bar.style.width = `var(${token})`;
+            row.append(bar);
+            return row;
+          }),
         );
       }
 
       function elevation() {
-        const grid = document.getElementById("elevGrid");
-        grid.replaceChildren(
+        document.getElementById("elevGrid").replaceChildren(
           ...[
             ["--e1", "Resting cards, small popovers"],
             ["--e2", "Hovered cards, dropdowns"],
@@ -697,18 +1027,9 @@
       function lists() {
         const rows = (tokens) =>
           `<table><tbody>${tokens
-            .map(
-              (t) =>
-                `<tr><td><code>${t}</code></td><td style="color:var(--text-dim)">${read(t)}</td></tr>`,
-            )
+            .map((t) => `<tr><td><code>${t}</code></td><td style="color:var(--text-dim)">${read(t)}</td></tr>`)
             .join("")}</tbody></table>`;
-        document.getElementById("motionList").innerHTML = rows([
-          "--dur-1",
-          "--dur-2",
-          "--dur-3",
-          "--dur-4",
-          "--ease-out",
-        ]);
+        document.getElementById("motionList").innerHTML = rows([...DUR, "--ease-out"]);
         document.getElementById("zList").innerHTML = rows([
           "--z-raised",
           "--z-sticky",
@@ -731,14 +1052,6 @@
         elevation();
         lists();
       }
-
-      document.getElementById("themeBtn").addEventListener("click", (e) => {
-        const light = document.body.classList.toggle("theme-light");
-        document.body.classList.toggle("theme-dark", !light);
-        document.documentElement.style.colorScheme = light ? "light" : "dark";
-        e.target.textContent = light ? "Dark mode" : "Light mode";
-        paint();
-      });
 
       paint();
     </script>
