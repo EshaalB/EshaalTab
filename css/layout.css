@@ -172,7 +172,7 @@ body.theme-light.solid-mode.ambient-on::after {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 15px 0 15px 0;
+  padding-block: var(--sp-4);
   visibility: hidden;
 }
 
@@ -188,7 +188,7 @@ body.loaded .app {
   position: relative;
   z-index: var(--z-topbar);
   isolation: isolate;
-  padding: 0 var(--sp-4);
+  padding-inline: var(--page-gutter);
   min-height: calc(46px * var(--ui-scale));
 }
 
@@ -525,14 +525,13 @@ body.theme-light .et-search-pill {
   flex-direction: column;
   align-items: center;
 
-  justify-content: flex-start;
-
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
 
-  padding: 0 var(--page-gutter) clamp(var(--sp-8), 15.5vh, calc(176px * var(--ui-scale)));
+  justify-content: center;
+  padding: var(--sp-6) var(--page-gutter) calc(var(--sp-6) + var(--optical-rise));
 }
 
 .et-view-home.active::-webkit-scrollbar {
@@ -541,7 +540,7 @@ body.theme-light .et-search-pill {
 
 .et-view-notes.active {
   justify-content: center;
-  padding: var(--sp-4) var(--sp-6) var(--sp-6);
+  padding: var(--sp-4) var(--page-gutter) var(--sp-6);
 }
 
 .et-home-center {
@@ -1805,7 +1804,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
 
 @media (max-width: 1024px) {
   .et-topbar {
-    padding: var(--sp-2) var(--sp-4);
+    padding: var(--sp-2) var(--page-gutter);
   }
   .et-pop-workspace {
     max-width: calc(100vw - 32px);
@@ -1820,9 +1819,9 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
   .et-topbar {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
-    row-gap: 8px;
+    row-gap: var(--sp-2);
     min-height: auto;
-    padding: 4px 12px 8px;
+    padding: var(--sp-1) var(--page-gutter) var(--sp-2);
   }
 
   .et-main-tabs,
@@ -1892,7 +1891,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
     grid-template-columns: 1fr auto 1fr;
     grid-template-rows: auto;
     row-gap: 0;
-    padding: 4px 12px 8px;
+    padding: var(--sp-1) var(--page-gutter) var(--sp-2);
   }
   .et-top-right {
     grid-column: 3;
@@ -1978,8 +1977,8 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 44px 44px;
     gap: 4px 8px;
-    padding: 2px max(8px, env(safe-area-inset-right)) 6px
-      max(8px, env(safe-area-inset-left));
+    padding: 2px max(var(--page-gutter), env(safe-area-inset-right)) 6px
+      max(var(--page-gutter), env(safe-area-inset-left));
   }
 
   .et-main-tabs,
@@ -2063,7 +2062,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
 
 @media (max-width: 360px) {
   .et-topbar {
-    padding-inline: 6px;
+    padding-inline: var(--page-gutter);
   }
   .et-topbar-btn {
     width: 40px;

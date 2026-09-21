@@ -13,6 +13,14 @@
     applyWallpaperBlur,
   } = S;
   const renderSideSheetContent = (...a) => S.renderSideSheetContent(...a);
+
+  const currentInk = () => {
+    const style = getComputedStyle(document.body);
+    const wp = document.body.classList.contains("wallpaper-mode")
+      ? style.getPropertyValue("--wp-ink").trim()
+      : "";
+    return Contrast.toHex(Contrast.toRgb(wp || style.getPropertyValue("--text").trim() || "#ffffff"));
+  };
   const paintNextFrame = S.createFrameScheduler();
 
   function bindWidgetEvents() {
@@ -190,7 +198,7 @@
       StorageManager.save();
       WidgetsRenderer.applyClockAppearance(live());
       renderSideSheetContent();
-      ToastSystem.info("Clock follows the accent colour again");
+      ToastSystem.info("Clock uses the default text colour again");
     });
 
     [
@@ -428,8 +436,8 @@
               <label class="st-label" for="stClockColor">Clock colour</label>
               <div style="display:flex; align-items:center; gap:6px;">
                 <input type="color" id="stClockColor" class="st-color"
-                       value="${/^#[0-9a-f]{6}$/i.test(settings.clockColor || "") ? settings.clockColor : effectiveAccent()}" />
-                <button id="stClockColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Use accent</button>
+                       value="${/^#[0-9a-f]{6}$/i.test(settings.clockColor || "") ? settings.clockColor : currentInk()}" />
+                <button id="stClockColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Default</button>
               </div>
             </div>
             <div class="st-slider-row">
@@ -439,7 +447,7 @@
             <div class="st-row">
               <label class="st-label" for="stGreetingColor">Greeting colour</label>
               <div style="display:flex; align-items:center; gap:6px;">
-                <input type="color" id="stGreetingColor" class="st-color" value="${/^#[0-9a-f]{6}$/i.test(settings.greetingColor || "") ? settings.greetingColor : "#ffffff"}" />
+                <input type="color" id="stGreetingColor" class="st-color" value="${/^#[0-9a-f]{6}$/i.test(settings.greetingColor || "") ? settings.greetingColor : currentInk()}" />
                 <button id="stGreetingColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Auto</button>
               </div>
             </div>
@@ -450,7 +458,7 @@
             <div class="st-row">
               <label class="st-label" for="stMetaColor">Date and weather colour</label>
               <div style="display:flex; align-items:center; gap:6px;">
-                <input type="color" id="stMetaColor" class="st-color" value="${/^#[0-9a-f]{6}$/i.test(settings.metaColor || "") ? settings.metaColor : "#ffffff"}" />
+                <input type="color" id="stMetaColor" class="st-color" value="${/^#[0-9a-f]{6}$/i.test(settings.metaColor || "") ? settings.metaColor : currentInk()}" />
                 <button id="stMetaColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Auto</button>
               </div>
             </div>
