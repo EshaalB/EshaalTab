@@ -43,7 +43,6 @@
   --board-ground: var(--board-rgb, 24, 26, 32);
   --board-solid: color-mix(in srgb, var(--board-accent) var(--board-tint), rgb(var(--board-ground)));
   --board-ink: var(--text);
-  --board-inset-ground: rgba(0, 0, 0, 0.34);
   --board-title-ink: var(--board-text, var(--text));
   --board-wash-strong: color-mix(in srgb, var(--board-accent) 20%, transparent);
   width: 100%;
@@ -160,7 +159,6 @@ body.theme-light .et-board-card.has-own-color {
   --board-tint: 100%;
   --board-text: var(--board-ink);
   --board-text-dim: color-mix(in srgb, var(--board-ink) 70%, transparent);
-  --board-inset-ground: color-mix(in srgb, var(--board-ink) 10%, transparent);
   --board-wash-strong: color-mix(in srgb, var(--board-ink) 14%, transparent);
 }
 
@@ -181,7 +179,6 @@ body.wallpaper-mode .et-board-card:not(.ink-dark) :is(.et-board-card-title, .et-
 body.theme-light .et-board-card {
   --board-tint: 15%;
   --board-ring: 20%;
-  --board-inset-ground: rgba(15, 23, 42, 0.07);
 }
 
 .et-board-card-header {
