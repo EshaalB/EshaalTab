@@ -532,7 +532,7 @@ body.theme-light .et-search-pill {
   scrollbar-width: none;
   -ms-overflow-style: none;
 
-  padding: 0 var(--sp-6) clamp(56px, 10vh, 120px);
+  padding: 0 var(--page-gutter) clamp(var(--sp-8), 15.5vh, calc(176px * var(--ui-scale)));
 }
 
 .et-view-home.active::-webkit-scrollbar {
@@ -546,12 +546,12 @@ body.theme-light .et-search-pill {
 
 .et-home-center {
   width: 100%;
-  max-width: min(92vw, calc(760px * var(--ui-scale)));
+  max-width: min(calc(100vw - var(--page-gutter) * 2), var(--content-max));
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(18px, 2.4vh, 30px);
+  gap: var(--sp-6);
   margin: 0 auto;
   position: relative;
 }
@@ -689,7 +689,6 @@ body.solid-mode * {
 }
 
 body.wallpaper-mode {
-  --home-ink: color-mix(in srgb, var(--accent-color) 25%, var(--wp-ink-mid, #ffffff));
   --accent-on-wp: color-mix(
     in srgb,
     var(--accent-ink, var(--accent-color)) 62%,
@@ -700,7 +699,7 @@ body.wallpaper-mode {
 }
 
 body.wallpaper-mode .et-home-todos {
-  color: var(--home-ink);
+  color: var(--wp-ink, #ffffff);
   width: auto;
   max-width: 100%;
   margin-inline: auto;
@@ -733,11 +732,11 @@ body.performance-mode.wallpaper-mode .et-home-todos {
 
 body.wallpaper-mode .clock-digits,
 body.wallpaper-mode .clock-ampm {
-  color: var(--clock-color, var(--home-ink));
+  color: var(--clock-color, var(--wp-ink, #ffffff));
 }
 
 .clock-digits {
-  color: var(--clock-color, var(--accent-display, var(--accent-ink, var(--accent-color))));
+  color: var(--clock-color, var(--text));
 }
 
 .clock-colon {
@@ -750,7 +749,7 @@ body.wallpaper-mode .clock-ampm {
   font-weight: 600;
   letter-spacing: 0.08em;
 
-  color: var(--clock-color, var(--accent-display, var(--accent-ink, var(--accent-color))));
+  color: var(--clock-color, var(--text));
   opacity: 0.95;
   margin-left: 0.14em;
 
@@ -767,13 +766,13 @@ body.wallpaper-mode .clock-ampm {
   color: var(--text);
   opacity: 1;
 
-  margin-top: calc(var(--clock-size) * 0.07);
+  margin-top: var(--sp-2);
   text-shadow: none;
   text-wrap: balance;
 }
 
 body.wallpaper-mode .et-home-greeting {
-  color: var(--home-ink);
+  color: var(--wp-ink, #ffffff);
   opacity: 0.98;
   text-shadow:
     0 2px var(--wp-shadow-blur, 20px)
@@ -841,12 +840,12 @@ body.wallpaper-mode .et-home-greeting {
 }
 
 body.wallpaper-mode .et-weather-inline:hover {
-  color: var(--home-ink);
+  color: var(--wp-ink, #ffffff);
 }
 
 body.wallpaper-mode .et-home-date,
 body.wallpaper-mode .et-weather-inline{
-  color: var(--home-ink);
+  color: var(--wp-ink, #ffffff);
   text-shadow:
     0 2px var(--wp-shadow-blur, 20px)
       rgba(var(--wp-halo-low, 0, 0, 0), var(--wp-shadow-opacity, 0.6)),
@@ -905,7 +904,7 @@ body.clock-pos-fixed .et-home-clock {
 
 body.clock-pos-fixed .clock-digits,
 body.clock-pos-fixed .clock-ampm {
-  color: var(--clock-color, var(--wp-ink-mid, var(--accent-display, var(--accent-ink, var(--text)))));
+  color: var(--clock-color, var(--text));
 }
 
 body.clock-pos-fixed .et-home-greeting {
@@ -925,8 +924,8 @@ body:not(.view-home) .et-home-clock {
   justify-content: center;
   flex-wrap: wrap;
 
-  gap: clamp(18px, calc(var(--clock-size) * 0.3), 34px);
-  margin-block: 0 calc(var(--clock-size) * 0.1);
+  gap: var(--sp-5);
+  margin-block: 0 var(--sp-2);
 
   color: var(--text-dim);
   font-size: clamp(14px, calc(var(--clock-size) * 0.19), 21px);
@@ -1846,7 +1845,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
   }
 
   .et-view-home.active {
-    padding: 0 14px clamp(36px, 7vh, 72px);
+    padding-inline: var(--page-gutter);
   }
 
   .et-home-center {
@@ -1933,11 +1932,8 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
   .app {
     padding: 8px 0;
   }
-  .et-view-home.active {
-    padding-bottom: clamp(12px, 4vh, 32px);
-  }
   .et-home-center {
-    gap: 14px;
+    gap: var(--sp-4);
   }
 
   .et-home-clock {
@@ -1963,7 +1959,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
 @media (max-height: 480px) {
   .et-view-home.active {
     justify-content: flex-start;
-    padding-block: 12px 20px;
+    padding-block: var(--sp-3) var(--sp-5);
   }
   .et-home-center {
     justify-content: flex-start;
@@ -2016,7 +2012,7 @@ body.theme-light:not(.wallpaper-mode) .dock-pin-add:hover .dock-pin-icon {
   }
 
   .et-view-home.active {
-    padding-inline: max(12px, env(safe-area-inset-left));
+    padding-inline: max(var(--page-gutter), env(safe-area-inset-left));
   }
 
   .et-home-center {
@@ -2204,7 +2200,7 @@ body.has-meta-color #clockWidget :is(.et-home-date, .et-weather-inline, .et-weat
 }
 
 #clockWidget .et-home-meta {
-  margin-bottom: clamp(8px, calc(var(--clock-size) * 0.15), 22px);
+  margin-bottom: var(--sp-3);
   font-size: calc(clamp(14px, calc(var(--clock-size) * 0.19), 21px) * var(--meta-scale, 1));
 }
 

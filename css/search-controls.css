@@ -3,7 +3,7 @@
   align-items: center;
   gap: var(--sp-1);
   width: 100%;
-  max-width: min(calc(620px * var(--ui-scale)), 86vw);
+  max-width: min(calc(480px * var(--ui-scale)), calc(100vw - var(--page-gutter) * 2));
   min-height: 46px;
   height: calc(46px * var(--ui-scale));
   padding: 0 var(--sp-2) 0 6px;

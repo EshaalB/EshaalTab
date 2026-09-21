@@ -290,7 +290,9 @@ textarea::placeholder {
   --fs-lg: calc(20px * var(--ui-scale));
   --fs-xl: calc(28px * var(--ui-scale));
 
-  --clock-size: clamp(59px, min(11.3vw, 17.4vh), calc(174px * var(--ui-scale)));
+  --clock-size: clamp(52px, min(10vw, 15.3vh), calc(152px * var(--ui-scale)));
+  --page-gutter: clamp(12px, 3vw, 32px);
+  --content-max: calc(680px * var(--ui-scale));
 
   --fw-medium: 500;
   --fw-semi: 600;
