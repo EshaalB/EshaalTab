@@ -61,6 +61,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     ViewController.init();
     BackupReminder.init();
+    document
+      .querySelectorAll('link[data-defer][media="print"]')
+      .forEach((link) => (link.media = "all"));
+    (window.requestIdleCallback || setTimeout)(() => {
+      const tag = document.createElement("script");
+      tag.src = "js/ui/whats-new.js";
+      document.head.append(tag);
+    });
     (window.requestIdleCallback || setTimeout)(() =>
       warmFavicons(BoardManager.getAll().flatMap((b) => (b.bookmarks || []).map((bm) => bm.url))),
     );
