@@ -760,13 +760,16 @@ body.wallpaper-mode .clock-ampm {
 }
 
 .et-home-greeting {
-  font-size: inherit;
-  font-weight: var(--fw-semi);
-  line-height: inherit;
+  font-size: clamp(17px, calc(var(--clock-size) * 0.25), 30px);
+  font-weight: 500;
+  line-height: 1.15;
   letter-spacing: -0.015em;
   color: var(--text);
   opacity: 1;
+
+  margin-top: var(--sp-2);
   text-shadow: none;
+  text-wrap: balance;
 }
 
 body.wallpaper-mode .et-home-greeting {
@@ -793,7 +796,7 @@ body.wallpaper-mode .et-home-greeting {
 }
 
 .et-home-corner:empty,
-.et-home-meta .is-off {
+.et-home-corner.is-off {
   display: none;
 }
 
@@ -906,7 +909,8 @@ body.clock-pos-fixed .clock-ampm {
 }
 
 body.clock-pos-fixed .et-home-greeting {
-  font-weight: var(--fw-semi);
+  font-size: clamp(17px, 1.7vw, 23px);
+  font-weight: 600;
   color: var(--text);
   opacity: 0.95;
 }
@@ -921,8 +925,8 @@ body:not(.view-home) .et-home-clock {
   justify-content: center;
   flex-wrap: wrap;
 
-  gap: var(--sp-2);
-  margin-block: var(--sp-2) 0;
+  gap: var(--sp-5);
+  margin-block: 0 var(--sp-2);
 
   color: var(--text-dim);
   font-size: clamp(14px, calc(var(--clock-size) * 0.19), 21px);
@@ -930,14 +934,8 @@ body:not(.view-home) .et-home-clock {
   opacity: 0.95;
 }
 
-.et-home-meta > *:not(.is-off) ~ *:not(.is-off)::before {
-  content: "·";
-  margin-inline-end: var(--sp-2);
-  opacity: 0.5;
-}
-
 .et-home-meta:empty,
-.et-home-meta:not(:has(> *:not(.is-off):not(:empty))) {
+.et-home-meta:not(:has(.et-home-corner:not(.is-off):not(:empty))) {
   display: none;
 }
 
@@ -2203,6 +2201,7 @@ body.has-meta-color #clockWidget :is(.et-home-date, .et-weather-inline, .et-weat
 }
 
 #clockWidget .et-home-meta {
+  margin-bottom: var(--sp-3);
   font-size: calc(clamp(14px, calc(var(--clock-size) * 0.19), 21px) * var(--meta-scale, 1));
 }
 
@@ -2211,7 +2210,10 @@ body.has-meta-color #clockWidget :is(.et-home-date, .et-weather-inline, .et-weat
 }
 
 #clockWidget .et-home-greeting {
-  font-size: calc(1em * var(--greeting-scale, 1));
+  font-size: calc(clamp(17px, calc(var(--clock-size) * 0.25), 30px) * var(--greeting-scale, 1));
+  margin-top: calc(
+    clamp(8px, var(--clock-size) * 0.15, 22px) - var(--greeting-ink-top, 0px)
+  );
 }
 
 .et-home-todo-list {
