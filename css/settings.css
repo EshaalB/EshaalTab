@@ -70,6 +70,7 @@ body.radius-sharp .et-set-panel {
 }
 
 .et-set-title {
+  font-family: var(--font-display);
   font-size: clamp(20px, calc(20px * var(--ui-scale)), 24px);
   font-weight: 700;
   color: var(--text);
@@ -241,7 +242,7 @@ body.radius-sharp .et-set-panel {
   scrollbar-width: auto;
   scrollbar-color: color-mix(in srgb, var(--accent-color) 65%, var(--text-dim))
     var(--surface-panel, rgba(255, 255, 255, 0.05));
-  font-size: var(--fs-md);
+  font-size: var(--fs-base);
 }
 
 .et-set-body::-webkit-scrollbar {
@@ -269,6 +270,7 @@ body.radius-sharp .et-set-panel {
 }
 
 .st-group-title {
+  font-family: var(--font-display);
   font-size: var(--fs-lg);
   font-weight: 600;
   text-transform: capitalize;
@@ -342,7 +344,7 @@ body.radius-sharp .et-set-panel {
 }
 
 .st-label {
-  font-size: var(--fs-md);
+  font-size: var(--fs-base);
   font-weight: 500;
   color: var(--text);
 }
@@ -449,7 +451,7 @@ body.radius-sharp .et-set-panel {
   border: 1px solid transparent;
   background: var(--surface-3);
   color: var(--text);
-  font-size: var(--fs-md);
+  font-size: var(--fs-base);
   font-family: inherit;
   transition:
     border-color var(--dur-1) var(--ease-out),
@@ -976,7 +978,7 @@ body.radius-sharp .et-set-panel {
   background: transparent;
   padding: 4px 6px;
   color: var(--text);
-  font-size: var(--fs-md);
+  font-size: var(--fs-base);
 }
 
 .st-wallpaper-url-row .st-action-btn {
@@ -1104,7 +1106,7 @@ body.radius-sharp .et-set-panel {
 }
 
 .st-accordion-header {
-  font-size: var(--fs-md);
+  font-size: var(--fs-base);
   font-weight: 600;
   color: var(--text);
   display: flex;

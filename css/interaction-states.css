@@ -476,7 +476,7 @@ body.wallpaper-mode :focus-visible {
   .et-notes-area {
     padding: var(--sp-4);
 
-    font-size: max(16px, var(--notes-font-size, var(--fs-md)));
+    font-size: max(16px, var(--notes-font-size, var(--fs-base)));
   }
 
   .et-notes-toolbar {

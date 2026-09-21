@@ -53,7 +53,7 @@ body.radius-sharp .et-search-submit {
   padding: 0 var(--sp-3);
   background: none;
   border: none;
-  font-size: var(--fs-md);
+  font-size: var(--fs-base);
   font-weight: 500;
   font-family: inherit;
   caret-color: var(--accent-ink, var(--accent-color));
