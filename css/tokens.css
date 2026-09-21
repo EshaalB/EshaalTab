@@ -292,6 +292,7 @@ textarea::placeholder {
 
   --clock-size: clamp(52px, min(10vw, 15.3vh), calc(152px * var(--ui-scale)));
   --page-gutter: clamp(12px, 3vw, 32px);
+  --content-wide: calc(1280px * var(--ui-scale));
   --optical-rise: clamp(var(--sp-8), 15vh, calc(180px * var(--ui-scale)));
   --content-max: calc(680px * var(--ui-scale));
 

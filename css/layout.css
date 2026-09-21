@@ -189,6 +189,8 @@ body.loaded .app {
   z-index: var(--z-topbar);
   isolation: isolate;
   padding-inline: var(--page-gutter);
+  width: min(100%, calc(var(--content-wide) + var(--page-gutter) * 2));
+  margin-inline: auto;
   min-height: calc(46px * var(--ui-scale));
 }
 

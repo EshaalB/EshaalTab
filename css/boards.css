@@ -5,6 +5,9 @@
   overflow-y: auto;
   overflow-x: hidden;
   --boards-gutter: var(--page-gutter);
+  width: 100%;
+  max-width: calc(var(--content-wide) + var(--page-gutter) * 2);
+  margin-inline: auto;
   margin-top: var(--sp-2);
   padding: var(--boards-gutter) var(--boards-gutter) 100px;
   scrollbar-width: none;
@@ -19,10 +22,9 @@
   flex-grow: 1;
   gap: var(--sp-4);
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
-  max-width: min(94vw, calc(1280px * var(--ui-scale)));
-  margin: 0 auto;
+  max-width: 100%;
   padding-bottom: var(--sp-12);
 }
 

@@ -714,7 +714,7 @@ const BoardRenderer = (() => {
       ) || 1;
     const areaEl = boardsArea();
     const areaStyle = areaEl ? getComputedStyle(areaEl) : null;
-    const realWidth = areaEl
+    const innerWidth_ = areaEl
       ? Math.max(
           0,
           areaEl.clientWidth -
@@ -722,6 +722,7 @@ const BoardRenderer = (() => {
             parseFloat(areaStyle.paddingRight || "0"),
         )
       : 0;
+    const realWidth = innerWidth_;
     const areaWidth = realWidth || Math.max(240, window.innerWidth - 32) || 1200;
     const preferredWidth = Math.round(
       (StorageManager.getSettings().boardWidth || 270) * uiScale,
@@ -938,6 +939,7 @@ const BoardRenderer = (() => {
     boardsDirty = false;
     renderBoards();
   }
+
 
   function paintBoards() {
     {

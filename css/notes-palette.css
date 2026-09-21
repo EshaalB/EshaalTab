@@ -114,7 +114,8 @@
   grid-template-columns: minmax(0, 1fr) calc(268px * var(--ui-scale));
   gap: calc(16px * var(--ui-scale));
   width: 100%;
-  max-width: min(96vw, calc(1320px * var(--ui-scale)));
+  max-width: var(--content-wide);
+  margin-inline: auto;
   height: calc(100vh - 108px);
 }
 
