@@ -656,12 +656,15 @@ const SettingsRenderer = (() => {
         const sampleCanvas = document.createElement("canvas");
         const sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
         let samplePainted = false;
+        let blurPx = 0;
 
         const paintSampleCanvas = async () => {
-          if (samplePainted) return;
+          if (samplePainted && sampleCanvas.width) return;
           samplePainted = true;
           const bg = $("photo-bg");
           const src = /^url\("(.*)"\)$/.exec(bg?.style.backgroundImage || "")?.[1];
+          const s = StorageManager.getSettings();
+          blurPx = parseFloat(getComputedStyle(bg || document.body).filter.replace(/[^\d.]/g, "")) || 0;
           if (!src) return;
           try {
             const img = new Image();
@@ -675,58 +678,105 @@ const SettingsRenderer = (() => {
             const h = innerHeight;
             sampleCanvas.width = w;
             sampleCanvas.height = h;
-            const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
-            const dw = img.naturalWidth * scale;
-            const dh = img.naturalHeight * scale;
-            const s = StorageManager.getSettings();
+            const zoom = (s.wallpaperZoom || 100) / 100;
+            const cover = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+            const dw = img.naturalWidth * cover * zoom;
+            const dh = img.naturalHeight * cover * zoom;
             const px = (s.wallpaperPosX ?? 50) / 100;
             const py = (s.wallpaperPosY ?? 50) / 100;
             sampleCtx.drawImage(img, (w - dw) * px, (h - dh) * py, dw, dh);
           } catch {
             sampleCanvas.width = 0;
+            samplePainted = false;
           }
         };
+
+        const rgbOf = (value) => {
+          const parts = String(value).match(/[\d.]+/g);
+          if (!parts || parts.length < 3) return null;
+          return { r: +parts[0], g: +parts[1], b: +parts[2], a: parts[3] === undefined ? 1 : +parts[3] };
+        };
+
+        const layerColor = (node) => {
+          const cs = getComputedStyle(node);
+          if (cs.display === "none" || cs.visibility === "hidden") return null;
+          const c = rgbOf(cs.backgroundColor);
+          if (!c) return null;
+          c.a *= parseFloat(cs.opacity);
+          return c.a > 0.01 ? c : null;
+        };
+
+        const over = (top, base) => ({
+          r: top.r * top.a + base.r * (1 - top.a),
+          g: top.g * top.a + base.g * (1 - top.a),
+          b: top.b * top.a + base.b * (1 - top.a),
+          a: 1,
+        });
 
         const BACKDROP = new Set(["photo-bg", "video-bg", "wallpaper-overlay", "wallpaper-vignette"]);
         const isBackdrop = (node) =>
           node === document.body ||
           BACKDROP.has(node.id) ||
           node.classList?.contains("app") ||
-          node.classList?.contains("et-view") ||
-          node.classList?.contains("et-home-center") ||
-          node.classList?.contains("et-home-widgets");
+          node.classList?.contains("et-view");
 
-        const surfaceUnder = (el) => {
-          for (let node = el; node && node !== document.documentElement; node = node.parentElement) {
-            if (isBackdrop(node)) return null;
-            const parts = getComputedStyle(node).backgroundColor.match(/[\d.]+/g);
-            if (parts && (parts[3] === undefined || +parts[3] > 0.6)) {
-              return Contrast.toHex({ r: +parts[0], g: +parts[1], b: +parts[2] });
-            }
-          }
-          return null;
-        };
-
-        const fromCanvas = (x, y) => {
+        const wallpaperAt = (x, y) => {
           if (!sampleCanvas.width) return null;
-          const d = sampleCtx.getImageData(
-            Math.min(sampleCanvas.width - 1, Math.max(0, Math.round(x))),
-            Math.min(sampleCanvas.height - 1, Math.max(0, Math.round(y))),
-            1,
-            1,
-          ).data;
-          return Contrast.toHex({ r: d[0], g: d[1], b: d[2] });
+          const step = blurPx > 1 ? Math.min(12, Math.round(blurPx)) : 0;
+          let r = 0;
+          let g = 0;
+          let b = 0;
+          let n = 0;
+          for (let dy = -step; dy <= step; dy += step || 1) {
+            for (let dx = -step; dx <= step; dx += step || 1) {
+              const sx = Math.min(sampleCanvas.width - 1, Math.max(0, Math.round(x + dx)));
+              const sy = Math.min(sampleCanvas.height - 1, Math.max(0, Math.round(y + dy)));
+              const d = sampleCtx.getImageData(sx, sy, 1, 1).data;
+              r += d[0];
+              g += d[1];
+              b += d[2];
+              n += 1;
+              if (!step) break;
+            }
+            if (!step) break;
+          }
+          return { r: r / n, g: g / n, b: b / n, a: 1 };
         };
 
-        const pageColor = () => {
-          const parts = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g);
-          return parts ? Contrast.toHex({ r: +parts[0], g: +parts[1], b: +parts[2] }) : null;
+        const baseColor = (x, y) => {
+          let base =
+            wallpaperAt(x, y) ||
+            (document.body && layerColor(document.body)) || { r: 20, g: 21, b: 26, a: 1 };
+          for (const id of ["wallpaper-overlay", "wallpaper-vignette"]) {
+            const layer = $(id);
+            const tint = layer && layerColor(layer);
+            if (tint) base = over(tint, base);
+          }
+          return base;
         };
 
         const sampleAt = (x, y) => {
           const el = document.elementFromPoint(x, y);
           if (!el) return null;
-          return surfaceUnder(el) || fromCanvas(x, y) || pageColor();
+          const stack = [];
+          for (let node = el; node && node !== document.documentElement; node = node.parentElement) {
+            if (isBackdrop(node)) break;
+            const c = layerColor(node);
+            if (c) {
+              stack.push(c);
+              if (c.a > 0.995) break;
+            }
+          }
+          let color =
+            stack.length && stack[stack.length - 1].a > 0.995
+              ? stack.pop()
+              : baseColor(x, y);
+          for (let i = stack.length - 1; i >= 0; i -= 1) color = over(stack[i], color);
+          return Contrast.toHex({
+            r: Math.round(color.r),
+            g: Math.round(color.g),
+            b: Math.round(color.b),
+          });
         };
 
         const loupe = document.createElement("div");
