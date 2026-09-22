@@ -507,8 +507,6 @@ const SettingsRenderer = (() => {
     if (closeBtn) closeBtn.addEventListener("click", closeSideSheet);
 
     if (overlay) {
-      const isPicker = (el) => el?.matches?.('input[type="color"]');
-      const stopPicking = () => overlay.classList.remove("is-picking");
       let pop = null;
       let popInput = null;
 
@@ -827,51 +825,6 @@ const SettingsRenderer = (() => {
         loupe.hidden = true;
         document.body.append(loupe);
 
-        const dragSample = (e) => {
-          if (!pop) return;
-          e.preventDefault();
-          const panel = $("sidesheetPanel");
-          let live = false;
-          paintSampleCanvas();
-          overlay.classList.add("is-sampling");
-
-          const hits = (el, x, y) => {
-            if (!el) return false;
-            const r = el.getBoundingClientRect();
-            return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-          };
-
-          const move = (ev) => {
-            const insideUi =
-              hits(panel, ev.clientX, ev.clientY) || hits(pop, ev.clientX, ev.clientY);
-            if (!live && insideUi) return;
-            if (!live) {
-              live = true;
-              overlay.classList.add("is-live");
-              pop.classList.add("is-hidden");
-              loupe.hidden = false;
-            }
-            const hex = sampleAt(ev.clientX, ev.clientY);
-            loupe.style.left = `${ev.clientX + 18}px`;
-            loupe.style.top = `${ev.clientY + 18}px`;
-            if (!hex) return;
-            loupe.style.background = hex;
-            ({ h, s: sat, v: val } = hexToHsv(hex));
-            paint();
-          };
-
-          const up = () => {
-            document.removeEventListener("pointermove", move);
-            document.removeEventListener("pointerup", up);
-            loupe.hidden = true;
-            overlay.classList.remove("is-sampling", "is-live");
-            pop?.classList.remove("is-hidden");
-          };
-
-          document.addEventListener("pointermove", move);
-          document.addEventListener("pointerup", up);
-        };
-
         let armed = null;
 
         const disarm = (restore) => {
@@ -911,19 +864,27 @@ const SettingsRenderer = (() => {
             return !inBox(panel) && !inBox(pop);
           };
 
+          let cleared = false;
+          let lastRead = 0;
+
           const readAt = (x, y) => {
-            const away = outside(x, y);
-            overlay.classList.toggle("is-live", away);
-            overlay.classList.toggle("is-sampling", away);
-            pop.classList.toggle("is-hidden", away);
+            if (!cleared && outside(x, y)) {
+              cleared = true;
+              overlay.classList.add("is-live", "is-sampling");
+              pop.classList.add("is-hidden");
+            }
             return sampleAt(x, y);
           };
 
           const move = (ev) => {
-            const hex = readAt(ev.clientX, ev.clientY);
+            const { clientX: x, clientY: y } = ev;
             loupe.hidden = false;
-            loupe.style.left = `${ev.clientX + 18}px`;
-            loupe.style.top = `${ev.clientY + 18}px`;
+            loupe.style.left = `${x + 18}px`;
+            loupe.style.top = `${y + 18}px`;
+            const now = performance.now();
+            if (now - lastRead < 16) return;
+            lastRead = now;
+            const hex = readAt(x, y);
             if (!hex) return;
             loupe.style.background = hex;
             loupe.dataset.hex = hex.toUpperCase();
@@ -932,7 +893,7 @@ const SettingsRenderer = (() => {
           };
 
           const pick = (ev) => {
-            if (ev.target.closest?.(".st-picker-drop")) return;
+            if (!cleared || ev.target.closest?.(".st-picker-drop")) return;
             ev.preventDefault();
             ev.stopPropagation();
             const hex = readAt(ev.clientX, ev.clientY);
@@ -962,7 +923,6 @@ const SettingsRenderer = (() => {
           e.stopPropagation();
           armSampling();
         });
-        preview.addEventListener("pointerdown", dragSample);
         closeHooks.push(() => disarm(null));
 
         pop.querySelector(".st-picker-head").addEventListener("pointerdown", (e) => {
@@ -1009,17 +969,8 @@ const SettingsRenderer = (() => {
       });
 
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && pop) {
-          closePop();
-          stopPicking();
-        }
+        if (e.key === "Escape" && pop) closePop();
       });
-
-      overlay.addEventListener("change", (e) => {
-        if (isPicker(e.target)) stopPicking();
-      });
-      window.addEventListener("focus", stopPicking);
-      document.addEventListener("visibilitychange", stopPicking);
 
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay && !gestureStartedIn($("sidesheetPanel")))

@@ -14,10 +14,6 @@
   display: flex;
 }
 
-.et-set-overlay.is-picking {
-  visibility: hidden;
-}
-
 .et-set-overlay.is-sampling {
   pointer-events: none;
 }
