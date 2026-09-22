@@ -992,8 +992,8 @@ const WidgetsRenderer = (() => {
 
   function measureDock() {
     const pins = $("homePinned");
-    const home = $("homeView");
-    if (!pins || !home) return;
+    const home = document.documentElement;
+    if (!pins) return;
     const sideDocked =
       document.body.classList.contains("pins-pos-left") ||
       document.body.classList.contains("pins-pos-right");

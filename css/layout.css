@@ -2445,6 +2445,14 @@ body.pins-pos-bottom .et-view-home.active > .et-home-center {
   margin-block: auto 0;
 }
 
+body.pins-pos-left:is(.clock-pos-top-left, .clock-pos-bottom-left) .et-home-clock {
+  left: calc(var(--pins-dock-w, 0px) + (20px * var(--ui-scale)) + var(--sp-4));
+}
+
+body.pins-pos-right:is(.clock-pos-top-right, .clock-pos-bottom-right) .et-home-clock {
+  right: calc(var(--pins-dock-w, 0px) + (20px * var(--ui-scale)) + var(--sp-4));
+}
+
 body.pins-pos-left .et-view-home.active,
 body.pins-pos-right .et-view-home.active {
   padding-inline: calc(

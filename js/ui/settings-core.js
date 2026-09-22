@@ -509,112 +509,204 @@ const SettingsRenderer = (() => {
     if (overlay) {
       const isPicker = (el) => el?.matches?.('input[type="color"]');
       const stopPicking = () => overlay.classList.remove("is-picking");
-      let menu = null;
-      let menuInput = null;
-      let bypass = false;
+      let pop = null;
+      let popInput = null;
 
-      const closeMenu = () => {
-        menu?.remove();
-        menu = null;
-        menuInput = null;
+      const hsvToHex = (h, sat, val) => {
+        const f = (n) => {
+          const k = (n + h / 60) % 6;
+          const v = val - val * sat * Math.max(0, Math.min(k, 4 - k, 1));
+          return Math.round(v * 255);
+        };
+        return Contrast.toHex({ r: f(5), g: f(3), b: f(1) });
       };
 
-      const commit = (input, hex) => {
-        if (!HEX6_RE.test(hex)) return;
-        input.value = hex.toLowerCase();
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.dispatchEvent(new Event("change", { bubbles: true }));
+      const hexToHsv = (hex) => {
+        const { r, g, b } = Contrast.toRgb(hex);
+        const max = Math.max(r, g, b) / 255;
+        const min = Math.min(r, g, b) / 255;
+        const d = max - min;
+        let h = 0;
+        if (d) {
+          if (max === r / 255) h = ((g - b) / 255 / d) % 6;
+          else if (max === g / 255) h = (b - r) / 255 / d + 2;
+          else h = (r - g) / 255 / d + 4;
+          h *= 60;
+          if (h < 0) h += 360;
+        }
+        return { h, s: max ? d / max : 0, v: max };
       };
 
-      function openMenu(input) {
-        closeMenu();
-        menuInput = input;
-        menu = document.createElement("div");
-        menu.className = "st-color-menu";
-        menu.innerHTML = `
-          <div class="st-color-menu-row">
-            ${recentColors()
-              .map(
-                (c) =>
-                  `<button type="button" class="st-recent-swatch" data-color="${c}" style="background:${c}" title="Use ${c}" aria-label="Use colour ${c}"></button>`,
-              )
-              .join("")}
-          </div>
-          <label class="st-color-menu-hex">
-            <span>Hex</span>
-            <input type="text" value="${input.value}" maxlength="7" spellcheck="false" />
-          </label>
-          ${"EyeDropper" in window ? '<button type="button" class="st-color-menu-btn" data-act="screen">Pick from screen</button>' : ""}
-          <button type="button" class="st-color-menu-btn" data-act="more">More colours…</button>`;
-        const r = input.getBoundingClientRect();
-        menu.style.top = `${Math.min(r.bottom + 6, innerHeight - 200)}px`;
-        menu.style.left = `${Math.min(r.left, innerWidth - 240)}px`;
-        document.body.append(menu);
-        menu.querySelector(".st-color-menu-hex input")?.focus();
-      }
+      const closePop = () => {
+        if (pop && popInput) rememberColor(popInput.value);
+        pop?.remove();
+        pop = null;
+        popInput = null;
+      };
+      closeColorPopover = closePop;
 
-      overlay.addEventListener("click", (e) => {
-        const input = e.target.closest?.('input[type="color"]');
-        if (!input || bypass) return;
-        e.preventDefault();
-        if (menuInput === input) closeMenu();
-        else openMenu(input);
-      });
+      const commitColor = (hex) => {
+        if (!popInput || !HEX6_RE.test(hex)) return;
+        popInput.value = hex.toLowerCase();
+        popInput.dispatchEvent(new Event("input", { bubbles: true }));
+        popInput.dispatchEvent(new Event("change", { bubbles: true }));
+      };
 
-      document.addEventListener("click", async (e) => {
-        if (!menu) return;
-        const input = menuInput;
-        const swatch = e.target.closest?.(".st-recent-swatch");
-        if (swatch && menu.contains(swatch)) {
-          commit(input, swatch.dataset.color);
-          closeMenu();
-          return;
-        }
-        const act = e.target.closest?.(".st-color-menu-btn")?.dataset.act;
-        if (act === "more") {
-          closeMenu();
-          bypass = true;
-          try {
-            input.showPicker ? input.showPicker() : input.click();
-          } catch {
-            input.click();
-          }
-          setTimeout(() => (bypass = false), 0);
-          return;
-        }
-        if (act === "screen") {
-          closeMenu();
+      function openPop(input) {
+        closePop();
+        popInput = input;
+        let { h, s: sat, v: val } = hexToHsv(input.value);
+
+        pop = document.createElement("div");
+        pop.className = "st-picker";
+        setSafeHTML(
+          pop,
+          '<div class="st-picker-head">' +
+            '<span class="st-picker-title">Colour</span>' +
+            '<button type="button" class="st-picker-close" aria-label="Close">&#10005;</button>' +
+            "</div>" +
+            '<div class="st-picker-area" tabindex="0" role="slider" aria-label="Saturation and brightness"><span class="st-picker-thumb"></span></div>' +
+            '<input type="range" class="st-picker-hue" min="0" max="359" step="1" aria-label="Hue" />' +
+            '<div class="st-picker-foot">' +
+            '<span class="st-picker-preview"></span>' +
+            '<input type="text" class="st-picker-hex" maxlength="7" spellcheck="false" aria-label="Hex colour" />' +
+            ("EyeDropper" in window
+              ? '<button type="button" class="st-picker-drop" title="Pick from screen" aria-label="Pick a colour from the screen">&#9678;</button>'
+              : "") +
+            "</div>" +
+            '<div class="st-picker-recent"></div>',
+        );
+
+        const area = pop.querySelector(".st-picker-area");
+        const thumb = pop.querySelector(".st-picker-thumb");
+        const hue = pop.querySelector(".st-picker-hue");
+        const hexField = pop.querySelector(".st-picker-hex");
+        const preview = pop.querySelector(".st-picker-preview");
+        const recent = pop.querySelector(".st-picker-recent");
+
+        const paint = (apply = true) => {
+          const value = hsvToHex(h, sat, val);
+          area.style.setProperty("--hue", hsvToHex(h, 1, 1));
+          thumb.style.left = `${sat * 100}%`;
+          thumb.style.top = `${(1 - val) * 100}%`;
+          thumb.style.background = value;
+          preview.style.background = value;
+          hue.value = String(Math.round(h));
+          if (document.activeElement !== hexField) hexField.value = value;
+          if (apply) commitColor(value);
+        };
+
+        recent.replaceChildren(
+          ...recentColors().map((c) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "st-recent-swatch";
+            b.style.background = c;
+            b.title = `Use ${c}`;
+            b.setAttribute("aria-label", `Use colour ${c}`);
+            b.addEventListener("click", () => {
+              ({ h, s: sat, v: val } = hexToHsv(c));
+              paint();
+            });
+            return b;
+          }),
+        );
+
+        const fromPointer = (e) => {
+          const r = area.getBoundingClientRect();
+          sat = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+          val = 1 - Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+          paint();
+        };
+        area.addEventListener("pointerdown", (e) => {
+          area.setPointerCapture(e.pointerId);
+          fromPointer(e);
+        });
+        area.addEventListener("pointermove", (e) => {
+          if (e.buttons) fromPointer(e);
+        });
+        area.addEventListener("keydown", (e) => {
+          const step = e.shiftKey ? 0.1 : 0.02;
+          if (e.key === "ArrowRight") sat = Math.min(1, sat + step);
+          else if (e.key === "ArrowLeft") sat = Math.max(0, sat - step);
+          else if (e.key === "ArrowUp") val = Math.min(1, val + step);
+          else if (e.key === "ArrowDown") val = Math.max(0, val - step);
+          else return;
+          e.preventDefault();
+          paint();
+        });
+        hue.addEventListener("input", () => {
+          h = +hue.value;
+          paint();
+        });
+        hexField.addEventListener("input", () => {
+          const v = hexField.value.trim().replace(/^#?/, "#");
+          if (!HEX6_RE.test(v)) return;
+          ({ h, s: sat, v: val } = hexToHsv(v));
+          paint();
+        });
+        pop.querySelector(".st-picker-close").addEventListener("click", closePop);
+        pop.querySelector(".st-picker-drop")?.addEventListener("click", async () => {
           overlay.classList.add("is-picking");
+          pop.classList.add("is-hidden");
           try {
             const { sRGBHex } = await new window.EyeDropper().open();
-            commit(input, sRGBHex);
+            ({ h, s: sat, v: val } = hexToHsv(sRGBHex));
+            paint();
           } catch {
           } finally {
             stopPicking();
-            input.focus();
+            pop?.classList.remove("is-hidden");
           }
-          return;
-        }
-        if (!menu.contains(e.target) && !e.target.closest('input[type="color"]')) closeMenu();
+        });
+
+        pop.querySelector(".st-picker-head").addEventListener("pointerdown", (e) => {
+          if (e.target.closest(".st-picker-close")) return;
+          const box = pop.getBoundingClientRect();
+          const dx = e.clientX - box.left;
+          const dy = e.clientY - box.top;
+          const move = (ev) => {
+            pop.style.left = `${Math.max(4, Math.min(innerWidth - box.width - 4, ev.clientX - dx))}px`;
+            pop.style.top = `${Math.max(4, Math.min(innerHeight - box.height - 4, ev.clientY - dy))}px`;
+          };
+          const up = () => {
+            document.removeEventListener("pointermove", move);
+            document.removeEventListener("pointerup", up);
+          };
+          document.addEventListener("pointermove", move);
+          document.addEventListener("pointerup", up);
+        });
+
+        const at = input.getBoundingClientRect();
+        pop.style.left = `${Math.max(4, Math.min(at.left - 48, innerWidth - 252))}px`;
+        pop.style.top = `${Math.max(4, Math.min(at.bottom + 8, innerHeight - 340))}px`;
+        document.body.append(pop);
+        paint(false);
+      }
+
+      overlay.addEventListener("click", (e) => {
+        const btn = e.target.closest?.(".st-swatch");
+        if (!btn) return;
+        const input = $(btn.dataset.for);
+        if (!input) return;
+        if (popInput === input) closePop();
+        else openPop(input);
       });
 
-      document.addEventListener("input", (e) => {
-        if (!menu || !menu.contains(e.target) || e.target.type !== "text") return;
-        const hex = e.target.value.trim().replace(/^#?/, "#");
-        if (HEX6_RE.test(hex)) commit(menuInput, hex);
+      document.addEventListener("pointerdown", (e) => {
+        if (!pop || pop.contains(e.target) || e.target.closest?.(".st-swatch")) return;
+        closePop();
       });
 
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && menu) {
-          closeMenu();
+        if (e.key === "Escape" && pop) {
+          closePop();
           stopPicking();
         }
       });
 
       overlay.addEventListener("change", (e) => {
-        if (!isPicker(e.target)) return;
-        stopPicking();
-        rememberColor(e.target.value);
+        if (isPicker(e.target)) stopPicking();
       });
       window.addEventListener("focus", stopPicking);
       document.addEventListener("visibilitychange", stopPicking);
@@ -786,6 +878,7 @@ const SettingsRenderer = (() => {
   }
 
   const HEX6_RE = /^#[0-9a-f]{6}$/i;
+  let closeColorPopover = () => {};
 
   function recentColors() {
     const list = StorageManager.getSettings().recentColors;
@@ -800,7 +893,25 @@ const SettingsRenderer = (() => {
     StorageManager.saveSettings();
   }
 
+  function paintSwatches(root) {
+    root.querySelectorAll("input.st-color").forEach((input) => {
+      if (input.previousElementSibling?.classList.contains("st-swatch")) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "st-swatch";
+      btn.dataset.for = input.id;
+      btn.style.background = input.value;
+      const label = input.closest(".st-row")?.querySelector(".st-label")?.textContent;
+      btn.setAttribute("aria-label", label ? `${label.trim()}: choose colour` : "Choose colour");
+      input.before(btn);
+      input.hidden = true;
+      input.tabIndex = -1;
+      input.addEventListener("input", () => (btn.style.background = input.value));
+    });
+  }
+
   function paintPage(mods, page, token, savedScrollTop) {
+    closeColorPopover();
     const body = $("sidesheetBody");
     if (!body || token !== renderToken || activePage !== page) return;
     const settings = StorageManager.getSettings();
@@ -816,6 +927,8 @@ const SettingsRenderer = (() => {
     body.querySelectorAll("[data-page]").forEach((el) => {
       if (el.dataset.page !== page) el.remove();
     });
+
+    paintSwatches(body);
 
 
 

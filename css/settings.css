@@ -18,43 +18,154 @@
   visibility: hidden;
 }
 
-.st-color-menu {
+.st-swatch {
+  width: 48px;
+  height: 32px;
+  padding: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.st-swatch:hover {
+  border-color: var(--border-strong);
+}
+
+.st-picker {
   position: fixed;
   z-index: var(--z-modal);
+  width: 236px;
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  width: 220px;
-  padding: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
   background: var(--menu-bg);
   border: 1px solid var(--menu-border);
   border-radius: var(--r-md);
-  box-shadow: var(--e3);
+  box-shadow: var(--e4);
 }
 
-.st-color-menu-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+.st-picker.is-hidden {
+  visibility: hidden;
 }
 
-.st-color-menu-row:empty {
-  display: none;
-}
-
-.st-color-menu-hex {
+.st-picker-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--sp-2);
+  margin: calc(var(--sp-1) * -1) calc(var(--sp-1) * -1) 0;
+  padding: var(--sp-1);
+  cursor: grab;
+  user-select: none;
+}
+
+.st-picker-head:active {
+  cursor: grabbing;
+}
+
+.st-picker-title {
   font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
   color: var(--text-dim);
 }
 
-.st-color-menu-hex input {
+.st-picker-close {
+  padding: 2px 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+
+.st-picker-close:hover {
+  color: var(--text);
+  background: var(--menu-hover);
+}
+
+.st-picker-area {
+  position: relative;
+  height: 140px;
+  border-radius: var(--r-sm);
+  cursor: crosshair;
+  touch-action: none;
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, var(--hue, #f00));
+}
+
+.st-picker-thumb {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.st-picker-hue {
+  width: 100%;
+  height: 12px;
+  margin: 0;
+  appearance: none;
+  border-radius: var(--r-pill);
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+}
+
+.st-picker-hue::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  background: transparent;
+  cursor: pointer;
+}
+
+.st-picker-hue::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.st-picker-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.st-picker-preview {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-xs);
+}
+
+.st-picker-hex {
   flex: 1;
   min-width: 0;
   padding: 6px 8px;
   font: inherit;
+  font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--text);
   background: var(--surface-panel-2);
@@ -62,22 +173,33 @@
   border-radius: var(--r-sm);
 }
 
-.st-color-menu-btn {
-  font: inherit;
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-medium);
-  text-align: left;
-  padding: 7px 10px;
-  color: var(--text);
-  background: transparent;
+.st-picker-drop {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  background: var(--surface-panel-2);
   border: 1px solid var(--border-soft);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
 
-.st-color-menu-btn:hover {
-  background: var(--menu-hover);
+.st-picker-drop:hover {
+  color: var(--text);
   border-color: var(--border-strong);
+}
+
+.st-picker-recent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.st-picker-recent:empty {
+  display: none;
 }
 
 .st-recent-swatch {
