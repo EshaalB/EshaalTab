@@ -654,13 +654,17 @@ const SettingsRenderer = (() => {
         pop.querySelector(".st-picker-close").addEventListener("click", closePop);
 
         const sampleCanvas = document.createElement("canvas");
+        sampleCanvas.width = 0;
+        sampleCanvas.height = 0;
         const sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
         let samplePainted = false;
+        let hasWallpaper = false;
         let blurPx = 0;
 
         const paintSampleCanvas = async () => {
-          if (samplePainted && sampleCanvas.width) return;
+          if (samplePainted && hasWallpaper) return;
           samplePainted = true;
+          hasWallpaper = false;
           const bg = $("photo-bg");
           const src = /^url\("(.*)"\)$/.exec(bg?.style.backgroundImage || "")?.[1];
           const s = StorageManager.getSettings();
@@ -685,6 +689,7 @@ const SettingsRenderer = (() => {
             const px = (s.wallpaperPosX ?? 50) / 100;
             const py = (s.wallpaperPosY ?? 50) / 100;
             sampleCtx.drawImage(img, (w - dw) * px, (h - dh) * py, dw, dh);
+            hasWallpaper = true;
           } catch {
             sampleCanvas.width = 0;
             samplePainted = false;
@@ -721,7 +726,7 @@ const SettingsRenderer = (() => {
           node.classList?.contains("et-view");
 
         const wallpaperAt = (x, y) => {
-          if (!sampleCanvas.width) return null;
+          if (!hasWallpaper) return null;
           const step = blurPx > 1 ? Math.min(12, Math.round(blurPx)) : 0;
           let r = 0;
           let g = 0;
@@ -744,15 +749,51 @@ const SettingsRenderer = (() => {
         };
 
         const baseColor = (x, y) => {
-          let base =
-            wallpaperAt(x, y) ||
-            (document.body && layerColor(document.body)) || { r: 20, g: 21, b: 26, a: 1 };
+          let base = wallpaperAt(x, y);
+          if (!base) {
+            for (const node of [$("photo-bg"), document.body, document.documentElement]) {
+              const c = node && layerColor(node);
+              if (c && c.a > 0.01) {
+                base = c;
+                break;
+              }
+            }
+          }
+          if (!base) base = { r: 20, g: 21, b: 26, a: 1 };
           for (const id of ["wallpaper-overlay", "wallpaper-vignette"]) {
             const layer = $(id);
             const tint = layer && layerColor(layer);
             if (tint) base = over(tint, base);
           }
           return base;
+        };
+
+        const inkAt = (el, x, y) => {
+          const svg = el.closest?.("svg");
+          if (svg) {
+            const cs = getComputedStyle(el.tagName === "svg" ? el : el);
+            const paint = cs.stroke !== "none" ? cs.stroke : cs.fill;
+            const c = rgbOf(paint);
+            if (c && c.a > 0.01) {
+              c.a *= parseFloat(getComputedStyle(svg).opacity);
+              return c;
+            }
+          }
+          for (const node of el.childNodes || []) {
+            if (node.nodeType !== 3 || !node.textContent.trim()) continue;
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            for (const r of range.getClientRects()) {
+              if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+                const cs = getComputedStyle(el);
+                const c = rgbOf(cs.color);
+                if (!c) return null;
+                c.a *= parseFloat(cs.opacity);
+                return c.a > 0.01 ? c : null;
+              }
+            }
+          }
+          return null;
         };
 
         const sampleAt = (x, y) => {
@@ -772,6 +813,8 @@ const SettingsRenderer = (() => {
               ? stack.pop()
               : baseColor(x, y);
           for (let i = stack.length - 1; i >= 0; i -= 1) color = over(stack[i], color);
+          const ink = inkAt(el, x, y);
+          if (ink) color = over(ink, color);
           return Contrast.toHex({
             r: Math.round(color.r),
             g: Math.round(color.g),
