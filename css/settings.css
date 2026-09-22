@@ -40,6 +40,11 @@
   border-color: var(--border-strong);
 }
 
+body.is-eyedropping,
+body.is-eyedropping * {
+  cursor: crosshair !important;
+}
+
 .st-loupe {
   position: fixed;
   z-index: calc(var(--z-modal) + 1);
@@ -206,6 +211,12 @@
   border: 1px solid var(--border-soft);
   border-radius: var(--r-sm);
   cursor: pointer;
+}
+
+.st-picker-drop.is-armed {
+  color: var(--accent-ink, var(--accent-color));
+  border-color: var(--accent-color);
+  background: var(--menu-active-bg);
 }
 
 .st-picker-drop:hover {

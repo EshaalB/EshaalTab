@@ -537,7 +537,10 @@ const SettingsRenderer = (() => {
         return { h, s: max ? d / max : 0, v: max };
       };
 
+      const closeHooks = [];
       const closePop = () => {
+        while (closeHooks.length) closeHooks.pop()();
+        document.body.classList.remove("is-eyedropping");
         if (pop && popInput) rememberColor(popInput.value);
         document.querySelector(".st-loupe")?.remove();
         pop?.remove();
@@ -555,6 +558,7 @@ const SettingsRenderer = (() => {
 
       function openPop(input) {
         closePop();
+        closeHooks.length = 0;
         popInput = input;
         let { h, s: sat, v: val } = hexToHsv(input.value);
 
@@ -775,25 +779,93 @@ const SettingsRenderer = (() => {
           document.addEventListener("pointerup", up);
         };
 
-        const screenSample = async () => {
-          if (!("EyeDropper" in window)) return;
-          overlay.classList.add("is-picking");
-          pop.classList.add("is-hidden");
-          try {
-            const { sRGBHex } = await new window.EyeDropper().open();
-            ({ h, s: sat, v: val } = hexToHsv(sRGBHex));
+        let armed = null;
+
+        const disarm = (restore) => {
+          if (!armed) return;
+          document.removeEventListener("pointermove", armed.move, true);
+          document.removeEventListener("pointerdown", armed.pick, true);
+          document.removeEventListener("keydown", armed.key, true);
+          armed = null;
+          loupe.hidden = true;
+          overlay.classList.remove("is-sampling", "is-live");
+          pop?.classList.remove("is-hidden");
+          dropBtn?.classList.remove("is-armed");
+          if (restore) {
+            ({ h, s: sat, v: val } = hexToHsv(restore));
             paint();
-          } catch {
-          } finally {
-            stopPicking();
-            pop?.classList.remove("is-hidden");
           }
         };
 
+        const armSampling = () => {
+          if (armed) {
+            disarm(armed.startHex);
+            return;
+          }
+          paintSampleCanvas();
+          const startHex = hsvToHex(h, sat, val);
+          overlay.classList.add("is-sampling");
+          dropBtn?.classList.add("is-armed");
+          document.body.classList.add("is-eyedropping");
+
+          const outside = (x, y) => {
+            const panel = $("sidesheetPanel");
+            const inBox = (el) => {
+              if (!el) return false;
+              const r = el.getBoundingClientRect();
+              return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+            };
+            return !inBox(panel) && !inBox(pop);
+          };
+
+          const move = (ev) => {
+            const away = outside(ev.clientX, ev.clientY);
+            overlay.classList.toggle("is-live", away);
+            pop.classList.toggle("is-hidden", away);
+            loupe.hidden = !away;
+            if (!away) return;
+            const hex = sampleAt(ev.clientX, ev.clientY);
+            loupe.style.left = `${ev.clientX + 18}px`;
+            loupe.style.top = `${ev.clientY + 18}px`;
+            if (!hex) return;
+            loupe.style.background = hex;
+            ({ h, s: sat, v: val } = hexToHsv(hex));
+            paint();
+          };
+
+          const pick = (ev) => {
+            if (!outside(ev.clientX, ev.clientY)) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            const hex = sampleAt(ev.clientX, ev.clientY);
+            disarm(null);
+            if (hex) {
+              ({ h, s: sat, v: val } = hexToHsv(hex));
+              paint();
+            }
+          };
+
+          const key = (ev) => {
+            if (ev.key !== "Escape") return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            disarm(startHex);
+          };
+
+          armed = { move, pick, key, startHex };
+          document.addEventListener("pointermove", move, true);
+          document.addEventListener("pointerdown", pick, true);
+          document.addEventListener("keydown", key, true);
+        };
+
         const dropBtn = pop.querySelector(".st-picker-drop");
-        dropBtn?.addEventListener("click", screenSample);
-        dropBtn?.addEventListener("pointerdown", dragSample);
+        dropBtn?.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          armSampling();
+        });
         preview.addEventListener("pointerdown", dragSample);
+        closeHooks.push(() => disarm(null));
 
         pop.querySelector(".st-picker-head").addEventListener("pointerdown", (e) => {
           if (e.target.closest(".st-picker-close")) return;
