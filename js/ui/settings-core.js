@@ -539,6 +539,7 @@ const SettingsRenderer = (() => {
 
       const closePop = () => {
         if (pop && popInput) rememberColor(popInput.value);
+        document.querySelector(".st-loupe")?.remove();
         pop?.remove();
         pop = null;
         popInput = null;
@@ -570,9 +571,10 @@ const SettingsRenderer = (() => {
             '<div class="st-picker-foot">' +
             '<span class="st-picker-preview"></span>' +
             '<input type="text" class="st-picker-hex" maxlength="7" spellcheck="false" aria-label="Hex colour" />' +
-            ("EyeDropper" in window
-              ? '<button type="button" class="st-picker-drop" title="Pick from anywhere on screen — or drag this out of Settings" aria-label="Pick a colour from anywhere on screen">&#9678;</button>'
-              : "") +
+            '<button type="button" class="st-picker-drop" title="Pick a colour: click, or drag this onto what you want" aria-label="Pick a colour from the page">' +
+            '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="m2 22 1.5-1.5h3l8-8"/><path d="M3.5 20.5v-3l8-8"/>' +
+            '<path d="m14.5 6.5 3.2-3.2a2.1 2.1 0 1 1 3 3L17.5 9.5l.5.5a2 2 0 0 1-2.8 2.8l-4-4A2 2 0 0 1 14 6l.5.5Z"/></svg></button>' +
             "</div>" +
             '<div class="st-picker-recent"></div>',
         );
@@ -647,8 +649,134 @@ const SettingsRenderer = (() => {
         });
         pop.querySelector(".st-picker-close").addEventListener("click", closePop);
 
-        const sampleScreen = async () => {
-          if (!("EyeDropper" in window) || !pop) return;
+        const sampleCanvas = document.createElement("canvas");
+        const sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
+        let samplePainted = false;
+
+        const paintSampleCanvas = async () => {
+          if (samplePainted) return;
+          samplePainted = true;
+          const bg = $("photo-bg");
+          const src = /^url\("(.*)"\)$/.exec(bg?.style.backgroundImage || "")?.[1];
+          if (!src) return;
+          try {
+            const img = new Image();
+            const ready = new Promise((res, rej) => {
+              img.onload = res;
+              img.onerror = rej;
+            });
+            img.src = src;
+            if (!img.complete) await ready;
+            const w = innerWidth;
+            const h = innerHeight;
+            sampleCanvas.width = w;
+            sampleCanvas.height = h;
+            const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+            const dw = img.naturalWidth * scale;
+            const dh = img.naturalHeight * scale;
+            const s = StorageManager.getSettings();
+            const px = (s.wallpaperPosX ?? 50) / 100;
+            const py = (s.wallpaperPosY ?? 50) / 100;
+            sampleCtx.drawImage(img, (w - dw) * px, (h - dh) * py, dw, dh);
+          } catch {
+            sampleCanvas.width = 0;
+          }
+        };
+
+        const BACKDROP = new Set(["photo-bg", "video-bg", "wallpaper-overlay", "wallpaper-vignette"]);
+        const isBackdrop = (node) =>
+          node === document.body ||
+          BACKDROP.has(node.id) ||
+          node.classList?.contains("app") ||
+          node.classList?.contains("et-view") ||
+          node.classList?.contains("et-home-center") ||
+          node.classList?.contains("et-home-widgets");
+
+        const surfaceUnder = (el) => {
+          for (let node = el; node && node !== document.documentElement; node = node.parentElement) {
+            if (isBackdrop(node)) return null;
+            const parts = getComputedStyle(node).backgroundColor.match(/[\d.]+/g);
+            if (parts && (parts[3] === undefined || +parts[3] > 0.6)) {
+              return Contrast.toHex({ r: +parts[0], g: +parts[1], b: +parts[2] });
+            }
+          }
+          return null;
+        };
+
+        const fromCanvas = (x, y) => {
+          if (!sampleCanvas.width) return null;
+          const d = sampleCtx.getImageData(
+            Math.min(sampleCanvas.width - 1, Math.max(0, Math.round(x))),
+            Math.min(sampleCanvas.height - 1, Math.max(0, Math.round(y))),
+            1,
+            1,
+          ).data;
+          return Contrast.toHex({ r: d[0], g: d[1], b: d[2] });
+        };
+
+        const pageColor = () => {
+          const parts = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g);
+          return parts ? Contrast.toHex({ r: +parts[0], g: +parts[1], b: +parts[2] }) : null;
+        };
+
+        const sampleAt = (x, y) => {
+          const el = document.elementFromPoint(x, y);
+          if (!el) return null;
+          return surfaceUnder(el) || fromCanvas(x, y) || pageColor();
+        };
+
+        const loupe = document.createElement("div");
+        loupe.className = "st-loupe";
+        loupe.hidden = true;
+        document.body.append(loupe);
+
+        const dragSample = (e) => {
+          if (!pop) return;
+          e.preventDefault();
+          const panel = $("sidesheetPanel");
+          let live = false;
+          paintSampleCanvas();
+          overlay.classList.add("is-sampling");
+
+          const hits = (el, x, y) => {
+            if (!el) return false;
+            const r = el.getBoundingClientRect();
+            return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+          };
+
+          const move = (ev) => {
+            const insideUi =
+              hits(panel, ev.clientX, ev.clientY) || hits(pop, ev.clientX, ev.clientY);
+            if (!live && insideUi) return;
+            if (!live) {
+              live = true;
+              overlay.classList.add("is-live");
+              pop.classList.add("is-hidden");
+              loupe.hidden = false;
+            }
+            const hex = sampleAt(ev.clientX, ev.clientY);
+            loupe.style.left = `${ev.clientX + 18}px`;
+            loupe.style.top = `${ev.clientY + 18}px`;
+            if (!hex) return;
+            loupe.style.background = hex;
+            ({ h, s: sat, v: val } = hexToHsv(hex));
+            paint();
+          };
+
+          const up = () => {
+            document.removeEventListener("pointermove", move);
+            document.removeEventListener("pointerup", up);
+            loupe.hidden = true;
+            overlay.classList.remove("is-sampling", "is-live");
+            pop?.classList.remove("is-hidden");
+          };
+
+          document.addEventListener("pointermove", move);
+          document.addEventListener("pointerup", up);
+        };
+
+        const screenSample = async () => {
+          if (!("EyeDropper" in window)) return;
           overlay.classList.add("is-picking");
           pop.classList.add("is-hidden");
           try {
@@ -662,31 +790,10 @@ const SettingsRenderer = (() => {
           }
         };
 
-        const dragOut = (e) => {
-          if (!("EyeDropper" in window)) return;
-          const panel = $("sidesheetPanel");
-          let armed = true;
-          const move = (ev) => {
-            if (!armed || !pop) return;
-            const inPanel = panel?.contains(document.elementFromPoint(ev.clientX, ev.clientY));
-            const inPop = pop.contains(document.elementFromPoint(ev.clientX, ev.clientY));
-            if (inPanel || inPop) return;
-            armed = false;
-            stop();
-            sampleScreen();
-          };
-          const stop = () => {
-            document.removeEventListener("pointermove", move);
-            document.removeEventListener("pointerup", stop);
-            armed = false;
-          };
-          document.addEventListener("pointermove", move);
-          document.addEventListener("pointerup", stop);
-        };
-
-        pop.querySelector(".st-picker-preview").addEventListener("pointerdown", dragOut);
-        pop.querySelector(".st-picker-drop")?.addEventListener("click", sampleScreen);
-        pop.querySelector(".st-picker-drop")?.addEventListener("pointerdown", dragOut);
+        const dropBtn = pop.querySelector(".st-picker-drop");
+        dropBtn?.addEventListener("click", screenSample);
+        dropBtn?.addEventListener("pointerdown", dragSample);
+        preview.addEventListener("pointerdown", dragSample);
 
         pop.querySelector(".st-picker-head").addEventListener("pointerdown", (e) => {
           if (e.target.closest(".st-picker-close")) return;
@@ -705,10 +812,15 @@ const SettingsRenderer = (() => {
           document.addEventListener("pointerup", up);
         });
 
-        const at = input.getBoundingClientRect();
-        pop.style.left = `${Math.max(4, Math.min(at.left - 48, innerWidth - 252))}px`;
-        pop.style.top = `${Math.max(4, Math.min(at.bottom + 8, innerHeight - 340))}px`;
         document.body.append(pop);
+        const at = (input.previousElementSibling || input).getBoundingClientRect();
+        const box = pop.getBoundingClientRect();
+        const left =
+          at.left - box.width - 10 >= 8
+            ? at.left - box.width - 10
+            : Math.min(at.right + 10, innerWidth - box.width - 8);
+        pop.style.left = `${Math.max(8, left)}px`;
+        pop.style.top = `${Math.max(8, Math.min(at.top - 8, innerHeight - box.height - 8))}px`;
         paint(false);
       }
 
