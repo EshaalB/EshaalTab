@@ -571,7 +571,7 @@ const SettingsRenderer = (() => {
             '<span class="st-picker-preview"></span>' +
             '<input type="text" class="st-picker-hex" maxlength="7" spellcheck="false" aria-label="Hex colour" />' +
             ("EyeDropper" in window
-              ? '<button type="button" class="st-picker-drop" title="Pick from screen" aria-label="Pick a colour from the screen">&#9678;</button>'
+              ? '<button type="button" class="st-picker-drop" title="Pick from anywhere on screen — or drag this out of Settings" aria-label="Pick a colour from anywhere on screen">&#9678;</button>'
               : "") +
             "</div>" +
             '<div class="st-picker-recent"></div>',
@@ -646,7 +646,9 @@ const SettingsRenderer = (() => {
           paint();
         });
         pop.querySelector(".st-picker-close").addEventListener("click", closePop);
-        pop.querySelector(".st-picker-drop")?.addEventListener("click", async () => {
+
+        const sampleScreen = async () => {
+          if (!("EyeDropper" in window) || !pop) return;
           overlay.classList.add("is-picking");
           pop.classList.add("is-hidden");
           try {
@@ -658,7 +660,33 @@ const SettingsRenderer = (() => {
             stopPicking();
             pop?.classList.remove("is-hidden");
           }
-        });
+        };
+
+        const dragOut = (e) => {
+          if (!("EyeDropper" in window)) return;
+          const panel = $("sidesheetPanel");
+          let armed = true;
+          const move = (ev) => {
+            if (!armed || !pop) return;
+            const inPanel = panel?.contains(document.elementFromPoint(ev.clientX, ev.clientY));
+            const inPop = pop.contains(document.elementFromPoint(ev.clientX, ev.clientY));
+            if (inPanel || inPop) return;
+            armed = false;
+            stop();
+            sampleScreen();
+          };
+          const stop = () => {
+            document.removeEventListener("pointermove", move);
+            document.removeEventListener("pointerup", stop);
+            armed = false;
+          };
+          document.addEventListener("pointermove", move);
+          document.addEventListener("pointerup", stop);
+        };
+
+        pop.querySelector(".st-picker-preview").addEventListener("pointerdown", dragOut);
+        pop.querySelector(".st-picker-drop")?.addEventListener("click", sampleScreen);
+        pop.querySelector(".st-picker-drop")?.addEventListener("pointerdown", dragOut);
 
         pop.querySelector(".st-picker-head").addEventListener("pointerdown", (e) => {
           if (e.target.closest(".st-picker-close")) return;
