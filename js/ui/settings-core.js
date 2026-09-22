@@ -787,6 +787,7 @@ const SettingsRenderer = (() => {
           document.removeEventListener("pointerdown", armed.pick, true);
           document.removeEventListener("keydown", armed.key, true);
           armed = null;
+          document.body.classList.remove("is-eyedropping");
           loupe.hidden = true;
           overlay.classList.remove("is-sampling", "is-live");
           pop?.classList.remove("is-hidden");
@@ -804,7 +805,6 @@ const SettingsRenderer = (() => {
           }
           paintSampleCanvas();
           const startHex = hsvToHex(h, sat, val);
-          overlay.classList.add("is-sampling");
           dropBtn?.classList.add("is-armed");
           document.body.classList.add("is-eyedropping");
 
@@ -818,26 +818,31 @@ const SettingsRenderer = (() => {
             return !inBox(panel) && !inBox(pop);
           };
 
-          const move = (ev) => {
-            const away = outside(ev.clientX, ev.clientY);
+          const readAt = (x, y) => {
+            const away = outside(x, y);
             overlay.classList.toggle("is-live", away);
+            overlay.classList.toggle("is-sampling", away);
             pop.classList.toggle("is-hidden", away);
-            loupe.hidden = !away;
-            if (!away) return;
-            const hex = sampleAt(ev.clientX, ev.clientY);
+            return sampleAt(x, y);
+          };
+
+          const move = (ev) => {
+            const hex = readAt(ev.clientX, ev.clientY);
+            loupe.hidden = false;
             loupe.style.left = `${ev.clientX + 18}px`;
             loupe.style.top = `${ev.clientY + 18}px`;
             if (!hex) return;
             loupe.style.background = hex;
+            loupe.dataset.hex = hex.toUpperCase();
             ({ h, s: sat, v: val } = hexToHsv(hex));
             paint();
           };
 
           const pick = (ev) => {
-            if (!outside(ev.clientX, ev.clientY)) return;
+            if (ev.target.closest?.(".st-picker-drop")) return;
             ev.preventDefault();
             ev.stopPropagation();
-            const hex = sampleAt(ev.clientX, ev.clientY);
+            const hex = readAt(ev.clientX, ev.clientY);
             disarm(null);
             if (hex) {
               ({ h, s: sat, v: val } = hexToHsv(hex));
