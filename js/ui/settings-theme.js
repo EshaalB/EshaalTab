@@ -52,6 +52,9 @@
 
       s.accent2 = p.accent2 || "";
       s.cornerRadius = CORNER_STYLES[0].value;
+      s.clockColor = "";
+      s.greetingColor = "";
+      s.metaColor = "";
 
       if (s.backgroundType && s.backgroundType !== "solid") {
         s.backgroundType = "solid";

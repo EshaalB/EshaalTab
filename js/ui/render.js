@@ -7,7 +7,7 @@ const uiMode = () =>
 const boardTint = (hex) => {
   const key = String(hex || "").toLowerCase();
   const tint = BoardManager.BOARD_TINTS.find(
-    (t) => t.light === key || t.dark === key,
+    (t) => t.light === key || t.dark === key || t.legacy === key,
   );
   return tint ? tint[uiMode()] : hex;
 };
