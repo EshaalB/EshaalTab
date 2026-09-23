@@ -226,7 +226,7 @@ const ContextMenu = (() => {
         <button class="board-swatch is-default${board.color ? "" : " active"}" data-color="" title="Theme colour" aria-label="Theme colour"></button>
         ${BoardManager.BOARD_COLORS.map(
           (c, i) =>
-            `<button class="board-swatch${board.color === c ? " active" : ""}" data-color="${c}" style="--swatch: ${boardTint(c)}" title="${BoardManager.BOARD_TINTS[i].name}" aria-label="Board colour ${BoardManager.BOARD_TINTS[i].name}"></button>`,
+            `<button class="board-swatch${board.color === c ? " active" : ""}" data-color="${c}" style="--swatch: ${BoardManager.BOARD_TINTS[i].dot}; --swatch-fill: ${boardTint(c)}" title="${BoardManager.BOARD_TINTS[i].name}" aria-label="Board colour ${BoardManager.BOARD_TINTS[i].name}"></button>`,
         ).join("")}
         <label class="board-swatch board-swatch-custom${isCustomColor ? " active" : ""}" title="Custom colour">
           <input type="color" value="${escapeHtml(board.color || effectiveBoardAccent())}" aria-label="Custom board colour" />

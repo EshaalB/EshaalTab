@@ -21,15 +21,15 @@ const BoardManager = (() => {
   const boards = () => StorageManager.getData().boards;
 
   const BOARD_TINTS = [
-    { name: "Gray", light: "#f1f1ef", dark: "#2f2f2f" },
-    { name: "Brown", light: "#f4eeee", dark: "#4a3228" },
-    { name: "Orange", light: "#faebdd", dark: "#5c3b23" },
-    { name: "Yellow", light: "#fbf3db", dark: "#564328" },
-    { name: "Green", light: "#edf3ec", dark: "#243d30" },
-    { name: "Blue", light: "#e7f3f8", dark: "#143a4e" },
-    { name: "Purple", light: "#f6f3f9", dark: "#3c2d49" },
-    { name: "Pink", light: "#faf1f5", dark: "#4e2c3c" },
-    { name: "Red", light: "#fdebec", dark: "#522e2a" },
+    { name: "Gray", light: "#f1f1ef", dark: "#2f2f2f", dot: "#8d8d87" },
+    { name: "Brown", light: "#f4eeee", dark: "#4a3228", dot: "#a3705a" },
+    { name: "Orange", light: "#faebdd", dark: "#5c3b23", dot: "#d9730d" },
+    { name: "Yellow", light: "#fbf3db", dark: "#564328", dot: "#b8851d" },
+    { name: "Green", light: "#edf3ec", dark: "#243d30", dot: "#448361" },
+    { name: "Blue", light: "#e7f3f8", dark: "#143a4e", dot: "#337ea9" },
+    { name: "Purple", light: "#f6f3f9", dark: "#3c2d49", dot: "#9065b0" },
+    { name: "Pink", light: "#faf1f5", dark: "#4e2c3c", dot: "#c14c8a" },
+    { name: "Red", light: "#fdebec", dark: "#522e2a", dot: "#d44c47" },
   ];
 
   const BOARD_COLORS = BOARD_TINTS.map((t) => t.light);
