@@ -609,6 +609,7 @@ body.theme-light .et-board-card:not(.has-own-color) {
   border-radius: 50%;
   border: 2px solid transparent;
   background: var(--swatch, var(--accent-color));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent);
   cursor: pointer;
   outline-offset: 2px;
   transition:
@@ -630,6 +631,7 @@ body.theme-light .et-board-card:not(.has-own-color) {
 
 .board-swatch.active {
   border-color: var(--text);
+  box-shadow: none;
 }
 
 .board-swatch-custom {
