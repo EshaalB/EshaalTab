@@ -20,16 +20,19 @@ const TabManager = (() => {
 const BoardManager = (() => {
   const boards = () => StorageManager.getData().boards;
 
-  const BOARD_COLORS = [
-    "#6366f1",
-    "#0ea5e9",
-    "#14b8a6",
-    "#22c55e",
-    "#f59e0b",
-    "#f43f5e",
-    "#a855f7",
-    "#64748b",
+  const BOARD_TINTS = [
+    { name: "Gray", light: "#f1f1ef", dark: "#2f2f2f" },
+    { name: "Brown", light: "#f4eeee", dark: "#4a3228" },
+    { name: "Orange", light: "#faebdd", dark: "#5c3b23" },
+    { name: "Yellow", light: "#fbf3db", dark: "#564328" },
+    { name: "Green", light: "#edf3ec", dark: "#243d30" },
+    { name: "Blue", light: "#e7f3f8", dark: "#143a4e" },
+    { name: "Purple", light: "#f6f3f9", dark: "#3c2d49" },
+    { name: "Pink", light: "#faf1f5", dark: "#4e2c3c" },
+    { name: "Red", light: "#fdebec", dark: "#522e2a" },
   ];
+
+  const BOARD_COLORS = BOARD_TINTS.map((t) => t.light);
 
 
   function setColor(boardId, color) {
@@ -263,6 +266,7 @@ const BoardManager = (() => {
     getAll: boards,
     MAX_NAME,
     BOARD_COLORS,
+    BOARD_TINTS,
   };
 })();
 

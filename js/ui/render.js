@@ -4,6 +4,14 @@ const uiMode = () =>
   document.body.classList.contains("theme-light") ? "light" : "dark";
 
 
+const boardTint = (hex) => {
+  const key = String(hex || "").toLowerCase();
+  const tint = BoardManager.BOARD_TINTS.find(
+    (t) => t.light === key || t.dark === key,
+  );
+  return tint ? tint[uiMode()] : hex;
+};
+
 const mixRgb = (a, b, t) => ({
   r: a.r * t + b.r * (1 - t),
   g: a.g * t + b.g * (1 - t),
@@ -22,7 +30,8 @@ function boardBackdrop() {
 
 function paintBoardInk(card) {
   const light = uiMode() === "light";
-  const color = card.dataset.color;
+  const color = card.dataset.color ? boardTint(card.dataset.color) : "";
+  if (color) card.style.setProperty("--board-accent", color);
   const root = getComputedStyle(document.documentElement);
   const alpha = parseFloat(root.getPropertyValue("--board-opacity"));
   const backdrop = boardBackdrop();
@@ -216,8 +225,8 @@ const ContextMenu = (() => {
       <div class="board-menu-swatches" role="group" aria-label="Board colour">
         <button class="board-swatch is-default${board.color ? "" : " active"}" data-color="" title="Theme colour" aria-label="Theme colour"></button>
         ${BoardManager.BOARD_COLORS.map(
-          (c) =>
-            `<button class="board-swatch${board.color === c ? " active" : ""}" data-color="${c}" style="--swatch: ${c}" title="Board colour" aria-label="Board colour ${c}"></button>`,
+          (c, i) =>
+            `<button class="board-swatch${board.color === c ? " active" : ""}" data-color="${c}" style="--swatch: ${boardTint(c)}" title="${BoardManager.BOARD_TINTS[i].name}" aria-label="Board colour ${BoardManager.BOARD_TINTS[i].name}"></button>`,
         ).join("")}
         <label class="board-swatch board-swatch-custom${isCustomColor ? " active" : ""}" title="Custom colour">
           <input type="color" value="${escapeHtml(board.color || effectiveBoardAccent())}" aria-label="Custom board colour" />
@@ -1165,7 +1174,7 @@ const BoardRenderer = (() => {
 
     if (board.color) {
       acc.classList.add("has-own-color");
-      acc.style.setProperty("--board-accent", board.color);
+      acc.style.setProperty("--board-accent", boardTint(board.color));
       acc.dataset.color = board.color;
     }
     paintBoardInk(acc);
