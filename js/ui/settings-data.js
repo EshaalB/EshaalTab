@@ -545,7 +545,7 @@
             </button>
             <div class="st-accordion-body">
               <div class="st-card st-data-stack st-danger-card">
-                <div class="st-data-action"><div class="st-data-action-copy"><div class="st-label">Remove all boards</div><div class="st-hint">Keeps settings, notes and wallpapers.</div></div><button id="stClearBoardsBtn" class="st-action-btn st-icon-trash" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4);">Remove</button></div>
+                <div class="st-data-action"><div class="st-data-action-copy"><div class="st-label">Remove all boards</div><div class="st-hint">Keeps settings, notes and wallpapers.</div></div><button id="stClearBoardsBtn" class="st-action-btn st-icon-trash is-danger">Remove</button></div>
                 <div class="st-data-action"><div class="st-data-action-copy"><div class="st-label">Factory reset</div><div class="st-hint">Deletes all extension data.</div></div><button id="stResetAllBtn" class="st-reset-btn st-icon-reset">Reset</button></div>
               </div>
             </div>

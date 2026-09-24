@@ -1175,6 +1175,10 @@ const StorageManager = (() => {
         "et_boot",
         JSON.stringify({ ...(prev || {}), mode, pageBg: bg }),
       );
+      const root = document.documentElement;
+      root.style.setProperty("--page-bg", bg);
+      root.style.backgroundColor = bg;
+      root.style.colorScheme = mode;
     } catch (e) {}
   }
 

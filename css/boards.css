@@ -251,13 +251,13 @@ body.theme-light .et-board-card:not(.has-own-color) {
 
 .board-pin-badge {
   position: absolute;
-  top: 3px;
-  right: 3px;
+  top: 1px;
+  right: 1px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
   border-radius: var(--r-sm);
@@ -274,13 +274,13 @@ body.theme-light .et-board-card:not(.has-own-color) {
 .et-board-tile-more {
   opacity: 0;
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: 1px;
+  left: 1px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
   border-radius: var(--r-sm);

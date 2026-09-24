@@ -63,6 +63,7 @@
     <div id="wallpaper-vignette"></div>
 
     <div class="app">
+      <h1 class="et-sr-only">EshaalTab</h1>
       <div class="et-topbar">
 
         <div class="et-top-left" id="topLeft">
@@ -223,6 +224,7 @@
         </div>
       </div>
 
+      <main id="etMain">
       <section class="et-view et-view-home" id="homeView">
         <div class="et-home-center">
           <div class="et-home-widgets" id="homeWidgets">
@@ -451,6 +453,7 @@
           </div>
         </div>
       </section>
+      </main>
     </div>
 
     <div class="et-pop-sessions" id="sessionsPopover">
@@ -598,6 +601,7 @@
           <input
             type="text"
             id="searchInput"
+            aria-label="Search bookmarks, history, and shortcuts"
             placeholder="Search bookmarks, history, and shortcuts"
             autocomplete="off"
             spellcheck="false"
