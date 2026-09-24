@@ -21,6 +21,10 @@
   opacity: 1;
 }
 
+.et-set-overlay.closing {
+  pointer-events: none;
+}
+
 .et-set-overlay.is-sampling {
   pointer-events: none;
 }

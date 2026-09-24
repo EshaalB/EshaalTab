@@ -204,21 +204,7 @@ const StorageManager = (() => {
       "quora",
     ],
     lastSettingsPage: "appearance",
-    collapsedSettingsAccordions: {
-      theme: [
-        "themes",
-        "theme and colours",
-        "position and crop",
-        "share your theme",
-      ],
-      widgets: [
-        "general appearance",
-        "clock and text",
-        "search",
-        "weather",
-      ],
-      data: ["privacy", "data management"],
-    },
+    collapsedSettingsAccordions: {},
 
     expandedSettingsAccordions: {},
     settingsLayoutVersion: 14,
@@ -1000,6 +986,29 @@ const StorageManager = (() => {
         }
         for (const gone of Object.keys(RETIRED_SETTINGS_PAGES))
           delete collapsedSettingsAccordions[gone];
+        for (const tab of ["theme", "widgets", "data", "help", "support"]) {
+          if (SETTINGS_PAGES.includes(tab)) continue;
+          delete collapsedSettingsAccordions[tab];
+          for (const key of [
+            "collapsedSettingsAccordions",
+            "expandedSettingsAccordions",
+            "settingsScrollPositions",
+          ]) {
+            const map = loadedSettings[key];
+            if (map && typeof map === "object" && !Array.isArray(map))
+              delete map[tab];
+          }
+        }
+        delete collapsedSettingsAccordions.data;
+        for (const key of [
+          "collapsedSettingsAccordions",
+          "expandedSettingsAccordions",
+          "settingsScrollPositions",
+        ]) {
+          const map = loadedSettings[key];
+          if (map && typeof map === "object" && !Array.isArray(map))
+            delete map.data;
+        }
       }
 
       if ((loadedSettings.settingsLayoutVersion || 0) < 11) {
@@ -1522,9 +1531,9 @@ const StorageManager = (() => {
       const src = raw[key];
       if (!src || typeof src !== "object" || Array.isArray(src)) return;
       out[key] = {};
-      for (const tab of ["theme", "widgets", "data", "help", "support"]) {
-        if (Array.isArray(src[tab])) {
-          out[key][tab] = src[tab]
+      for (const page of SETTINGS_PAGES) {
+        if (Array.isArray(src[page])) {
+          out[key][page] = src[page]
             .filter((v) => typeof v === "string")
             .map((v) => v.slice(0, 100))
             .slice(0, 30);
@@ -1611,9 +1620,9 @@ const StorageManager = (() => {
       !Array.isArray(raw.settingsScrollPositions)
     ) {
       out.settingsScrollPositions = {};
-      for (const tab of ["theme", "widgets", "data", "help", "support"]) {
-        const pos = num(raw.settingsScrollPositions[tab], 0, 100000);
-        if (pos !== undefined) out.settingsScrollPositions[tab] = pos;
+      for (const page of SETTINGS_PAGES) {
+        const pos = num(raw.settingsScrollPositions[page], 0, 100000);
+        if (pos !== undefined) out.settingsScrollPositions[page] = pos;
       }
     }
     if (Array.isArray(raw.enabledEngines)) {
