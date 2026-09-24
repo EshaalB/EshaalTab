@@ -156,7 +156,7 @@
       }
       if (count === -1) {
         ToastSystem.error(
-          'No "url" column found. Export from Raindrop as CSV.',
+          'No "url" column found. The CSV needs a url column.',
         );
         return;
       }
@@ -168,7 +168,7 @@
       BoardRenderer.renderBoards();
       HomeRenderer.renderPinned();
       ToastSystem.success(
-        `Imported ${count} bookmark${count === 1 ? "" : "s"} from Raindrop!`,
+        `Imported ${count} bookmark${count === 1 ? "" : "s"} `,
       );
     };
     reader.readAsText(file);
@@ -337,8 +337,7 @@
 
     $("stRemoteFavicons")?.addEventListener("change", (e) => {
       settings.remoteFavicons = e.target.checked;
-      // Marks this as a deliberate choice, so a future change to the default
-      // never quietly reverses it.
+
       settings.remoteFaviconsChoice = e.target.checked;
       StorageManager.saveSettings();
       BoardRenderer.renderBoards();
@@ -351,6 +350,15 @@
           : "Web icons off, using your browser cache only",
       );
     });
+
+    const setBackup = (key, value) => {
+      StorageManager.getSettings()[key] = value;
+      BackupReminder.reschedule();
+      renderSideSheetContent();
+    };
+    $("stBackupFreq")?.addEventListener("change", (e) => setBackup("backupFreq", e.target.dataset.value ?? e.target.value));
+    $("stBackupDay")?.addEventListener("change", (e) => setBackup("backupDay", Number(e.target.dataset.value ?? e.target.value)));
+    $("stBackupDate")?.addEventListener("change", (e) => setBackup("backupDate", Number(e.target.dataset.value ?? e.target.value)));
 
     $("stExportBtn")?.addEventListener("click", async () => {
       try {
@@ -453,10 +461,45 @@
     });
   }
 
+  function backupReminderHtml(settings) {
+    const r = BackupReminder.schedule(settings);
+    const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const last = settings.lastBackupAt
+      ? `Last backup ${new Date(settings.lastBackupAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}.`
+      : "No backup exported yet.";
+    return `
+              <div class="st-subgroup">
+                <div class="st-subhead">Backup reminder</div>
+                <div class="st-row">
+                  <label class="st-label" for="stBackupFreq">Remind me</label>
+                  ${CustomSelect.render({
+                    id: "stBackupFreq",
+                    value: r.freq,
+                    options: [
+                      { value: "off", label: "Never" },
+                      { value: "daily", label: "Every day" },
+                      { value: "weekly", label: "Every week" },
+                      { value: "monthly", label: "Every month" },
+                    ],
+                    style: "width:180px;",
+                  })}
+                </div>
+                <div class="st-row"${r.freq === "weekly" ? "" : " hidden"}>
+                  <label class="st-label" for="stBackupDay">Day</label>
+                  ${CustomSelect.render({ id: "stBackupDay", value: r.day, options: DAYS.map((label, value) => ({ value, label })), style: "width:180px;" })}
+                </div>
+                <div class="st-row"${r.freq === "monthly" ? "" : " hidden"}>
+                  <label class="st-label" for="stBackupDate">Day of month</label>
+                  ${CustomSelect.render({ id: "stBackupDate", value: r.date, options: Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: i + 1 === 31 ? "31 (or last day)" : String(i + 1) })), style: "width:180px;" })}
+                </div>
+                <div class="st-hint">Shows a reminder on your new tab when a backup is due. ${last}</div>
+              </div>`;
+  }
+
   function render(settings, data) {
     return `
         <div class="st-container">
-          <div class="st-accordion is-expanded" data-page="backup" data-accordion-key="data management">
+          <div class="st-accordion is-expanded" data-page="data" data-accordion-key="data management">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Backup and import</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -469,11 +512,12 @@
                 <label class="st-action-btn st-icon-upload" for="btnImportJsonFile">Restore backup</label>
               </div>
               <input type="file" id="btnImportJsonFile" accept=".json" aria-label="Restore from a JSON backup" style="display:none;" />
+              ${backupReminderHtml(settings)}
               <div class="st-subgroup st-data-stack">
                 <div class="st-subhead">Import bookmarks</div>
                 <div class="st-btn-grid">
                   <button id="btnImportBrowser" class="st-action-btn st-icon-upload">Import Chrome</button>
-                  <button id="btnRaindropTrigger" class="st-action-btn st-icon-upload">Import Raindrop.io</button>
+                  <button id="btnRaindropTrigger" class="st-action-btn st-icon-upload">Import CSV or JSON</button>
                 </div>
                 <input type="file" id="btnImportRaindropFile" accept=".csv,.json" style="display:none;" />
               </div>
@@ -481,7 +525,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded" data-page="maintenance">
+          <div class="st-accordion is-expanded" data-page="data">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Maintenance</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -494,14 +538,14 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded" data-page="reset">
+          <div class="st-accordion is-expanded" data-page="data">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Danger zone</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
             </button>
             <div class="st-accordion-body">
               <div class="st-card st-data-stack st-danger-card">
-                <div class="st-data-action"><div class="st-data-action-copy"><div class="st-label">Remove all boards</div><div class="st-hint">Keeps settings, notes and wallpapers.</div></div><button id="stClearBoardsBtn" class="st-action-btn st-icon-trash" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4);">Remove</button></div>
+                <div class="st-data-action"><div class="st-data-action-copy"><div class="st-label">Remove all boards</div><div class="st-hint">Keeps settings, notes and wallpapers.</div></div><button id="stClearBoardsBtn" class="st-action-btn st-icon-trash is-danger">Remove</button></div>
                 <div class="st-data-action"><div class="st-data-action-copy"><div class="st-label">Factory reset</div><div class="st-hint">Deletes all extension data.</div></div><button id="stResetAllBtn" class="st-reset-btn st-icon-reset">Reset</button></div>
               </div>
             </div>

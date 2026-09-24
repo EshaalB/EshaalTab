@@ -5,9 +5,6 @@ const todayKey = () => new Date().toLocaleDateString("sv");
 const ToastSystem = (() => {
   const MAX_TOASTS = 3;
 
-  /* One glyph per outcome, drawn rather than typed: a tick, an "i" and a cross
-     read at 16px where the equivalent characters in the UI font do not, and
-     they stay the same shape whatever typeface the user has chosen. */
   const GLYPHS = {
     success: '<polyline points="20 6 9 17 4 12"/>',
     error: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
@@ -42,12 +39,6 @@ const ToastSystem = (() => {
       </button>`;
   }
 
-  /**
-   * @param {string} message Headline. Says what happened, in a few words.
-   * @param {string} type    success | error | warning | info | loading.
-   * @param {number} duration 0 keeps it up until it is dismissed.
-   * @param {string} [detail] Optional second line: why, or what to do next.
-   */
   function show(message, type = "info", duration = 3000, detail = "") {
     const container = $("toastContainer");
     if (!container) return;
@@ -56,9 +47,7 @@ const ToastSystem = (() => {
       (t) => t.dataset.msg === message && !t.classList.contains("is-exiting"),
     );
     if (existing) {
-      if (existing.__timer) clearTimeout(existing.__timer);
-      if (duration > 0)
-        existing.__timer = setTimeout(() => dismiss(existing), duration);
+      wire(existing, duration, 1500);
       return createController(existing);
     }
 
@@ -75,24 +64,49 @@ const ToastSystem = (() => {
     return createController(toast);
   }
 
-  /** Shared hover-pause, close-button and auto-dismiss wiring. */
   function wire(toast, duration, resumeDelay) {
     toast
       .querySelector(".toast-close")
       ?.addEventListener("click", () => dismiss(toast));
-
+    if (toast.__timer) clearTimeout(toast.__timer);
+    toast.querySelector(".toast-progress")?.remove();
+    toast.classList.remove("has-progress", "is-paused");
+    toast.__life = null;
     if (duration <= 0) return;
+
+    const bar = document.createElement("span");
+    bar.className = "toast-progress";
+    bar.setAttribute("aria-hidden", "true");
+    toast.style.setProperty("--toast-life", `${duration}ms`);
+    toast.classList.add("has-progress");
+    toast.appendChild(bar);
+    toast.__life = { remaining: duration, startedAt: Date.now() };
     toast.__timer = setTimeout(() => dismiss(toast), duration);
+
+    if (toast.__hoverWired) return;
+    toast.__hoverWired = true;
     toast.addEventListener("mouseenter", () => {
-      if (toast.__timer) clearTimeout(toast.__timer);
+      const life = toast.__life;
+      if (!life) return;
+      clearTimeout(toast.__timer);
+      life.remaining = Math.max(0, life.remaining - (Date.now() - life.startedAt));
+      toast.classList.add("is-paused");
     });
     toast.addEventListener("mouseleave", () => {
-      toast.__timer = setTimeout(() => dismiss(toast), resumeDelay);
+      const life = toast.__life;
+      if (!life) return;
+      toast.classList.remove("is-paused");
+      life.startedAt = Date.now();
+      toast.__timer = setTimeout(
+        () => dismiss(toast),
+        Math.max(life.remaining, Math.min(resumeDelay, 400)),
+      );
     });
   }
 
   function createController(toast) {
     return {
+      el: toast,
       dismiss: () => dismiss(toast),
       update: (newMsg, newType = "success", newDuration = 3000, detail = "") => {
         if (!toast || !toast.parentNode) return;
@@ -104,11 +118,6 @@ const ToastSystem = (() => {
     };
   }
 
-  /**
-   * A toast the user can act on - undoing a delete, retrying a failed save.
-   * The action sits under the message rather than beside it, so a long label
-   * and a long message stop competing for the same line.
-   */
   function action(
     message,
     actionLabel,
@@ -199,7 +208,7 @@ const PomodoroMode = (() => {
       : "smooth";
   let wheelHours = 0;
   let wheelMinutes = 25;
-  // Where focus was before the overlay opened, so closing it puts the user back.
+
   let lastFocus = null;
 
   function closeWheelPicker(restoreFocus = false) {
@@ -341,15 +350,6 @@ const PomodoroMode = (() => {
     flipClock?.addEventListener("click", toggle);
     resetBtn?.addEventListener("click", reset);
 
-    // A chip clicked with the pointer keeps DOM focus afterwards, and the
-    // overlay's key handler deliberately ignores keys aimed at a button - so
-    // space did nothing after picking a duration until you clicked the page to
-    // move focus off the chip. Releasing focus on pointer activation puts the
-    // shortcut back immediately.
-    //
-    // `detail > 0` is the pointer/click case. Keyboard activation reports 0,
-    // and there focus must stay put: a keyboard user needs the chip to remain
-    // focused, and space re-pressing a focused button is the correct behaviour.
     const releaseAfterPointer = (btn, e) => {
       if (e.detail > 0) btn.blur();
     };
@@ -389,7 +389,6 @@ const PomodoroMode = (() => {
         closeWheelPicker();
     });
 
-    // A drag-select that ends outside the panel must not dismiss it.
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay && gestureStartedIn(overlay.firstElementChild))
         e.stopPropagation();
@@ -404,9 +403,7 @@ const PomodoroMode = (() => {
         closeWheelPicker(true);
         return;
       }
-      // Typing keeps its keys. A button keeps Space only when it was reached by
-      // keyboard - then Space is how you press it. A button that was merely
-      // clicked (a preset, the display switch) should not swallow the start key.
+
       if (e.target?.matches?.("input, select, textarea, [contenteditable]")) return;
       if (
         e.key === " " &&
@@ -474,23 +471,10 @@ const PomodoroMode = (() => {
     if (overlay) {
       overlay.classList.toggle("is-running", running);
     }
-    // Stopping always brings the room back up; there is nothing to be calm
-    // about once the countdown is not moving.
+
     if (!running) wake();
     else armZen();
   }
-
-  // ------------------------------------------------------------- zen mode
-  //
-  // A focus timer that keeps a reset button, four preset chips and a close
-  // cross in your eyeline is not a focus timer, it is a dashboard. So once the
-  // countdown is running and the pointer has been still for a moment, every
-  // control fades out and only the clock is left, breathing. Any movement or
-  // keypress brings the controls straight back - nothing is unreachable, it is
-  // just out of the way.
-  //
-  // The idle timer runs only while the overlay is open and counting, and it is
-  // a single timeout rather than a poll, so an idle Zen screen costs nothing.
 
   const ZEN_IDLE_MS = 3000;
   let zenTimer = null;
@@ -515,12 +499,7 @@ const PomodoroMode = (() => {
   function wireZen() {
     if (zenWired || !overlay) return;
     zenWired = true;
-    // `pointermove` fires at the pointer's sampling rate - well over a hundred
-    // times a second on a fast mouse - and re-arming a timeout on every one of
-    // those is a hundred timer churns a second to answer a question that only
-    // changes every few seconds. So the idle countdown is re-armed at most
-    // ten times a second; waking is still immediate, because that is the part
-    // a person can feel.
+
     let lastRouse = 0;
     const rouse = () => {
       if (overlay.classList.contains("is-zen")) {
@@ -539,10 +518,7 @@ const PomodoroMode = (() => {
 
   function enter() {
     if (!overlay) return;
-    /* Focus moves into the timer. It used to stay on the toolbar button that
-       opened it - and the Space handler below deliberately leaves Space alone
-       when a button has focus, so the one key the screen tells you to press
-       did nothing until you clicked somewhere on the page first. */
+
     if (!overlay.contains(document.activeElement))
       lastFocus = document.activeElement;
     overlay.classList.add("open");
@@ -553,7 +529,6 @@ const PomodoroMode = (() => {
     updateRunningUI();
   }
   function exit() {
-    // Back to whatever opened the timer, once this call has finished closing it.
     queueMicrotask(() => {
       if (lastFocus && lastFocus.isConnected)
         lastFocus.focus({ preventScroll: true });
@@ -574,25 +549,13 @@ const PomodoroMode = (() => {
     updateRunningUI();
     if (statusText) statusText.textContent = "Focusing";
     disarmTicker();
-    // Anchored to the wall clock rather than counted in interval ticks. A
-    // background tab has its timers throttled to once a minute or worse, so a
-    // `timeLeft--` per tick makes a 25 minute session take far longer than 25
-    // minutes - the countdown visibly crawls the moment the tab loses focus.
+
     deadline = Date.now() + timeLeft * 1000;
     armTicker();
     updateDisplay();
     persistState();
   }
 
-  /**
-   * Runs the countdown at display rate only while the tab is on screen.
-   *
-   * The remaining time is derived from `deadline`, so ticking in a hidden tab
-   * repaints a display nobody can see four times a second. What a hidden tab
-   * still owes the user is the *completion* - so instead of a fast interval it
-   * holds a single timeout aimed at the deadline. Both paths land on `tick()`,
-   * which is idempotent, so the two can never disagree about the time left.
-   */
   function armTicker() {
     disarmTicker();
     if (!running || deadline == null) return;
@@ -600,8 +563,6 @@ const PomodoroMode = (() => {
     if (document.visibilityState === "visible") {
       intervalId = setInterval(tick, 250);
     } else {
-      // A hidden tab's timeouts are throttled but still fire, and a late
-      // completion is corrected the moment the tab is looked at again.
       endTimeoutId = setTimeout(tick, Math.max(0, deadline - Date.now()) + 50);
     }
   }
@@ -613,8 +574,6 @@ const PomodoroMode = (() => {
     endTimeoutId = null;
   }
 
-  // Catch the countdown up the instant the tab is on screen again rather than
-  // waiting for the next throttled wake-up, and swap between the two tickers.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") tick();
     armTicker();
@@ -667,8 +626,6 @@ const PomodoroMode = (() => {
     updateDisplay();
     updateRunningUI();
     persistState();
-    // No toast: the timer already says "Session complete" and plays the chime,
-    // and a second notice for the same moment was only noise.
   }
   function updateDisplay() {
     const firstValue =
@@ -693,8 +650,7 @@ const PomodoroMode = (() => {
     const today = todayKey();
     const data = StorageManager.getData();
     const count = (data.focus && data.focus[today]) || 0;
-    // Shown from the second session on. A count of one - or none - says
-    // nothing the timer in front of you does not.
+
     sessionsCount.hidden = count < 2;
     sessionsCount.textContent = count >= 2 ? `${count} sessions today` : "";
   }
@@ -714,4 +670,108 @@ const PomodoroMode = (() => {
     } catch {}
   }
   return { init, enter, exit };
+})();
+
+const BackupReminder = (() => {
+  const FREQS = ["off", "daily", "weekly", "monthly"];
+  let toast = null;
+
+  function schedule(s) {
+    const int = (v, lo, hi, d) => (Number.isInteger(v) && v >= lo && v <= hi ? v : d);
+    return {
+      freq: FREQS.includes(s.backupFreq) ? s.backupFreq : "weekly",
+      day: int(s.backupDay, 0, 6, 1),
+      date: int(s.backupDate, 1, 31, 1),
+    };
+  }
+
+  function lastDue(r, now) {
+    const midnight = (d) => {
+      const t = new Date(d);
+      t.setHours(0, 0, 0, 0);
+      return t;
+    };
+    const n = new Date(now);
+    let t;
+    if (r.freq === "daily") {
+      t = midnight(n);
+    } else if (r.freq === "weekly") {
+      t = midnight(n);
+      t.setDate(t.getDate() - ((t.getDay() - r.day + 7) % 7));
+    } else if (r.freq === "monthly") {
+      const inMonth = (y, mo) =>
+        new Date(y, mo, Math.min(r.date, new Date(y, mo + 1, 0).getDate()));
+      t = inMonth(n.getFullYear(), n.getMonth());
+      if (t > n) t = inMonth(n.getFullYear(), n.getMonth() - 1);
+    } else return 0;
+    return t.getTime();
+  }
+
+  function isDue(s, now = Date.now()) {
+    const r = schedule(s);
+    if (r.freq === "off") return false;
+    const seen = (v) => (Number.isFinite(v) && v <= now ? v : 0);
+    const since = seen(s.backupSince) || now;
+    const due = lastDue(r, now);
+    return due > Math.max(since, seen(s.lastBackupAt), seen(s.backupDismissedAt));
+  }
+
+  function hide() {
+    toast?.dismiss();
+    toast = null;
+  }
+
+  function check() {
+    const s = StorageManager.getSettings();
+    if (!Number.isFinite(s.backupSince)) {
+      s.backupSince = Date.now();
+      StorageManager.saveSettings();
+    }
+    if (!isDue(s)) return hide();
+    if (toast?.el.isConnected && !toast.el.classList.contains("is-exiting")) return;
+    toast = ToastSystem.action(
+      "Time to back up your data",
+      "Export backup",
+      async () => {
+        try {
+          await StorageManager.exportJSON();
+          ToastSystem.success("Backup exported");
+        } catch (err) {
+          ToastSystem.error(err?.message || "Could not export the backup");
+          toast = null;
+          setTimeout(check, 0);
+        }
+      },
+      "info",
+      0,
+      "Boards, notes, settings and wallpapers in one file.",
+    );
+    const el = toast.el;
+    el.querySelectorAll(".toast-dismiss-btn, .toast-close").forEach((b) =>
+      b.addEventListener("click", () => {
+        StorageManager.getSettings().backupDismissedAt = Date.now();
+        StorageManager.saveSettings();
+      }),
+    );
+  }
+
+  function reschedule() {
+    const s = StorageManager.getSettings();
+    s.backupSince = Date.now();
+    delete s.backupDismissedAt;
+    StorageManager.saveSettings();
+    check();
+  }
+
+  function init() {
+    check();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") check();
+    });
+    setInterval(() => {
+      if (document.visibilityState === "visible") check();
+    }, 60e3);
+  }
+
+  return { init, check, reschedule, isDue, schedule, FREQS };
 })();

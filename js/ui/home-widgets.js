@@ -48,9 +48,6 @@ const WidgetsRenderer = (() => {
   }
 
   function initClock() {
-    // `visibleInterval` stops the tick entirely while the tab is hidden - a
-    // clock nobody can see is not worth a wake-up per second - and repaints
-    // immediately on the way back, so it is never briefly stale on return.
     if (clockInterval) clockInterval();
     clockInterval = visibleInterval(updateClock, 1000);
   }
@@ -80,8 +77,7 @@ const WidgetsRenderer = (() => {
         greetingText = "Good night";
       }
       const name = capitalName(StorageManager.getSettings().displayName);
-      // The full stop is the difference between a label and the page saying
-      // something to you. Only when there is a name to say it to.
+
       const fullText = name ? `${greetingText}, ${name}.` : greetingText;
       greetingEl.textContent = fullText;
     }
@@ -116,7 +112,6 @@ const WidgetsRenderer = (() => {
     );
   }
 
-  /** The name as a greeting shows it: first letter capitalised, rest as typed. */
   function capitalName(raw) {
     const name = String(raw || "").trim();
     return name ? name.charAt(0).toLocaleUpperCase() + name.slice(1) : "";
@@ -130,36 +125,19 @@ const WidgetsRenderer = (() => {
     const count = (data.focus && data.focus[today]) || 0;
     const countEl = $("pomoToggleCount");
     if (countEl) {
-      // From the second session on; a badge reading "1" says nothing the
-      // timer does not.
       countEl.textContent = count;
       countEl.style.display = count > 1 ? "flex" : "none";
     }
     btn.onclick = () => PomodoroMode.enter();
   }
 
-  /* First entry is the shipped default, and it has to be the browser's own
-     search provider.
-     
-     Chrome Web Store policy requires that a new tab page which offers search
-     respects the user's selected search settings, via the Search API. Shipping
-     a hardcoded provider as the default changes the user's search experience
-     without asking, which is a single-purpose violation - the extension would
-     be replacing both the new tab page and the search provider. Routing the
-     default through `chrome.search.query` means EshaalTab replaces the page
-     and nothing else; whatever the user already chose is what answers.
-     
-     The named providers below stay available as an explicit per-search choice.
-     Picking one is the user changing their own mind for one query, which is a
-     preference, not a hijack. */
   const q$ = encodeURIComponent;
   const ENGINES = {
     default: {
       name: "Default (Browser)",
       group: "web",
       useSystemDefault: true,
-      // Only reached when the Search API is unavailable, which outside the
-      // installed extension is always - the dev server has no chrome.search.
+
       url: (q) => `https://www.google.com/search?q=${q$(q)}`,
     },
     google: {
@@ -248,7 +226,6 @@ const WidgetsRenderer = (() => {
     },
   };
 
-  /** Menu sections, in order. */
   const ENGINE_GROUPS = [
     ["web", "Search engines"],
     ["ai", "AI assistants"],
@@ -258,14 +235,6 @@ const WidgetsRenderer = (() => {
   const BROWSER_GLYPH =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>';
 
-  /**
-   * An engine's icon: its site's favicon, through the same local-first lookup
-   * pins use, with a lettermark underneath for when no icon can be had. The
-   * browser default has no site of its own, so it gets a globe.
-   *
-   * Call `wireFavicons` on the container after inserting it - that is what
-   * walks the fallback chain and reveals the lettermark.
-   */
   function engineIcon(key, size = 18) {
     const eng = ENGINES[key] || ENGINES.default;
     if (!eng.home) {
@@ -274,24 +243,11 @@ const WidgetsRenderer = (() => {
     return `<span class="et-eng-ico" aria-hidden="true" style="--eng-size:${size}px"><img class="et-eng-fav" ${faviconAttr(eng.home)} alt="" width="${size}" height="${size}" /><span class="et-eng-letter">${escapeHtml(eng.name.charAt(0))}</span></span>`;
   }
 
-  // The engine is already shown by its icon beside this field, so naming it in
-  // the placeholder too just made the line long enough to crowd the submit
-  // button.
   const hintFor = (key) => {
     const e = ENGINES[key] || ENGINES.default;
     return e.ask ? "Ask or type a URL" : "Search or type a URL";
   };
 
-  /**
-   * Hands the query to the browser's own configured search provider.
-   *
-   * This is the Search API the Web Store policy asks for: the extension never
-   * decides where a default search goes, it asks the browser to run the search
-   * the user's own settings describe.
-   *
-   * @returns {boolean} False when the API is not available, so the caller can
-   *   fall back to a URL rather than swallowing the search.
-   */
   function searchWithDefaultEngine(query, newTab = false) {
     try {
       if (HAS_EXT && EXT.search && typeof EXT.search.query === "function") {
@@ -312,7 +268,6 @@ const WidgetsRenderer = (() => {
     return false;
   }
 
-  /** Searches with the engine chosen for the search bar, from anywhere. */
   function searchWeb(query, newTab = false) {
     const text = String(query || "").trim();
     if (!text) return;
@@ -343,42 +298,30 @@ const WidgetsRenderer = (() => {
       : "default";
 
     const current = () => ENGINES[currentEngineKey] || ENGINES.default;
-    // A panel of sections, each a grid, rather than one long column: with every
-    // engine switched on the column ran past the bottom of the window. The
-    // first section's header carries the way to choose which engines appear.
-    let firstSection = true;
-    const optionsHtml = ENGINE_GROUPS.map(([group, label]) => {
-      const rows = renderEngines.filter(([, eng]) => (eng.group || "web") === group);
-      if (!rows.length) return "";
-      const edit = firstSection
-        ? `<button type="button" class="nsb-eng-edit" data-act="edit-engines" tabindex="-1">Edit</button>`
-        : "";
-      firstSection = false;
-      return `
-        <div class="nsb-eng-section" role="group" aria-label="${label}">
-          <div class="nsb-eng-head"><span aria-hidden="true">${label}</span>${edit}</div>
-          <div class="nsb-eng-grid">
-            ${rows
-              .map(
-                ([key, eng]) => `
-            <div class="et-search-opt ${key === currentEngineKey ? "active" : ""}" data-engine="${key}" role="option" tabindex="-1" aria-selected="${key === currentEngineKey}">
-              <span class="et-eng-slot" data-eng="${key}"></span>
-              <span class="et-search-opt-name">${escapeHtml(eng.name)}</span>
-            </div>`,
-              )
-              .join("")}
-          </div>
-        </div>`;
-    }).join("");
 
-    /* The engine is shown by its icon alone - the menu it opens names every
-       option, and a word in the bar was the widest thing in it after the
-       field. The accessible name still says which engine is in use. */
+    const optionsHtml =
+      ENGINE_GROUPS.map(([group, label]) => {
+        const rows = renderEngines.filter(([, eng]) => (eng.group || "web") === group);
+        if (!rows.length) return "";
+        return `
+        <div class="nsb-eng-section" role="group" aria-label="${label}">
+          ${rows
+            .map(
+              ([key, eng]) => `
+          <div class="et-search-opt ${key === currentEngineKey ? "active" : ""}" data-engine="${key}" role="option" tabindex="-1" aria-selected="${key === currentEngineKey}" data-tooltip="${escapeHtml(eng.name)}">
+            <span class="et-eng-slot" data-eng="${key}"></span>
+            <span class="et-search-opt-name">${escapeHtml(eng.name)}</span>
+          </div>`,
+            )
+            .join("")}
+        </div>`;
+      }).join("") +
+      `<button type="button" class="nsb-eng-edit" data-act="edit-engines" tabindex="-1">Edit</button>`;
+
     setSafeHTML(
       bar,
       `
       <div class="et-search-pill" style="position:relative;">
-        <span class="et-search-glyph" aria-hidden="true">${icon("search", 17)}</span>
         <button type="button" class="et-search-engine" id="nsbEngLogo" data-no-tooltip aria-haspopup="listbox" aria-expanded="false" aria-controls="nsbEngMenu" aria-label="Search engine: ${escapeHtml(current().name)}">
           <span class="et-search-engine-icon">${engineIcon(currentEngineKey, 18)}</span>
           <svg class="et-search-engine-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
@@ -386,7 +329,7 @@ const WidgetsRenderer = (() => {
         <div class="nsb-eng-menu" id="nsbEngMenu" role="listbox" aria-label="Search engines">
           ${optionsHtml}
         </div>
-        <input type="text" class="et-search-input" id="nsbInput" placeholder="${hintFor(currentEngineKey)}" autocomplete="off" spellcheck="false" />
+        <input type="text" class="et-search-input" id="nsbInput" aria-label="Search or type a URL" placeholder="${hintFor(currentEngineKey)}" autocomplete="off" spellcheck="false" />
         <button class="et-search-btn et-search-submit" id="nsbSearchBtn" title="Search" aria-label="Search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
@@ -408,10 +351,7 @@ const WidgetsRenderer = (() => {
 
     if (logoBtn && menu) {
       let closeTimeout = null;
-      // Opened by a click or a key rather than by passing over it. A menu that
-      // opened on hover closes when the pointer leaves; one the user asked for
-      // stays until they pick, press Escape or click elsewhere. Before this, a
-      // click on the button toggled the hover-opened menu straight back shut.
+
       let held = false;
 
       const pill = logoBtn.closest(".et-search-pill") || bar;
@@ -419,9 +359,7 @@ const WidgetsRenderer = (() => {
 
       const openMenu = (hold = false) => {
         if (closeTimeout) clearTimeout(closeTimeout);
-        // Icons are filled in the first time the menu opens. A hidden image
-        // still downloads, so building them with the bar cost every new tab a
-        // favicon lookup per engine for a menu most tabs never open.
+
         if (!menu.__icons) {
           menu.__icons = true;
           menu.querySelectorAll(".et-eng-slot").forEach((slot) => {
@@ -491,7 +429,7 @@ const WidgetsRenderer = (() => {
       logoBtn.dataset.popoverTrigger = "search-engine";
       logoBtn.addEventListener("click", (e) => {
         const isOpen = menu.classList.contains("open");
-        // `detail` is 0 for a click made with Enter or Space.
+
         if (e.detail === 0) {
           if (isOpen) closeMenu(true);
           else openFromKeyboard();
@@ -512,10 +450,6 @@ const WidgetsRenderer = (() => {
         }
       });
 
-      logoBtn.addEventListener("mouseenter", () => openMenu());
-      menu.addEventListener("mouseenter", () => openMenu());
-      logoBtn.addEventListener("mouseleave", () => closeMenu(false));
-      menu.addEventListener("mouseleave", () => closeMenu(false));
 
       menu.addEventListener("click", (e) => {
         if (e.target.closest('[data-act="edit-engines"]')) {
@@ -530,10 +464,6 @@ const WidgetsRenderer = (() => {
         selectEngine(opt.dataset.engine);
       });
 
-      // Arrows move through the grid the way it looks: left and right along a
-      // row and on into the next, up and down to the nearest option in the row
-      // above or below - including across a section break, where the columns
-      // of the two grids need not line up.
       const neighbour = (opts, from, key) => {
         const i = opts.indexOf(from);
         if (key === "ArrowLeft") return opts[i - 1] || null;
@@ -608,9 +538,6 @@ const WidgetsRenderer = (() => {
         }
       });
 
-      // Hover-opened, so it registers for outside-click/close-others handling
-      // but never calls closeAll itself - brushing past the logo should not
-      // dismiss a popover the user deliberately opened.
       PopoverRegistry.register("search-engine", () => menu, () =>
         closeMenu(true),
       );
@@ -666,27 +593,10 @@ const WidgetsRenderer = (() => {
     }
   }
 
-  /**
-   * City search for the weather.
-   *
-   * Typing asks Open-Meteo's geocoder for up to six places matching what has
-   * been typed so far, so a city is picked from a list - with its region and
-   * country, which is what tells two Springfields apart - instead of being
-   * guessed at and reported "not found" a second later. The picked place's
-   * coordinates go straight into the weather cache, so the forecast request
-   * that follows skips the geocoder.
-   *
-   * Nothing is sent until two characters are typed and the typing has paused.
-   *
-   * @param {HTMLInputElement} input
-   * @param {{onPick?: (p: {city: string, place: object}) => void}} [opts]
-   */
   function attachCityPicker(input, { onPick } = {}) {
     if (!input || input.__cityPicker) return;
     input.__cityPicker = true;
 
-    // Positioned against a wrapper rather than the field's parent, which in
-    // settings is a flex row the list would otherwise join as a third column.
     const wrap = document.createElement("span");
     wrap.className = "et-city-wrap";
     input.replaceWith(wrap);
@@ -725,9 +635,6 @@ const WidgetsRenderer = (() => {
         .filter(Boolean)
         .join(", ");
 
-    // Moves the highlight without rebuilding the list. Rebuilding under the
-    // pointer replaced the option between mousedown and mouseup, and a click
-    // whose two halves land on different elements is not a click.
     const highlight = (i) => {
       active = i;
       list.querySelectorAll(".et-city-opt").forEach((el, n) => {
@@ -790,9 +697,9 @@ const WidgetsRenderer = (() => {
           { signal: controller.signal },
         );
         const json = await res.json();
-        // A slower answer to an older query must not replace a newer one.
+
         if (input.value.trim() !== q || document.activeElement !== input) return;
-        // The geocoder can list the same place twice under different ids.
+
         const seen = new Set();
         results = (Array.isArray(json.results) ? json.results : []).filter((r) => {
           const id = `${r.name}|${r.admin1 || ""}|${r.country || ""}`;
@@ -825,8 +732,6 @@ const WidgetsRenderer = (() => {
         const step = e.key === "ArrowDown" ? 1 : -1;
         highlight((active + step + results.length) % results.length);
       } else if (e.key === "Enter" && active >= 0) {
-        // Stopped here so a dialog around the field does not also take Enter
-        // as "save" for the half-typed text.
         e.preventDefault();
         e.stopPropagation();
         pick(active);
@@ -837,8 +742,6 @@ const WidgetsRenderer = (() => {
       }
     });
 
-    // Keeps focus in the field, so the blur below does not close the list
-    // before the click that picks from it lands.
     list.addEventListener("mousedown", (e) => e.preventDefault());
     list.addEventListener("click", (e) => {
       const opt = e.target.closest(".et-city-opt");
@@ -882,7 +785,7 @@ const WidgetsRenderer = (() => {
         },
       );
       const input = $("dlgCity");
-      // Picking a place is the answer, so it saves - no second Enter needed.
+
       attachCityPicker(input, { onPick: () => $("modalOkBtn")?.click() });
       input?.focus();
       input?.select();
@@ -957,13 +860,7 @@ const WidgetsRenderer = (() => {
         );
     }
   }
-  /* Weather glyphs, drawn in colour.
 
-     The old ones were single-colour outlines at the size of the text beside
-     them: over a busy photo the sun and the cloud were hard to tell apart and
-     easy to miss. These are filled - a yellow sun, a white cloud with a grey
-     edge that still shows on a light page, blue rain, a yellow bolt - and a
-     night variant uses the moon. Codes are Open-Meteo's WMO weather codes. */
   const WX_CLOUD = (fill = "#F4F7FB", stroke = "#94A3B8", dy = 0) =>
     `<path transform="translate(0 ${dy})" d="M7.2 19h10a4.3 4.3 0 0 0 .6-8.56A6 6 0 0 0 6.5 9.2 4.9 4.9 0 0 0 7.2 19z" fill="${fill}" stroke="${stroke}" stroke-width="1.2" stroke-linejoin="round"/>`;
   const WX_SUN = `<circle cx="12" cy="12" r="4.6" fill="#FFC53D"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4 7 7M17 17l1.6 1.6M5.4 18.6 7 17M17 7l1.6-1.6" stroke="#FFB020" stroke-width="2" stroke-linecap="round"/>`;
@@ -1017,9 +914,6 @@ const WidgetsRenderer = (() => {
     const temp = Math.round(current.temperature);
     const { svg, label } = weatherIcon(current.weathercode, current.is_day !== 0);
 
-    // Temperature and icon only. The city is something you set once and then
-    // already know; printing it on every new tab spent the longest word in the
-    // line on the least useful fact in it. It stays in the tooltip.
     weatherEl.title = `${label} in ${name} - click to change city`;
     weatherEl.setAttribute(
       "aria-label",
@@ -1044,23 +938,29 @@ const WidgetsRenderer = (() => {
     if (greetingEl) greetingEl.style.display = w.greeting === false ? "none" : "";
     if (search) search.style.display = w.navSearch !== false ? "" : "none";
     if (weather) weather.style.display = w.weather ? "" : "none";
-    // The corner boxes are positioned absolutely, so an empty one still sits
-    // in the page taking hover; hide the box, not just its contents.
+
     if (cornerLeft) cornerLeft.classList.toggle("is-off", w.date !== true);
     if (cornerRight) cornerRight.classList.toggle("is-off", !w.weather);
     if (workspace)
       workspace.style.display = w.workspace !== false ? "" : "none";
-    if (pinned) pinned.style.display = s.hidePinnedOnHome ? "none" : "flex";
-    document.body.classList.toggle("hide-pinned-home", !!s.hidePinnedOnHome);
+    [
+      ["sessionsBtn", "library"],
+      ["pomoToggleBtn", "focusTimer"],
+      ["searchSideBtn", "palette"],
+    ].forEach(([id, key]) => {
+      const btn = $(id);
+      if (btn) btn.style.display = w[key] !== false ? "" : "none";
+    });
+    const dockEmpty = !!s.hidePinnedOnHome && w.pinnedBoards === false;
+    if (pinned) pinned.style.display = dockEmpty ? "none" : "flex";
+    document.body.classList.toggle("hide-pinned-home", dockEmpty);
     const pinsPos = ["left", "right", "bottom"].includes(s.pinsPosition)
       ? s.pinsPosition
       : "center";
     ["center", "left", "right", "bottom"].forEach((p) =>
       document.body.classList.toggle(`pins-pos-${p}`, p === pinsPos),
     );
-    // Beside or below the column, the row is placed against the Home view
-    // itself. Left inside the centre column it was positioned against the
-    // column, and "left side" landed in the middle of the page.
+
     const pinsEl = $("homePinned");
     const homeView = $("homeView");
     const centreCol = document.querySelector("#homeView > .et-home-center");
@@ -1073,6 +973,9 @@ const WidgetsRenderer = (() => {
       }
     }
 
+    measureDock();
+    watchDock();
+
     const raw = s.clockPosition === "corner" ? "bottom-left" : s.clockPosition;
     const pos = CLOCK_POSITIONS.includes(raw) ? raw : "center";
     CLOCK_POSITIONS.forEach((p) =>
@@ -1083,25 +986,37 @@ const WidgetsRenderer = (() => {
     placeClockBlock(pos !== "center");
 
     applyClockAppearance(s);
-    // The clock only repaints on a tick, and ticks are suspended while the tab
-    // is in the background - so a layout change made while it was hidden could
-    // leave the date and greeting blank until the next visible second. Anything
-    // that rearranges the home block repaints it.
+
     updateClock(true);
   }
 
-  /**
-   * Puts the clock block where the chosen layout wants it.
-   *
-   * The greeting, the time, the date and the weather are one element now, so
-   * there is nothing to gather up first - only the block itself to move. It is
-   * lifted out of `#homeView` and into `.app` whenever it leaves the centre:
-   * `.et-view.active` runs a `translateY` entrance animation, and a transformed
-   * ancestor becomes the containing block for `position: fixed` descendants, so
-   * `top: 15px` was being measured from the top of the view rather than the top
-   * of the window and landed 66px down. `.app` carries no transform, so from
-   * there the corner offsets mean what they say.
-   */
+  function measureDock() {
+    const pins = $("homePinned");
+    const home = document.documentElement;
+    if (!pins) return;
+    const sideDocked =
+      document.body.classList.contains("pins-pos-left") ||
+      document.body.classList.contains("pins-pos-right");
+    if (!sideDocked || pins.style.display === "none") {
+      home.style.removeProperty("--pins-dock-w");
+      return;
+    }
+    home.style.setProperty(
+      "--pins-dock-w",
+      `${Math.round(pins.getBoundingClientRect().width)}px`,
+    );
+  }
+
+  let dockWatched = false;
+  function watchDock() {
+    if (dockWatched) return;
+    const pins = $("homePinned");
+    if (!pins || typeof ResizeObserver !== "function") return;
+    dockWatched = true;
+
+    new ResizeObserver(() => measureDock()).observe(pins);
+  }
+
   function placeClockBlock(docked) {
     const app = document.querySelector(".app");
     const centre = $("homeWidgets");
@@ -1111,62 +1026,9 @@ const WidgetsRenderer = (() => {
       target.appendChild(clock);
   }
 
-  const CLOCK_FONT_STACKS = {
-    system: {
-      stack:
-        "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      // Regular, not semibold. At the size the clock is now set, 600 read as
-      // heavy and made the page feel denser than it is; the weight is what
-      // separates a calm clock from a loud one. The Thin and Light faces are
-      // still there for anyone who wants to go further.
-      weight: 400,
-      spacing: "-0.03em",
-    },
-    default: {
-      stack: "'Orbitron', var(--font-app, sans-serif)",
-      weight: 700,
-      spacing: "0.02em",
-    },
-    thin: {
-      stack:
-        "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', sans-serif",
-      weight: 200,
-      spacing: "-0.02em",
-    },
-    light: {
-      stack: "'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif",
-      weight: 300,
-      spacing: "-0.01em",
-    },
-    app: {
-      stack: "var(--font-app, sans-serif)",
-      weight: 600,
-      spacing: "normal",
-    },
-    serif: {
-      stack: "'Lora', Georgia, 'Times New Roman', serif",
-      weight: 400,
-      spacing: "normal",
-    },
-    mono: {
-      stack: "'JetBrains Mono', ui-monospace, Consolas, monospace",
-      weight: 400,
-      spacing: "-0.03em",
-    },
-    handwriting: { stack: "'Caveat', cursive", weight: 700, spacing: "normal" },
-    // Bundled (fonts/outfit-latin.woff2), so it renders the same offline and
-    // on every browser. Geometric, open numerals that stay light at display
-    // size without going as thin as the iOS-style face.
-    outfit: {
-      stack: "'Outfit', var(--font-app, sans-serif)",
-      weight: 400,
-      spacing: "-0.02em",
-    },
-  };
-
   function applyClockAppearance(s) {
     const root = document.documentElement.style;
-    const face = CLOCK_FONT_STACKS[s.clockFont] || CLOCK_FONT_STACKS.system;
+    const face = clockFont(s.clockFont);
     root.setProperty("--clock-font", face.stack);
     root.setProperty("--clock-weight", String(face.weight));
     root.setProperty("--clock-tracking", face.spacing);
@@ -1177,30 +1039,30 @@ const WidgetsRenderer = (() => {
     if (custom) root.setProperty("--clock-color", custom);
     else root.removeProperty("--clock-color");
 
+    const scale = Number.isFinite(s.clockScale)
+      ? Math.min(130, Math.max(60, s.clockScale))
+      : 100;
+    root.setProperty("--clock-scale", String(scale / 100));
+    const pct = (v, lo, hi) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : 100) / 100;
+    root.setProperty("--greeting-scale", String(pct(s.greetingScale, 70, 150)));
+    root.setProperty("--meta-scale", String(pct(s.metaScale, 70, 150)));
+
+    [
+      ["greetingColor", "--greeting-color", "has-greeting-color"],
+      ["metaColor", "--meta-color", "has-meta-color"],
+    ].forEach(([key, prop, cls]) => {
+      const val = /^#[0-9a-f]{6}$/i.test(s[key] || "") ? s[key] : "";
+      if (val) root.setProperty(prop, val);
+      else root.removeProperty(prop);
+      document.body.classList.toggle(cls, !!val);
+    });
+
     watchClockSpacing();
     fitClockSpacing();
   }
 
-  /* Clock-to-greeting spacing, measured from the letters themselves.
-
-     A text box is taller than the ink in it by an amount that belongs to the
-     font: under the digits sit the descender band and any leading, above the
-     greeting the ascender band. Those bands came to 47px under a 139px clock
-     here, and more on a bigger screen, so the gap you saw was mostly empty box
-     rather than the spacing the stylesheet asked for. `text-box` was meant to
-     trim them and did not reliably reach the digits' baseline.
-
-     The font's own metrics say exactly how deep those bands are, so they are
-     measured on a canvas in the computed font and handed to CSS, which pulls
-     the boxes in by that much. The gap on screen is then the stylesheet's
-     number on every font, size and browser. */
   const inkCanvas = document.createElement("canvas").getContext("2d");
 
-  /**
-   * Empty space above the first line's ink, and between the ink and the
-   * bottom of the element's box (so anything else holding the box open is
-   * counted too).
-   */
   function inkBands(el, sample) {
     const cs = getComputedStyle(el);
     inkCanvas.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
@@ -1229,7 +1091,7 @@ const WidgetsRenderer = (() => {
       clock.style.setProperty("--clock-ink-top", `${clockInk.top.toFixed(1)}px`);
       clock.style.setProperty("--clock-ink-bottom", `${clockInk.bottom.toFixed(1)}px`);
     }
-    // Capital height is what the eye reads as the top of a line of text.
+
     const greetInk = greeting ? inkBands(greeting, "H") : null;
     if (greetInk)
       clock.style.setProperty("--greeting-ink-top", `${greetInk.top.toFixed(1)}px`);
@@ -1239,9 +1101,7 @@ const WidgetsRenderer = (() => {
   function watchClockSpacing() {
     if (clockSpacingWatched) return;
     clockSpacingWatched = true;
-    // The clock is sized in viewport units and fonts arrive late, so either
-    // changes the bands. Resizes of the two boxes cover both; setting the
-    // margins does not resize them, so this cannot feed itself.
+
     if (typeof ResizeObserver === "function") {
       const observer = new ResizeObserver(() => fitClockSpacing());
       [$("clockTime"), $("clockGreeting")].forEach((el) => el && observer.observe(el));
@@ -1265,14 +1125,6 @@ const WidgetsRenderer = (() => {
   };
 })();
 
-/**
- * First run: the name screen.
- *
- * Shown over the app on the user's own wallpaper before anything else, so the
- * first thing a new install does is ask one question rather than present a
- * finished page addressed to nobody. It is deliberately skippable - a name is
- * a nicety, not a gate - and never appears again once completed.
- */
 const WelcomeScreen = (() => {
   function finish(name) {
     const settings = StorageManager.getSettings();
@@ -1285,14 +1137,12 @@ const WelcomeScreen = (() => {
 
     const screen = $("welcomeScreen");
     if (screen) screen.hidden = true;
-    // Repaint so the greeting says the new name immediately rather than on
-    // the next minute tick.
+
     try {
       WidgetsRenderer.updateClock(true);
     } catch {}
   }
 
-  /** @returns {boolean} Whether the screen was shown. */
   function maybeShow() {
     const settings = StorageManager.getSettings();
     if (settings.welcomeSeen || (settings.displayName || "").trim())
@@ -1304,8 +1154,7 @@ const WelcomeScreen = (() => {
     if (!screen || !input || !button) return false;
 
     screen.hidden = false;
-    // Empty until something is typed: "Continue" with nothing in the field
-    // would look like the button is broken rather than like a skip.
+
     const sync = () => {
       button.disabled = false;
       button.textContent = input.value.trim() ? "Continue" : "Skip";
@@ -1336,7 +1185,7 @@ const WelcomeScreen = (() => {
         e.preventDefault();
         finish(input.value);
       }
-      // Escape skips rather than trapping someone on the first screen.
+
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
@@ -1346,7 +1195,7 @@ const WelcomeScreen = (() => {
     button.addEventListener("click", () => finish(input.value));
 
     sync();
-    // After the boot reveal, or the field is focused while still invisible.
+
     requestAnimationFrame(() => input.focus());
     return true;
   }

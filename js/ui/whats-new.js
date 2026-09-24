@@ -1,13 +1,5 @@
 "use strict";
 
-/* Two jobs, both about surviving an extension update:
-   1. A stale new tab page keeps running the previous build's code until it is
-      reloaded, which is why an update can look like "nothing changed". When the
-      extension context is torn down we reload the page ourselves, at a moment
-      that will not eat what the user is typing.
-   2. Once the fresh build boots, show a short note about what changed. Settings
-      and data live in extension/local storage and are untouched by an update -
-      only the seen-version marker moves. */
 (function () {
   const EXT =
     typeof chrome !== "undefined" && chrome.runtime
@@ -18,8 +10,6 @@
 
   const SEEN_KEY = "et_seen_version";
 
-  // Newest first. Keep it to the handful of lines a user actually cares about;
-  // versions with no entry here update silently.
   const CHANGELOG = {
     "2.0.158": [
       "Fixed: dragging a board sideways onto a tall board no longer drops it underneath. It goes above, unless you let go near the bottom edge.",
@@ -209,8 +199,6 @@
     }
   }
 
-  /* ---- 1. reload a page whose extension context died under it ---- */
-
   function contextAlive() {
     try {
       return !!EXT?.runtime?.id;
@@ -256,23 +244,9 @@
       if (!contextAlive()) reloadWhenSafe();
     };
 
-    /* Every thirty seconds, not every five.
-
-       This is a poll for something that changes when the extension updates -
-       roughly weekly at best - and it runs for the life of every open new tab.
-       At five seconds that is twelve wake-ups a minute, per tab, forever, to
-       read one property; on a pinned new tab it is pure battery.
-
-       The frequency barely matters for how quickly a user notices, because
-       `visibleInterval` also runs the check on every re-show, and the moment
-       that actually counts is when someone returns to the tab. `focus` is
-       added for the same reason: a window brought forward is about to be used.
-       The interval is only the backstop for a tab left open and looked at. */
     visibleInterval(check, 30000);
     window.addEventListener("focus", check, { passive: true });
   }
-
-  /* ---- 2. the what's-new note ---- */
 
   function showNotes(version, lines) {
     const overlay = document.createElement("div");
@@ -336,8 +310,6 @@
       localStorage.setItem(SEEN_KEY, version);
     } catch {}
 
-    // No marker means a fresh install, or the first build that shipped this
-    // check. Either way there is nothing useful to announce yet.
     if (!seen || seen === version) return;
     const lines = CHANGELOG[version];
     if (!lines || !lines.length) return;

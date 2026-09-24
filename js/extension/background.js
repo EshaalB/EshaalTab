@@ -9,10 +9,9 @@ const API =
 
 const CONTEXT_MENU_ID = "eshaaltab-save";
 
-// Reminders. Split out to keep this file about the toolbar/context-menu
-// surface; it uses `API` and `flashBadge` from here, so it has to load after
-// both exist (function declarations hoist, `API` does not - hence the import
-// at the bottom of this file).
+const INBOX_QUEUE_KEY = "inboxQueue";
+
+const MAX_QUEUED_SAVES = 200;
 
 function uuid() {
   return self.crypto && crypto.randomUUID
@@ -25,11 +24,13 @@ async function flashBadge(text, color) {
   try {
     await API.action.setBadgeBackgroundColor({ color });
     await API.action.setBadgeText({ text });
-    setTimeout(() => {
-      try {
-        Promise.resolve(API.action.setBadgeText({ text: "" })).catch(() => {});
-      } catch {}
-    }, 1600);
+  } catch {}
+}
+
+async function clearBadge() {
+  if (!API?.action) return;
+  try {
+    await API.action.setBadgeText({ text: "" });
   } catch {}
 }
 
@@ -44,67 +45,40 @@ async function saveUrl(url, title) {
 }
 
 async function doSaveUrl(url, title) {
+  await clearBadge();
+
   if (!url || !/^https?:\/\//i.test(url)) {
     flashBadge("!", "#f59e0b");
     return;
   }
 
-  const bag = await API.storage.local.get("data");
-  const data = bag.data && typeof bag.data === "object" ? bag.data : {};
-  const bookmark = {
-    id: uuid(),
-    title: (title || url).trim(),
-    url: url.trim(),
-    tags: [],
-  };
+  const cleanUrl = url.trim().slice(0, 2000);
+  const bag = await API.storage.local.get(INBOX_QUEUE_KEY);
+  const queue = Array.isArray(bag[INBOX_QUEUE_KEY]) ? bag[INBOX_QUEUE_KEY] : [];
 
-  let target;
-  if (Array.isArray(data.pages)) {
-    for (const p of data.pages) {
-      const f = (p.boards || []).find((b) => b.name === "Inbox");
-      if (f) {
-        target = f;
-        break;
-      }
-    }
-    if (!target && data.pages[0]) {
-      target = {
-        id: uuid(),
-        type: "links",
-        name: "Inbox",
-        color: "#6366f1",
-        bookmarks: [],
-      };
-      (data.pages[0].boards = data.pages[0].boards || []).push(target);
-    }
-  } else {
-    if (!Array.isArray(data.boards)) data.boards = [];
-    target = data.boards.find((b) => b.name === "Inbox");
-    if (!target) {
-      target = {
-        id: uuid(),
-        name: "Inbox",
-        color: "#6366f1",
-        col: 0,
-        order: data.boards.length,
-        bookmarks: [],
-      };
-      data.boards.push(target);
-    }
+  if (queue.some((e) => e && e.url === cleanUrl)) {
+    flashBadge("\u2713", "#10b981");
+    return;
   }
 
-  if (!target) {
+  queue.push({
+    id: uuid(),
+    title: String(title || cleanUrl)
+      .trim()
+      .slice(0, 300),
+    url: cleanUrl,
+    ts: Date.now(),
+  });
+
+  try {
+    await API.storage.local.set({
+      [INBOX_QUEUE_KEY]: queue.slice(-MAX_QUEUED_SAVES),
+    });
+  } catch (e) {
     flashBadge("!", "#f59e0b");
     return;
   }
-  if (!Array.isArray(target.bookmarks)) target.bookmarks = [];
-
-  if (!target.bookmarks.some((b) => b.url === bookmark.url)) {
-    bookmark.order = target.bookmarks.length;
-    target.bookmarks.push(bookmark);
-    await API.storage.local.set({ data, writer: "background-" + uuid() });
-  }
-  flashBadge("✓", "#10b981");
+  flashBadge("\u2713", "#10b981");
 }
 
 async function saveActiveTab() {
@@ -139,22 +113,14 @@ async function registerMenu() {
   }
 }
 
-/* Updates have to actually land.
+const UPDATE_PENDING_KEY = "updatePending";
+const UPDATE_FLUSH_GRACE_MS = 400;
 
-   Chrome does not apply a pending extension update while the extension is
-   still "in use", and a new tab page is the worst possible case for that: a
-   pinned tab, or simply a browser that is never fully closed, keeps the
-   extension busy indefinitely. The update then sits in the queue for days,
-   which is what makes a fix look like it did not ship and pushes people
-   toward removing and reinstalling to get it.
-
-   Answering `onUpdateAvailable` by reloading immediately is the supported way
-   to say "go ahead now". The reload tears down this worker and swaps in the
-   new version; the open new tab pages notice their extension context has been
-   orphaned (`watchForUpdate` in whats-new.js polls for exactly that) and
-   reload themselves at the next safe moment, so a user who is mid-sentence in
-   a note does not lose it. */
-API?.runtime?.onUpdateAvailable?.addListener(() => {
+API?.runtime?.onUpdateAvailable?.addListener(async () => {
+  try {
+    await API.storage.local.set({ [UPDATE_PENDING_KEY]: Date.now() });
+    await new Promise((resolve) => setTimeout(resolve, UPDATE_FLUSH_GRACE_MS));
+  } catch {}
   try {
     API.runtime.reload();
   } catch {}
@@ -163,18 +129,7 @@ API?.runtime?.onUpdateAvailable?.addListener(() => {
 API?.runtime?.onInstalled.addListener((details) => {
   registerMenu();
 
-  /* An update can change what the context menu says or which contexts it
-     applies to, and the entry registered by the previous version survives the
-     swap - `registerMenu` already calls `removeAll` first, so this is simply
-     making sure it runs on the update path too, not only on a fresh install.
-
-     Anything else that ever needs to happen once per upgrade belongs here,
-     keyed off `details.previousVersion`, rather than in the new tab page:
-     the page only runs when someone opens a tab, which may be much later. */
   if (details?.reason === "update") {
-    // Nothing version-specific to do yet. The settings layer migrates itself
-    // on load (see `sanitizeSettings`), so new keys arrive with their defaults
-    // without a step here.
   }
 });
 API?.runtime?.onStartup?.addListener(registerMenu);
@@ -187,4 +142,3 @@ API?.contextMenus?.onClicked.addListener((info, tab) => {
 API?.commands?.onCommand.addListener((command) => {
   if (command === "save-current-tab") saveActiveTab();
 });
-

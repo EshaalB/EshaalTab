@@ -6,10 +6,10 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "Outfit";
-  src: url("../fonts/outfit-latin.woff2") format("woff2");
+  font-family: "Bricolage Grotesque";
+  src: url("../fonts/bricolage-grotesque-latin.woff2") format("woff2");
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 300 700;
   font-display: swap;
 }
 @font-face {
@@ -20,10 +20,26 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "Lexend";
-  src: url("../fonts/lexend-latin.woff2") format("woff2");
+  font-family: "Nunito";
+  src: url("../fonts/nunito-latin.woff2") format("woff2");
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bebas Neue";
+  src: url("../fonts/bebas-neue-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Young Serif";
+  src: url("../fonts/young-serif-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
   font-display: swap;
 }
 @font-face {
@@ -68,14 +84,14 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url("../fonts/orbitron-700.ttf") format("truetype");
+  src: url("../fonts/orbitron-700.woff2") format("woff2");
 }
 @font-face {
   font-family: "Orbitron";
   font-style: normal;
   font-weight: 800;
   font-display: swap;
-  src: url("../fonts/orbitron-800.ttf") format("truetype");
+  src: url("../fonts/orbitron-800.woff2") format("woff2");
 }
 
 * {
@@ -104,9 +120,9 @@ body {
 
 body.font-handwriting {
   --font-app: "Caveat", ui-rounded, cursive, sans-serif;
-  --fs-xs: 13px;
-  --fs-sm: 15px;
-  --fs-base: 16px;
+  --fs-xs: calc(13px * var(--ui-scale));
+  --fs-sm: calc(15px * var(--ui-scale));
+  --fs-base: calc(17px * var(--ui-scale));
   letter-spacing: 0.015em;
   font-weight: 500;
   font-style: normal;
@@ -127,9 +143,18 @@ body.font-handwriting .sr-sub {
   font-style: normal;
 }
 
-*:focus-visible {
+:focus {
+  outline: none;
+}
+
+:focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: 2px;
+}
+
+:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="button"], [type="submit"]), textarea, select, [contenteditable="true"]):focus-visible {
+  outline: none;
+  border-color: var(--accent-color);
 }
 
 input::placeholder,
@@ -138,6 +163,18 @@ textarea::placeholder {
   font-weight: 400 !important;
   opacity: 1 !important;
   text-shadow: none !important;
+}
+
+.et-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 ::-webkit-scrollbar {
@@ -172,11 +209,6 @@ textarea::placeholder {
   --e4:
     0 4px 8px var(--shadow-contact),
     0 20px 42px -4px var(--shadow-ambient);
-  --e-sheet:
-    -4px 0 8px var(--shadow-contact),
-    -12px 0 32px -4px var(--shadow-ambient);
-  --glass: none;
-  --glass-lg: none;
   --hair: 1px solid var(--border-soft);
 
   --wp-shadow-opacity: 0.6;
@@ -190,7 +222,6 @@ textarea::placeholder {
   --accent-gradient: linear-gradient(135deg, var(--accent-color), var(--accent-2, var(--accent-color)));
   --accent-gradient-h: linear-gradient(90deg, var(--accent-color), var(--accent-2, var(--accent-color)));
 
- 
   --accent-fill: var(--accent-color);
 
   --board-rgb: 255, 255, 255;
@@ -215,34 +246,25 @@ textarea::placeholder {
 
   --topbar-opacity: var(--board-opacity, 0.08);
   --notes-opacity: var(--board-opacity, 0.08);
-  /* The search bar had no surface of its own and borrowed the tab strip's,
-     so the two could never be set apart - one slider moved both. */
+
   --search-opacity: var(--topbar-opacity);
-  --surface-topbar: rgba(var(--board-rgb), var(--topbar-opacity));
   --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
   --surface-search: rgba(var(--board-rgb), var(--search-opacity));
 
-  --widget-bg-alpha: 0.95;
   --text: rgba(255, 255, 255, 0.95);
-  --text-dim: rgba(255, 255, 255, 0.65);
+  --text-dim: rgba(255, 255, 255, 0.86);
   --text-faint: rgba(255, 255, 255, 0.35);
   --border-soft: rgba(255, 255, 255, 0.12);
   --border-strong: rgba(255, 255, 255, 0.22);
   --track: rgba(255, 255, 255, 0.18);
 
-  --op-primary: 1;
-  --op-secondary: 0.78;
-  --op-muted: 0.52;
-  --op-faint: 0.32;
 
   --surface-base: #090a0f;
-  --surface-chip: rgba(255, 255, 255, 0.1);
-  /* Neutral (non-accent-tinted) surfaces for UI panels like settings cards */
+
   --surface-panel: rgba(255, 255, 255, 0.04);
   --surface-panel-2: rgba(255, 255, 255, 0.065);
   --border-tactile: 1px solid var(--border-soft);
-  --border-tactile-accent: 1px solid var(--accent-color);
- 
+
   --panel-rgb: 17, 19, 24;
   --panel-opacity: 1;
   --panel: rgba(var(--panel-rgb), var(--panel-opacity));
@@ -250,79 +272,49 @@ textarea::placeholder {
   --panel-border: rgba(255, 255, 255, 0.1);
   --panel-hover: rgba(255, 255, 255, 0.06);
 
-  /* Every menu that opens over the page - board options, the search-engine
-     list, every custom select - paints from these. They were three separate
-     sets of hardcoded fallbacks before, so the same dropdown pattern arrived in
-     three different greys with three different borders and three different
-     corner radii depending on which control opened it. */
-  /* Solid, not `--panel`. Panels follow the interface-strength slider, and a
-     menu that floats over the very content it is covering has to be readable
-     whatever that slider says - otherwise the option you are choosing is
-     printed on top of the setting you are choosing it for. */
   --menu-bg: var(--panel-solid);
   --menu-border: var(--panel-border);
   --menu-radius: var(--r-md);
   --menu-hover: var(--panel-hover);
 
-  /* The moving part of a switch or slider: it has to read against the track,
-     which is itself drawn from the panel, so it flips with the theme. */
   --knob: #ffffff;
 
-  /* Code and other fixed-width text. Was referenced with a bare `monospace`
-     fallback in three places and defined in none of them. */
+  --font-display: "Bricolage Grotesque", var(--font-app, Inter), system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
   --menu-active-bg: color-mix(in srgb, var(--accent-color) 18%, transparent);
   --menu-active-ink: var(--accent-ink, var(--accent-color));
 
-  --glass-fill: rgba(14, 16, 22, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-blur: none;
   --scrim: rgba(0, 0, 0, 0.65);
 
   --page-bg: #090a0f;
 
-  --paper: rgba(255, 255, 255, 0.035);
-  /* The amber wash behind an active/starred control. Same warning role as
-     --warning, mixed dark so it can sit under amber text without competing. */
-  --warning-wash: rgba(120, 78, 0, 0.52);
-  --danger: #ef4444;
-  --danger-text: #f87171;
+
+  --danger: #dc2626;
+  --danger-text: #fca5a5;
   --danger-fill: rgba(239, 68, 68, 0.12);
   --danger-border: rgba(239, 68, 68, 0.25);
-  --success-border: rgba(16, 185, 129, 0.5);
 
   --ui-scale: 1;
 
-  --fs-xs: calc(13px * var(--ui-scale));
+  --fs-xs: calc(12px * var(--ui-scale));
   --fs-sm: calc(14px * var(--ui-scale));
-  --fs-base: calc(15px * var(--ui-scale));
-  --fs-md: calc(16px * var(--ui-scale));
+  --fs-base: calc(16px * var(--ui-scale));
   --fs-lg: calc(20px * var(--ui-scale));
-  --fs-2xl: calc(24px * var(--ui-scale));
   --fs-xl: calc(28px * var(--ui-scale));
-  /* Bigger, and carried at a lighter weight further down. A large light clock
-     reads as calm; the same size in semibold reads as dense, which is what
-     made the page feel busier than it is.
 
-     Grown again now that everything around it went up: the clock has to stay
-     unmistakably the largest thing on the page, and holding it at 104px while
-     the navigation, the date row and the shortcuts all gained size quietly
-     narrowed the gap that makes the hierarchy readable. The vw term does the
-     real work on a laptop - 7.4vw is 107px on a 1440-wide window - and the
-     ceiling only bites on very wide monitors, where `--ui-scale` is already
-     lifting everything else too. */
-  --fs-display: clamp(64px, 7.4vw, calc(124px * var(--ui-scale)));
+  --clock-size: clamp(52px, min(11vw, 17vh), calc(190px * var(--ui-scale)));
+  --page-gutter: clamp(12px, 3vw, 32px);
+  --content-wide: min(calc(1600px * var(--ui-scale)), calc(100vw - var(--page-gutter) * 2));
+  --optical-rise: clamp(var(--sp-8), 15vh, calc(180px * var(--ui-scale)));
+  --content-max: calc(680px * var(--ui-scale));
 
-  --fw-body: 400;
   --fw-medium: 500;
   --fw-semi: 600;
-  --fw-bold: 700;
 
   --r-xs: 6px;
   --r-sm: 8px;
   --r-md: 14px;
   --r-lg: 20px;
-  --r-xl: 20px;
   --r-pill: 999px;
 
   --sp-1: 4px;
@@ -333,38 +325,33 @@ textarea::placeholder {
   --sp-6: 24px;
   --sp-8: 32px;
   --sp-12: 48px;
-  --sp-16: 64px;
 
   --lh-tight: 1.2;
   --lh-body: 1.6;
   --lh-ui: 1.1;
 
-  /* Tightened across the board. The old scale topped out at 400ms, which is
-     long enough that a panel opening or a view changing read as something you
-     wait for rather than something that just happened. These lengths still
-     show the motion - a change you cannot see at all is disorienting - but
-     land close enough to the click that the interface feels immediate.
-     `--dur-3` in particular drives the board open/close slide. */
-  --dur-1: 70ms;
-  --dur-2: 120ms;
-  --dur-3: 180ms;
-  --dur-4: 240ms;
+  --dur-1: 120ms;
+  --dur-2: 160ms;
+  --dur-3: 220ms;
+  --dur-4: 280ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --texture-paper: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.035'/%3E%3C/svg%3E");
 
   --success: #22c55e;
-  --success-text: #4ade80;
-  --success-fill: rgba(34, 197, 94, 0.12);
   --warning: #f59e0b;
   --warning-text: #fbbf24;
-  --warning-fill: rgba(245, 158, 11, 0.12);
 
-  --bp-sm: 640px;
-  --bp-md: 768px;
-  --bp-lg: 1024px;
-  --bp-xl: 1280px;
+  --z-raised: 10;
+  --z-sticky: 100;
+  --z-topbar: 200;
+  --z-dropdown: 300;
+  --z-popover: 400;
+  --z-sheet: 500;
+  --z-overlay: 600;
+  --z-modal: 700;
+  --z-toast: 800;
+  --z-tooltip: 900;
+
 }
 
 @media (min-width: 1800px) {
@@ -388,8 +375,16 @@ textarea::placeholder {
   }
 }
 
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
 body.theme-light {
-  --shadow-tint: color-mix(in srgb, var(--accent-color, #4382ec) 25%, #0f172a);
+  --shadow-tint: color-mix(in srgb, var(--accent-color, #6366f1) 25%, #0f172a);
   --shadow-contact: color-mix(in srgb, var(--shadow-tint) 7%, transparent);
   --shadow-ambient: color-mix(in srgb, var(--shadow-tint) 14%, transparent);
 
@@ -405,9 +400,6 @@ body.theme-light {
   --e4:
     0 4px 8px var(--shadow-contact),
     0 20px 42px -4px var(--shadow-ambient);
-  --e-sheet:
-    -4px 0 8px var(--shadow-contact),
-    -12px 0 32px -4px var(--shadow-ambient);
   --hair: 1px solid var(--border-soft);
 
   --board-border: transparent;
@@ -420,19 +412,16 @@ body.theme-light {
   --surface: rgba(0, 0, 0, 0.04);
   --surface-2: rgba(0, 0, 0, 0.06);
   --surface-3: rgba(0, 0, 0, 0.1);
-  --surface-topbar: rgba(var(--board-rgb), var(--topbar-opacity));
   --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
   --surface-search: rgba(var(--board-rgb), var(--search-opacity));
   --surface-base: #f4f6f8;
   --surface-card: rgba(var(--board-rgb), var(--board-opacity, 0.08));
-  --surface-chip: rgba(0, 0, 0, 0.05);
-  /* Neutral (non-accent-tinted) surfaces for UI panels in light mode */
+
   --surface-panel: rgba(0, 0, 0, 0.04);
   --surface-panel-2: rgba(0, 0, 0, 0.065);
   --border-tactile: 1px solid var(--border-soft);
-  --border-tactile-accent: 1px solid var(--accent-color);
   --text: rgba(0, 0, 0, 0.88);
-  --text-dim: rgba(0, 0, 0, 0.5);
+  --text-dim: rgba(0, 0, 0, 0.62);
   --text-faint: rgba(0, 0, 0, 0.35);
   --border-soft: rgba(0, 0, 0, 0.12);
   --border-strong: rgba(0, 0, 0, 0.2);
@@ -444,24 +433,15 @@ body.theme-light {
   --panel-solid: rgb(var(--panel-rgb));
   --panel-border: rgba(0, 0, 0, 0.12);
   --panel-hover: rgba(0, 0, 0, 0.04);
-  /* Re-declared, not inherited. `:root` defines these as aliases of the panel
-     tokens, and an alias is resolved where it is declared - so the root copy
-     had already become the dark panel colour before this block changed the
-     panel, and every dropdown on a light page opened black. */
+
   --menu-bg: var(--panel-solid);
   --menu-border: var(--panel-border);
   --menu-hover: var(--panel-hover);
   --knob: #ffffff;
 
-  --glass-fill: rgba(255, 255, 255, 0.62);
-  --glass-border: rgba(255, 255, 255, 0.75);
   --scrim: rgba(0, 0, 0, 0.35);
 
-  /* No `--page-bg` here. The theme code sets it on :root for whichever mode and
-     background is live, and a declaration on `body` would sit closer to the
-     page than that one and quietly win - which is how a chosen base colour
-     came back as stock grey the moment you switched to light. */
-  --paper: #fffdf6;
+  --danger: #dc2626;
   --danger-text: #b91c1c;
   --danger-fill: rgba(239, 68, 68, 0.08);
   --danger-border: rgba(239, 68, 68, 0.2);
@@ -471,9 +451,4 @@ body.has-custom-cursor,
 body.has-custom-cursor .app,
 body.has-custom-cursor .view {
   cursor: var(--app-cursor, default);
-}
-body.solid-mode {
-  --glass-fill: var(--surface-2);
-  --glass-border: var(--border-soft);
-  --glass-blur: none;
 }

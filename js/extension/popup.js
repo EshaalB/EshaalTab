@@ -30,9 +30,7 @@ const hexToRgb = (hex) => {
     ? { r: 99, g: 102, b: 241 }
     : { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 };
-// The popup loads platform.js too, so it scores colour with the same APCA
-// implementation the new tab page uses rather than carrying a second copy that
-// could drift out of step.
+
 const contrastText = (color) => Contrast.ink(color);
 
 function applyPopupTheme(settings) {
@@ -54,6 +52,9 @@ function applyPopupTheme(settings) {
   root.setProperty("--accent-color", accent);
   root.setProperty("--accent-contrast", contrastText(accent));
   root.setProperty("--accent-fill", accent);
+  root.setProperty("--accent-ink", Contrast.readable(accent, light ? "#ffffff" : "#161b22"));
+  root.setProperty("--ok", light ? "#15803d" : "#4ade80");
+  root.setProperty("--bad", light ? "#b91c1c" : "#f87171");
   root.setProperty("--bg", light ? "#f8fafc" : "#0d1117");
   root.setProperty("--page-bg", light ? "#f8fafc" : "#0d1117");
   root.setProperty("--surface-base", light ? "#ffffff" : "#161b22");
@@ -80,12 +81,6 @@ function applyPopupTheme(settings) {
     light ? "rgba(13,17,23,0.14)" : "rgba(255,255,255,0.14)",
   );
 
-  /* The dropdown tokens. The board picker is the shared CustomSelect, whose
-     menu is painted from `--menu-bg` / `--menu-border` / `--menu-hover`. The
-     popup never set them, so they fell through to tokens.css's root values -
-     the new tab page's dark panel - in both themes. In light mode that put
-     near-black option text on a near-black menu. They follow the popup's own
-     light/dark decision now, like every other surface in it. */
   const panelRgb = light ? "255, 255, 255" : "22, 27, 34";
   const menuLine = light ? "rgba(13,17,23,0.12)" : "rgba(255,255,255,0.12)";
   root.setProperty("--panel-rgb", panelRgb);
@@ -178,8 +173,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const raw = await EXT.storage.local.get(["data", "settings", "tabStashes"]);
     localData = raw.data;
     localSettings = raw.settings;
-    // `data.sessions` is canonical; `tabStashes` is the pre-sessions key and
-    // is merged in until the new tab page migrates it away.
+
     localStashes = Array.isArray(raw.data?.sessions)
       ? raw.data.sessions
       : raw.tabStashes;
@@ -291,8 +285,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveStashes() {
     localData.sessions = localStashes;
     if (HAS_EXT && EXT.storage) {
-      // Stamped as a popup write so open new tab pages treat it as a remote
-      // change and reload rather than echoing it back.
       await EXT.storage.local.set({
         data: localData,
         writer: "popup-session-" + Date.now(),
@@ -333,10 +325,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Read later: one click on whatever page you are looking at. This is the
-  // whole point of it living in the toolbar popup rather than the new tab
-  // page - by the time you have opened a new tab to paste a URL into, the
-  // page you wanted to save is behind you.
   const readLaterBtn = $("readLaterBtn");
   readLaterBtn?.addEventListener("click", async () => {
     const url = activeTab?.url || manualUrl.value.trim();
@@ -354,9 +342,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     readLaterBtn.disabled = true;
     readLaterBtn.textContent = "Saving…";
     try {
-      // Re-read immediately before writing rather than trusting the copy this
-      // popup loaded on open: a new tab page may have changed the queue since,
-      // and the popup must not write a stale list back over it.
       const bag = await EXT.storage.local.get("data");
       const data =
         bag.data && typeof bag.data === "object" ? bag.data : { boards: [] };

@@ -1,42 +1,53 @@
 "use strict";
 
-/** The mode a decorative tint has to survive, from the class the theme sets. */
 const uiMode = () =>
   document.body.classList.contains("theme-light") ? "light" : "dark";
 
-/** A stored board colour, softened for the mode it is about to be painted in. */
-const boardTint = (hex) => Contrast.tint(hex, uiMode());
 
-/* Neutral the coloured card is mixed over, and how much of the colour reaches
-   it - kept in step with `.et-board-card.has-own-color` in boards.css so the
-   ink is chosen against the surface the eye will actually see. */
-const CARD_GROUND = { dark: "#121318", light: "#f7f8fa" };
-const CARD_TINT = { dark: 0.52, light: 0.22 };
+const boardTint = (hex) => {
+  const key = String(hex || "").toLowerCase();
+  const tint = BoardManager.BOARD_TINTS.find(
+    (t) => t.light === key || t.dark === key || t.legacy === key,
+  );
+  return tint ? tint[uiMode()] : hex;
+};
 
-/**
- * The colour a coloured board writes its title in.
- *
- * The board's own hue, moved far enough from the card behind it to be read
- * comfortably. In dark mode that means lifting it, in light mode dropping it -
- * `Contrast.readable` walks toward whichever ink the surface calls for and
- * stops as soon as it clears the bar, so the hue survives and only lightness
- * moves. A title in the board's colour is the point; a title that has to be
- * squinted at is not.
- */
-function boardHeadingInk(hex) {
-  const mode = uiMode();
-  const tinted = Contrast.toRgb(boardTint(hex));
-  const ground = Contrast.toRgb(CARD_GROUND[mode]);
-  const t = CARD_TINT[mode];
-  const surface = Contrast.toHex({
-    r: tinted.r * t + ground.r * (1 - t),
-    g: tinted.g * t + ground.g * (1 - t),
-    b: tinted.b * t + ground.b * (1 - t),
-  });
-  return Contrast.readable(boardTint(hex), surface, 60);
+const mixRgb = (a, b, t) => ({
+  r: a.r * t + b.r * (1 - t),
+  g: a.g * t + b.g * (1 - t),
+  b: a.b * t + b.b * (1 - t),
+});
+
+function boardBackdrop() {
+  const s = StorageManager.getSettings();
+  const root = getComputedStyle(document.documentElement);
+  if (["image", "video"].includes(s.backgroundType) && s.wpTone) {
+    const scrim = s.wallpaperOverlay ? (s.wallpaperOverlayOpacity ?? 35) / 100 : 0;
+    return mixRgb(Contrast.toRgb(s.wpTone.middle || s.wpTone.overall), { r: 0, g: 0, b: 0 }, 1 - scrim);
+  }
+  return Contrast.toRgb(root.getPropertyValue("--page-bg").trim() || (uiMode() === "light" ? "#f7f8fa" : "#121318"));
 }
 
-/** The accent a board falls back to when it has no colour of its own. */
+function paintBoardInk(card) {
+  const light = uiMode() === "light";
+  const color = card.dataset.color ? boardTint(card.dataset.color) : "";
+  if (color) card.style.setProperty("--board-accent", color);
+  const root = getComputedStyle(document.documentElement);
+  const alpha = parseFloat(root.getPropertyValue("--board-opacity"));
+  const backdrop = boardBackdrop();
+  const solid = color
+    ? Contrast.toRgb(color)
+    : mixRgb(Contrast.toRgb(effectiveBoardAccent()), Contrast.toRgb(light ? "#ffffff" : "#17181e"), light ? 0.17 : 0.35);
+  const ink = Contrast.ink(Contrast.toHex(mixRgb(solid, backdrop, Number.isFinite(alpha) ? alpha : 1)));
+  card.classList.toggle("ink-dark", ink !== Contrast.INK_LIGHT);
+  for (const v of ["--board-ink", "--board-title-ink", "--board-text"]) card.style.setProperty(v, ink);
+  card.style.setProperty("--board-text-dim", `color-mix(in srgb, ${ink} 70%, transparent)`);
+}
+
+function repaintBoardInk() {
+  document.querySelectorAll(".et-board-card").forEach(paintBoardInk);
+}
+
 const effectiveBoardAccent = () =>
   (
     getComputedStyle(document.documentElement)
@@ -47,7 +58,6 @@ const effectiveBoardAccent = () =>
 const ContextMenu = (() => {
   let menuEl = null;
 
-  // The element focus was on when the menu opened, so Escape can hand it back.
   let invoker = null;
 
   function init() {
@@ -58,13 +68,12 @@ const ContextMenu = (() => {
     menuEl.style.display = "none";
     document.body.appendChild(menuEl);
     document.addEventListener("click", () => hide());
-    // Passive: a capture-phase scroll listener sees every scroll on the page.
+
     document.addEventListener("scroll", () => hide(), { capture: true, passive: true });
     window.addEventListener("resize", () => hide(), { passive: true });
     menuEl.addEventListener("keydown", onMenuKey);
   }
 
-  /** @param {boolean} [restoreFocus] True when dismissed from the keyboard. */
   function hide(restoreFocus = false) {
     if (!menuEl || menuEl.style.display === "none") return;
     menuEl.style.display = "none";
@@ -73,11 +82,6 @@ const ContextMenu = (() => {
     invoker = null;
   }
 
-  /* The menu is a real menu from the keyboard. Its items were plain divs with
-     click handlers: reachable by mouse only, invisible to Tab and to screen
-     readers. Arrow keys move between items and swatches, Enter or Space
-     activates, Escape closes and returns focus to what opened it, and Tab
-     leaves (a menu is one stop in the tab order). */
   function onMenuKey(e) {
     const stops = [
       ...menuEl.querySelectorAll(
@@ -188,14 +192,6 @@ const ContextMenu = (() => {
     place(x, y);
   }
 
-  /**
-   * Which of the four directions actually move this board somewhere, given
-   * where it currently sits (from the last paint's `boardPositions`). A board
-   * alone in its column with nothing beside it offers only the directions
-   * that exist - this is the "detect where the board is, offer only what
-   * applies" behaviour, replacing a fixed up/down pair that moved boards
-   * across columns as often as it moved them within one.
-   */
   function availableMoves(boardId) {
     const pos = BoardRenderer.getBoardPosition(boardId);
     if (!pos) return [];
@@ -204,10 +200,7 @@ const ContextMenu = (() => {
     if (pos.index < pos.count - 1)
       moves.push({ act: "movedown", icon: "↓", label: "Move down" });
     if (pos.col > 0) moves.push({ act: "moveleft", icon: "←", label: "Move left" });
-    // Rightwards into empty space is only offered when the board leaves
-    // something behind. Otherwise the whole grid would shuffle sideways and
-    // the layout would be re-compacted straight back, so the menu item would
-    // be a control that visibly does nothing.
+
     const rightIsReal =
       pos.col + 1 <= (pos.maxCol ?? 0) || pos.count > 1;
     if (pos.col < pos.numCols - 1 && rightIsReal)
@@ -226,13 +219,14 @@ const ContextMenu = (() => {
       <div class="board-menu-item" data-act="rename"><span class="board-menu-icon">${icon("edit", 16)}</span><span class="board-menu-label">Rename board</span></div>
       <div class="board-menu-item" data-act="addlink"><span class="board-menu-icon">+</span><span class="board-menu-label">Add link</span></div>
       <div class="board-menu-item" data-act="openall"><span class="board-menu-icon">${icon("grid", 16)}</span><span class="board-menu-label">Open all in tabs</span></div>
+      <div class="board-menu-item board-menu-check" data-act="titles" role="menuitemcheckbox" aria-checked="${!board.hideTitles}"><span class="board-menu-icon">${icon(board.hideTitles ? "eyeOff" : "eye", 16)}</span><span class="board-menu-label">Show titles</span><span class="board-menu-tick" aria-hidden="true">${board.hideTitles ? "" : icon("check", 14)}</span></div>
       <div class="board-menu-item" data-act="pinboard"><span class="board-menu-icon">${icon("pin", 16)}</span><span class="board-menu-label">${board.pinnedToHome ? "Unpin from Home" : "Pin board to Home"}</span></div>
       <div class="board-menu-sep"></div>
       <div class="board-menu-swatches" role="group" aria-label="Board colour">
         <button class="board-swatch is-default${board.color ? "" : " active"}" data-color="" title="Theme colour" aria-label="Theme colour"></button>
         ${BoardManager.BOARD_COLORS.map(
-          (c) =>
-            `<button class="board-swatch${board.color === c ? " active" : ""}" data-color="${c}" style="--swatch: ${boardTint(c)}" title="Board colour" aria-label="Board colour ${c}"></button>`,
+          (c, i) =>
+            `<button class="board-swatch${board.color === c ? " active" : ""}" data-color="${c}" style="--swatch: ${BoardManager.BOARD_TINTS[i].dot}; --swatch-fill: ${boardTint(c)}" title="${BoardManager.BOARD_TINTS[i].name}" aria-label="Board colour ${BoardManager.BOARD_TINTS[i].name}"></button>`,
         ).join("")}
         <label class="board-swatch board-swatch-custom${isCustomColor ? " active" : ""}" title="Custom colour">
           <input type="color" value="${escapeHtml(board.color || effectiveBoardAccent())}" aria-label="Custom board colour" />
@@ -255,7 +249,7 @@ const ContextMenu = (() => {
       <div class="board-menu-item danger" data-act="delete"><span class="board-menu-icon">${icon("trash", 16)}</span><span class="board-menu-label">Delete board</span></div>
     `,
     );
-    // Swatches stay open on click so a colour can be tried and changed again.
+
     const markActive = (chosen) =>
       menuEl
         .querySelectorAll(".board-swatch")
@@ -272,9 +266,7 @@ const ContextMenu = (() => {
 
     const custom = menuEl.querySelector(".board-swatch-custom");
     const customInput = custom?.querySelector("input");
-    // `input` rather than `change`: the board repaints live while the wheel is
-    // being dragged, so the colour is judged against the board it will be on
-    // rather than against the swatch.
+
     customInput?.addEventListener("input", (e) => {
       e.stopPropagation();
       if (!BoardManager.setColor(board.id, e.target.value)) return;
@@ -300,6 +292,11 @@ const ContextMenu = (() => {
           BoardRenderer.showAddLinkPopup(board.id);
         } else if (act === "openall") {
           TabStash.openAll(board);
+        } else if (act === "titles") {
+          if (board.hideTitles) delete board.hideTitles;
+          else board.hideTitles = true;
+          StorageManager.save();
+          BoardRenderer.renderBoards();
         } else if (act === "pinboard") {
           const now = PinnedBoards.togglePin(board.id);
           if (now !== null) {
@@ -311,6 +308,7 @@ const ContextMenu = (() => {
             );
           }
         } else if (act === "moveup" || act === "movedown") {
+          BoardRenderer.commitPaintedLayout();
           const moved =
             act === "moveup"
               ? BoardManager.moveUp(board.id)
@@ -319,15 +317,29 @@ const ContextMenu = (() => {
         } else if (act === "moveleft" || act === "moveright") {
           BoardRenderer.moveSideways(board.id, act === "moveleft" ? -1 : 1);
         } else if (act === "delete") {
-          const idx = BoardManager.getAll().findIndex((b) => b.id === board.id);
-          BoardManager.deleteBoard(board.id);
-          BoardRenderer.renderBoards();
-          HomeRenderer.renderPinned();
-          ToastSystem.action(`Board "${board.name}" deleted`, "Undo", () => {
-            BoardManager.restoreBoard(board, idx);
+          const count = (board.bookmarks || []).length;
+
+          const doDelete = () => {
+            const token = BoardManager.deleteBoard(board.id);
             BoardRenderer.renderBoards();
             HomeRenderer.renderPinned();
-          });
+            ToastSystem.action(`Board "${board.name}" deleted`, "Undo", () => {
+              BoardManager.restoreBoard(token);
+              BoardRenderer.renderBoards();
+              HomeRenderer.renderPinned();
+            });
+          };
+
+          if (count >= 3) {
+            showConfirm(
+              `Delete "${board.name}"?`,
+              `This board holds ${count} ${count === 1 ? "link" : "links"}. They will be deleted with it.`,
+              doDelete,
+              { confirmLabel: "Delete board" },
+            );
+          } else {
+            doDelete();
+          }
         }
       });
     });
@@ -335,14 +347,6 @@ const ContextMenu = (() => {
   }
 
   function place(x, y) {
-    // Positioned while hidden-but-laid-out so the width/height used to clamp
-    // it to the viewport are real. The entrance animation is withheld until
-    // after that - it used to run unconditionally the moment `display` went
-    // to `block`, so by the time `visibility` came back the menu had already
-    // spent part or all of its fade-and-rise sitting invisibly off in the
-    // measurement phase, which is why it was disabled outright rather than
-    // fixed. Gating it on a class added one frame later lets it play in full,
-    // starting from the moment anyone can actually see it.
     menuEl.classList.remove("is-shown");
     menuEl.style.visibility = "hidden";
     menuEl.style.display = "block";
@@ -351,9 +355,6 @@ const ContextMenu = (() => {
     menuEl.style.top = `${Math.max(8, Math.min(y, window.innerHeight - r.height - 8))}px`;
     menuEl.style.visibility = "";
 
-    // The reveal class drives `opacity` from 0. Added only in a frame callback,
-    // a page that is not being painted never ran it and the menu opened fully
-    // invisible, so a short timeout backs it up.
     const reveal = () => menuEl.classList.add("is-shown");
     requestAnimationFrame(reveal);
     setTimeout(reveal, 50);
@@ -376,21 +377,21 @@ const DragDropEngine = (() => {
 
   const clearMarkers = () =>
     $$(
-      ".et-board-card.drop-before, .et-board-card.drop-after, .et-board-card.is-drop-target, .et-board-col.drop-end, .et-board-tile.drop-before",
+      ".et-board-card.drop-before, .et-board-card.drop-after, .et-board-card.is-drop-target, .et-board-card.is-swap-target, .et-board-col.drop-end, .et-board-tile.drop-before",
     ).forEach((el) =>
-      el.classList.remove("drop-before", "drop-after", "is-drop-target", "drop-end"),
+      el.classList.remove(
+        "drop-before",
+        "drop-after",
+        "is-drop-target",
+        "is-swap-target",
+        "drop-end",
+      ),
     );
 
-  /** The last board card in a column, skipping the Add board tile. */
   const lastCardIn = (col) =>
     [...col.querySelectorAll(":scope > .et-board-card")].pop() || null;
 
   function install(container) {
-    // Where the press began. `dragstart` is dispatched on the draggable
-    // element itself - for a board, the whole card - not on what was pressed,
-    // so asking the event whether it came from the header always answered no,
-    // and a real board drag never started. (A scripted event aimed at the
-    // header passed the check, which is why it looked fine in testing.)
     let pressTarget = null;
     container.addEventListener(
       "pointerdown",
@@ -400,21 +401,18 @@ const DragDropEngine = (() => {
       true,
     );
 
-    // What the pointer is over. dragover fires at pointer rate, and a
-    // getBoundingClientRect per event forces a synchronous layout that makes
-    // the drag stutter, so the hovered card's midpoint is measured on entry
-    // and then at most once per frame, which keeps it correct while the page
-    // auto-scrolls.
     let hoverBoard = null;
     let hoverEdge = 0;
-    let hoverAfter = null;
+    let hoverTopEdge = 0;
+    let hoverBottomEdge = 0;
+    let hoverZone = null;
     let hoverCol = null;
     let hoverTile = null;
     let measureQueued = false;
 
     function forgetHover() {
       hoverBoard = null;
-      hoverAfter = null;
+      hoverZone = null;
       hoverCol = null;
       hoverTile = null;
     }
@@ -422,11 +420,22 @@ const DragDropEngine = (() => {
     function measureHover() {
       if (!hoverBoard || !hoverBoard.isConnected) return;
       const rect = hoverBoard.getBoundingClientRect();
-      // "Below this board" is the bottom strip of the card, not its lower
-      // half. Dragged sideways, the pointer almost always crosses the lower
-      // half of a tall board, and splitting at the middle put the dropped
-      // board underneath it - moved left, and a long way down.
+
       hoverEdge = rect.bottom - Math.min(60, rect.height * 0.35);
+
+      const strip = Math.max(10, Math.min(56, rect.height * 0.25));
+      hoverTopEdge = rect.top + strip;
+      hoverBottomEdge = rect.bottom - strip;
+    }
+
+    function zoneFor(card, clientY) {
+      const dragged = BoardRenderer.getBoardPosition(draggedBoardId);
+      const target = BoardRenderer.getBoardPosition(card.dataset.id);
+      const sameCol = dragged && target && dragged.col === target.col;
+      if (sameCol) return clientY >= hoverEdge ? "after" : "before";
+      if (clientY <= hoverTopEdge) return "before";
+      if (clientY >= hoverBottomEdge) return "after";
+      return "swap";
     }
 
     container.addEventListener("dragstart", (e) => {
@@ -441,7 +450,7 @@ const DragDropEngine = (() => {
         draggedBmInfo = { boardId: board?.dataset.id, bmId: link.dataset.id };
         link.classList.add("is-dragging");
         e.dataTransfer.effectAllowed = "move";
-        // Firefox will not start a drag that carries no data.
+
         try {
           e.dataTransfer.setData("text/plain", link.dataset.id);
         } catch {}
@@ -459,10 +468,7 @@ const DragDropEngine = (() => {
         e.dataTransfer.setData("text/plain", draggedBoardId);
         return;
       }
-      // The card is draggable so that its header can be, but a drag started
-      // anywhere else on it has nothing to move. Left alone, the browser still
-      // lifted a ghost of the whole card, which then dropped nowhere - a drag
-      // that looked like it worked and did nothing.
+
       if (
         e.target.closest?.(".et-board-card") &&
         !origin.closest("input, textarea, [contenteditable]")
@@ -487,9 +493,7 @@ const DragDropEngine = (() => {
         if (!board) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        // Where the link will land: the board it joins is outlined, and the
-        // tile it will sit in front of gets an edge. Without a tile under the
-        // pointer it goes to the end of the board.
+
         const over = e.target.closest(".et-board-tile");
         const tile = over && over.dataset.id !== draggedBmInfo?.bmId ? over : null;
         if (board !== hoverBoard || tile !== hoverTile) {
@@ -505,9 +509,6 @@ const DragDropEngine = (() => {
       if (draggedType !== "board") return;
       const board = e.target.closest(".et-board-card");
 
-      // Below the last card, or in an empty column: the board goes to the end
-      // of that column. This used to refuse the drop, so the only way into a
-      // column was to aim at a card already in it.
       if (!board) {
         const col = e.target.closest(".et-board-col");
         if (!col) return;
@@ -535,9 +536,6 @@ const DragDropEngine = (() => {
       e.dataTransfer.dropEffect = "move";
 
       if (board !== hoverBoard) {
-        // The previous card's marker is dropped here rather than in dragleave:
-        // that event also fires as the pointer crosses into a card's own
-        // children, which made the drop line flicker on and off mid-drag.
         clearMarkers();
         forgetHover();
         hoverBoard = board;
@@ -550,17 +548,15 @@ const DragDropEngine = (() => {
         });
       }
 
-      const after = e.clientY >= hoverEdge;
-      if (after === hoverAfter) return;
-      hoverAfter = after;
-      board.classList.toggle("drop-before", !after);
-      board.classList.toggle("drop-after", after);
+      const zone = zoneFor(board, e.clientY);
+      if (zone === hoverZone) return;
+      hoverZone = zone;
+      board.classList.toggle("drop-before", zone === "before");
+      board.classList.toggle("drop-after", zone === "after");
+      board.classList.toggle("is-swap-target", zone === "swap");
     });
 
     container.addEventListener("dragleave", (e) => {
-      // Only a genuine exit from the grid clears the markers; a dragleave whose
-      // relatedTarget is still inside the container is just the pointer moving
-      // between nested children.
       if (e.relatedTarget && container.contains(e.relatedTarget)) return;
       clearMarkers();
       forgetHover();
@@ -590,20 +586,30 @@ const DragDropEngine = (() => {
 
       if (board && board.dataset.id !== draggedBoardId) {
         e.preventDefault();
+        const swap = board.classList.contains("is-swap-target");
         const after = board.classList.contains("drop-after");
         clearMarkers();
-        const target = BoardManager.find(board.dataset.id);
-        if (!target || !Number.isInteger(target.col)) return;
-        // Placed by column and row, the way the grid shows it. The old
-        // flat-array reorder renumbered every board from its position in
-        // storage, which is not the order a column stacks in once boards have
-        // been moved up, down or sideways - so a drop could reshuffle the
-        // column it landed in.
-        const rest = BoardManager.columnBoards(target.col).filter(
+
+        BoardRenderer.commitPaintedLayout();
+
+        if (swap) {
+          if (BoardManager.swapBoards(draggedBoardId, board.dataset.id))
+            BoardRenderer.renderBoards();
+          return;
+        }
+
+        const pos = BoardRenderer.getBoardPosition(board.dataset.id);
+        const targetCol = pos
+          ? pos.col
+          : BoardManager.find(board.dataset.id)?.col;
+        if (!Number.isInteger(targetCol)) return;
+
+        const rest = BoardManager.columnBoards(targetCol).filter(
           (b) => b.id !== draggedBoardId,
         );
-        const at = rest.findIndex((b) => b.id === target.id) + (after ? 1 : 0);
-        BoardManager.placeBoard(draggedBoardId, target.col, at);
+        const at =
+          rest.findIndex((b) => b.id === board.dataset.id) + (after ? 1 : 0);
+        BoardManager.placeBoard(draggedBoardId, targetCol, at);
         BoardRenderer.renderBoards();
         return;
       }
@@ -614,6 +620,7 @@ const DragDropEngine = (() => {
         clearMarkers();
         if (!Number.isInteger(colIdx)) return;
         e.preventDefault();
+        BoardRenderer.commitPaintedLayout();
         BoardManager.placeBoard(draggedBoardId, colIdx, Infinity);
         BoardRenderer.renderBoards();
       }
@@ -624,10 +631,6 @@ const DragDropEngine = (() => {
 })();
 
 const BoardRenderer = (() => {
-  // Resolved on every use rather than cached once at script eval. A cached
-  // node goes stale the moment anything replaces #boardsArea, and every
-  // guard below then bails silently - boards simply stop opening, with no
-  // error to point at.
   const boardsArea = () => $("boardsArea");
 
   function addBoardAtRight(name) {
@@ -648,9 +651,26 @@ const BoardRenderer = (() => {
 
   let lastNumCols = null;
 
-  // Board id -> { col, numCols, index, count } from the most recent paint.
-  // Read by the board menu to know which of up/down/left/right are real moves.
   const boardPositions = new Map();
+
+  let paintedColumns = [];
+
+  function commitPaintedLayout() {
+    if (!paintedColumns.length) return false;
+    if (![...boardPositions.values()].some((pos) => pos.folded)) return false;
+    const idToCol = new Map();
+    paintedColumns.forEach((colBoards, col) => {
+      colBoards.forEach((painted, i) => {
+        idToCol.set(painted.id, col);
+
+        const live = BoardManager.find(painted.id);
+        if (live) live.order = i;
+      });
+    });
+    BoardManager.applyColumnLayout(idToCol);
+    StorageManager.save();
+    return true;
+  }
 
   let boardsMigrated = false;
 
@@ -668,11 +688,6 @@ const BoardRenderer = (() => {
     }
   }
 
-  // Narrowest a board column can go before its own header controls collapse
-  // into each other. Measured from a real rendered header rather than a fixed
-  // number, so a future redesign of the header (a wider button, an extra
-  // icon, a bigger count badge) raises this floor on its own instead of
-  // silently clipping again until someone remembers to update a constant.
   let measuredMinColW = 0;
 
   function measureMinColW() {
@@ -689,11 +704,8 @@ const BoardRenderer = (() => {
       parseFloat(headerStyle.paddingLeft || "0") +
       parseFloat(headerStyle.paddingRight || "0");
 
-    // Everything in the left group except the title (chevron, count, gaps).
     const chrome = left.offsetWidth - title.getBoundingClientRect().width;
-    // A sliver of title is still worth keeping - enough for an ellipsis and a
-    // character or two, so a one-letter board name doesn't look truncated to
-    // nothing even at the narrowest column.
+
     const MIN_TITLE = 22;
 
     measuredMinColW = Math.ceil(hPad + chrome + MIN_TITLE + right.offsetWidth);
@@ -707,8 +719,18 @@ const BoardRenderer = (() => {
           "--ui-scale",
         ),
       ) || 1;
-    const areaWidth =
-      boardsArea()?.clientWidth || Math.max(240, window.innerWidth - 32) || 1200;
+    const areaEl = boardsArea();
+    const areaStyle = areaEl ? getComputedStyle(areaEl) : null;
+    const innerWidth_ = areaEl
+      ? Math.max(
+          0,
+          areaEl.clientWidth -
+            parseFloat(areaStyle.paddingLeft || "0") -
+            parseFloat(areaStyle.paddingRight || "0"),
+        )
+      : 0;
+    const realWidth = innerWidth_;
+    const areaWidth = realWidth || Math.max(240, window.innerWidth - 32) || 1200;
     const preferredWidth = Math.round(
       (StorageManager.getSettings().boardWidth || 270) * uiScale,
     );
@@ -716,7 +738,7 @@ const BoardRenderer = (() => {
     const floor = measureMinColW();
     const colW = Math.max(floor, Math.min(preferredWidth, areaWidth - 24));
     const numCols = Math.max(1, Math.floor((areaWidth + 16) / (colW + 16)));
-    return { colW, numCols };
+    return { colW, numCols, measured: realWidth > 0 };
   }
 
   function init() {
@@ -737,8 +759,6 @@ const BoardRenderer = (() => {
 
     DragDropEngine.install(area);
 
-    // Delegated from #boardsView, which is static markup, so the handlers
-    // survive #boardsArea being re-created.
     const view = $("boardsView") || area;
 
     view.addEventListener("click", (e) => {
@@ -770,12 +790,8 @@ const BoardRenderer = (() => {
         return;
       }
 
-      // The whole header bar is the accordion's hit target, not just the
-      // chevron - a 14px arrow is a needle to aim at, and every other
-      // disclosure on the page opens from its title row.
       const header = e.target.closest(".et-board-card-header");
-      // `e.detail > 1` is the second click of a double-click, which renames the
-      // board - without this the card visibly flapped open and shut first.
+
       if (header && e.detail < 2 && !e.target.closest("button, a, input")) {
         toggleBoard(header.closest(".et-board-card"));
         return;
@@ -796,8 +812,20 @@ const BoardRenderer = (() => {
         return;
       }
 
-      // The pin sits inside the tile, so it has to claim the click before the
-      // tile turns it into "open this link".
+      const moreBtn = e.target.closest(".et-board-tile-more");
+      if (moreBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const acc = moreBtn.closest(".et-board-card");
+        const b = BoardManager.find(acc?.dataset.id);
+        const bm = b?.bookmarks.find((x) => x.id === moreBtn.dataset.more);
+        if (b && bm) {
+          const r = moreBtn.getBoundingClientRect();
+          ContextMenu.show(r.left, r.bottom + 4, b.id, bm);
+        }
+        return;
+      }
+
       const pinBtn = e.target.closest(".board-pin-badge");
       if (pinBtn) {
         e.preventDefault();
@@ -885,17 +913,40 @@ const BoardRenderer = (() => {
   }
 
   let renderBoardsRAF = null;
+
+  let boardsDirty = false;
+  let lastBoardsSignature = "";
+
+  let renderBoardsTimer = null;
+
   function renderBoards() {
     if (renderBoardsRAF) cancelAnimationFrame(renderBoardsRAF);
-    // A background tab never services its rAF queue, so coalescing there
-    // would leave the boards stale until the tab is looked at again.
-    if (document.hidden) {
+    if (renderBoardsTimer) clearTimeout(renderBoardsTimer);
+    renderBoardsRAF = null;
+    renderBoardsTimer = null;
+
+    const paint = () => {
+      if (renderBoardsRAF) cancelAnimationFrame(renderBoardsRAF);
+      if (renderBoardsTimer) clearTimeout(renderBoardsTimer);
       renderBoardsRAF = null;
+      renderBoardsTimer = null;
       paintBoards();
+    };
+
+    if (document.hidden) {
+      paint();
       return;
     }
-    renderBoardsRAF = requestAnimationFrame(paintBoards);
+    renderBoardsRAF = requestAnimationFrame(paint);
+    renderBoardsTimer = setTimeout(paint, 32);
   }
+
+  function flushBoards() {
+    if (!boardsDirty) return;
+    boardsDirty = false;
+    renderBoards();
+  }
+
 
   function paintBoards() {
     {
@@ -930,8 +981,7 @@ const BoardRenderer = (() => {
         delete data.expandedBoards;
         StorageManager.saveImmediate();
       }
-      // Self-healing: ids left behind by boards deleted before the prune in
-      // BoardManager.deleteBoard existed would otherwise sit in storage forever.
+
       let collapsedBoards = Array.isArray(data.collapsedBoards)
         ? data.collapsedBoards
         : [];
@@ -948,7 +998,26 @@ const BoardRenderer = (() => {
       const gridContainer = document.createElement("div");
       gridContainer.className = "et-board-grid";
 
-      const { colW, numCols } = boardLayoutMetrics();
+      const { colW, numCols, measured } = boardLayoutMetrics();
+      if (!measured && !document.hidden) {
+        boardsDirty = true;
+        return;
+      }
+      boardsDirty = false;
+      const signature = [
+        numCols,
+        colW,
+        uiMode(),
+        StorageManager.getSettings().remoteFavicons ? 1 : 0,
+        JSON.stringify(collapsedBoards),
+        JSON.stringify(boards),
+      ].join("|");
+      if (
+        signature === lastBoardsSignature &&
+        boardsArea.querySelector(".et-board-grid")
+      )
+        return;
+      lastBoardsSignature = signature;
       gridContainer.style.setProperty("--board-col-w", `${colW}px`);
 
       const colElements = [];
@@ -960,9 +1029,6 @@ const BoardRenderer = (() => {
         gridContainer.appendChild(colDiv);
       }
 
-      // Height is estimated rather than measured: nothing is in the document
-      // yet, and an estimate from the header plus the number of tile rows is
-      // close enough to keep the columns level.
       const TILES_PER_ROW = 3;
       const HEADER_H = 46;
       const TILE_ROW_H = 68;
@@ -974,38 +1040,19 @@ const BoardRenderer = (() => {
         return HEADER_H + rows * TILE_ROW_H;
       };
 
-      // A board's column is persisted (`board.col`), not recomputed from
-      // scratch on every render - that persistence is what lets "move up" and
-      // "move left" mean something, and what stops a manually-arranged layout
-      // from being silently reshuffled the next time a board is added.
-      //
-      // The window changing shape invalidates every column at once (there may
-      // no longer be as many, or there is suddenly room for more), so that
-      // case rebalances everything. Otherwise only the boards that genuinely
-      // have nowhere to go - new ones, or ones an old layout never assigned -
-      // are placed, into whichever real column is shortest right now; every
-      // board that already had a home keeps it.
-      // `lastNumCols` starts unknown at the top of every session, and
-      // "unknown" must not be treated as "changed" - otherwise the very first
-      // paint after opening the page would look like a resize and wipe out
-      // whatever layout was persisted from last time.
-      const colChanged = lastNumCols !== null && numCols !== lastNumCols;
       lastNumCols = numCols;
 
-      const isPlaced = (b) => Number.isInteger(b.col) && b.col < numCols;
-      const toPlace = colChanged ? boards : boards.filter((b) => !isPlaced(b));
+      const isPlaced = (b) => Number.isInteger(b.col) && b.col >= 0;
 
+      const toPlace = boards.filter((b) => !isPlaced(b));
       if (toPlace.length) {
         const colHeights = new Array(numCols).fill(0);
-        if (!colChanged) {
-          // Seed with the real height of what is already sitting in each
-          // column, so a new board joins the shortest *actual* column instead
-          // of restarting the estimate from zero.
-          boards.filter(isPlaced).forEach((b) => {
-            colHeights[b.col] +=
-              estimateHeight(b, !collapsedBoards.includes(b.id)) + COL_GAP;
-          });
-        }
+
+        boards.filter(isPlaced).forEach((b) => {
+          const c = Math.min(b.col, numCols - 1);
+          colHeights[c] +=
+            estimateHeight(b, !collapsedBoards.includes(b.id)) + COL_GAP;
+        });
         const shortestCol = () => colHeights.indexOf(Math.min(...colHeights));
         const idToCol = new Map();
         toPlace.forEach((board) => {
@@ -1017,21 +1064,31 @@ const BoardRenderer = (() => {
         BoardManager.applyColumnLayout(idToCol);
       }
 
-      // Deletes and sideways moves can leave a column with nothing in it, and
-      // an empty column is a visible hole in the grid rather than an absence.
       if (BoardManager.compactColumns()) StorageManager.save();
 
-      // `boardPositions` tells the "..." menu which of the four directions
-      // are actually available for a given board, so it never offers a move
-      // that would do nothing (or, as before, do something other than what
-      // its label said).
-      boardPositions.clear();
       const maxCol = Math.max(
         0,
         ...boards.map((b) => (Number.isInteger(b.col) ? b.col : 0)),
       );
-      for (let col = 0; col < numCols; col++) {
-        const colBoards = BoardManager.columnBoards(col);
+
+      const folded = maxCol >= numCols;
+      const displayCol = (col) => {
+        const c = Number.isInteger(col) && col >= 0 ? col : 0;
+        return c < numCols ? c : c % numCols;
+      };
+
+      boardPositions.clear();
+      paintedColumns = Array.from({ length: numCols }, () => []);
+
+      [...boards]
+        .sort((a, b) => {
+          const ca = Number.isInteger(a.col) ? a.col : 0;
+          const cb = Number.isInteger(b.col) ? b.col : 0;
+          return ca - cb || (a.order ?? 0) - (b.order ?? 0);
+        })
+        .forEach((board) => paintedColumns[displayCol(board.col)].push(board));
+
+      paintedColumns.forEach((colBoards, col) => {
         colBoards.forEach((board, i) => {
           boardPositions.set(board.id, {
             col,
@@ -1039,22 +1096,13 @@ const BoardRenderer = (() => {
             index: i,
             count: colBoards.length,
             maxCol,
+            folded,
           });
           const isExp = !collapsedBoards.includes(board.id);
           colElements[col].appendChild(
             createBoardAccordionElement(board, isExp),
           );
         });
-      }
-
-      // Boards with no valid column at all (should not happen once the
-      // rebalance above has run, but a corrupt import is not impossible) fall
-      // back to the first column rather than vanishing from the page.
-      boards.forEach((board) => {
-        if (boardPositions.has(board.id)) return;
-        colElements[0].appendChild(
-          createBoardAccordionElement(board, !collapsedBoards.includes(board.id)),
-        );
       });
 
       const addTile = document.createElement("div");
@@ -1062,15 +1110,12 @@ const BoardRenderer = (() => {
       addTile.id = "btnColAddBoard";
       addTile.setAttribute("role", "button");
       addTile.setAttribute("tabindex", "0");
-      // The plus is its own element so it can outrun the label - a sign at
-      // the end of a column reads faster as a symbol than as punctuation.
+
       setSafeHTML(
         addTile,
         `<span class="et-add-board-plus" aria-hidden="true">+</span><span>Add board</span>`,
       );
-      // Only columns that boards actually reach are candidates, plus the one
-      // immediately past them. Anything further out would put "+ Add board"
-      // across a gap from the grid it belongs to.
+
       const addLimit = Math.min(maxCol + 1, numCols - 1);
       let shortestNow = 0;
       for (let i = 1; i <= addLimit; i++) {
@@ -1084,25 +1129,16 @@ const BoardRenderer = (() => {
     }
   }
 
-  /**
-   * Slides a board card's body open or shut. The measuring, interruption
-   * recovery and easing live in the shared `slideHeight` (js/core/platform.js)
-   * now - the settings accordions use the exact same function, so the two
-   * collapse/expand patterns in the app move identically instead of one being
-   * a hand-tuned animation and the other a hard `display` toggle.
-   */
   function slideBoard(body, open, fromHeight = null) {
     slideHeight(body, open, "is-animating", fromHeight);
   }
 
-  /** Expands or collapses one board card and persists the new state. */
   function toggleBoard(acc) {
     if (!acc) return;
     const boardId = acc.dataset.id;
     const isExp = acc.classList.contains("is-expanded");
     const cardBody = acc.querySelector(".et-board-card-body");
-    // Measured before the class flip below changes which CSS rule is active,
-    // so the slide has a real starting height to animate from.
+
     const fromHeight = cardBody?.getBoundingClientRect().height ?? null;
     acc.classList.toggle("is-expanded", !isExp);
 
@@ -1134,13 +1170,14 @@ const BoardRenderer = (() => {
     acc.className = `et-board-card ${isExpanded ? "is-expanded" : ""}`;
     acc.setAttribute("data-id", board.id);
     acc.setAttribute("draggable", "true");
-    // A board with no colour of its own inherits the theme accent, which is
-    // what the CSS falls back to when the variable is absent.
+    acc.classList.toggle("hide-titles", !!board.hideTitles);
+
     if (board.color) {
       acc.classList.add("has-own-color");
       acc.style.setProperty("--board-accent", boardTint(board.color));
-      acc.style.setProperty("--board-title-ink", boardHeadingInk(board.color));
+      acc.dataset.color = board.color;
     }
+    paintBoardInk(acc);
 
     const linkCount = (board.bookmarks || []).length;
 
@@ -1170,15 +1207,21 @@ const BoardRenderer = (() => {
               ? board.bookmarks
                   .map((bm) => {
                     const rawTitle = (bm.title || "").trim();
+                    let host = bm.url;
+                    try { host = new URL(bm.url).hostname.replace(/^www\./, ""); } catch {}
+                    const name = rawTitle || host;
                     return `
-              <div class="et-board-tile${bm.pinnedToHome ? " is-pinned" : ""}" data-id="${bm.id}" draggable="true" role="button" tabindex="0"
-                   aria-label="${escapeHtml(rawTitle)}${bm.pinnedToHome ? ", pinned to Home" : ""}" title="${escapeHtml(bm.title)} (${escapeHtml(bm.url)})">
-                <img class="et-board-tile-icon" ${faviconAttr(bm.url)} alt="" />
-                <span class="et-board-tile-title" title="${escapeHtml(bm.title)}">${escapeHtml(rawTitle)}</span>
+              <div class="et-board-tile${bm.pinnedToHome ? " is-pinned" : ""}${rawTitle ? "" : " is-icon-only"}" data-id="${bm.id}" draggable="true" role="button" tabindex="0"
+                   aria-label="${escapeHtml(name)}${bm.pinnedToHome ? ", pinned to Home" : ""}" title="${escapeHtml(name)} (${escapeHtml(bm.url)})">
+                <button type="button" class="et-board-tile-more" data-more="${bm.id}"
+                        tabindex="-1" aria-hidden="true"
+                        title="More actions for ${escapeHtml(name)} (or right-click)">${icon("more", 12)}</button>
+                <img class="et-board-tile-icon" ${faviconAttr(bm.url)} alt="" width="26" height="26" />
+                <span class="et-board-tile-title" title="${escapeHtml(rawTitle)}">${escapeHtml(rawTitle)}</span>
                 <button type="button" class="board-pin-badge${bm.pinnedToHome ? " is-pinned" : ""}" data-pin="${bm.id}"
                         aria-pressed="${!!bm.pinnedToHome}"
                         title="${bm.pinnedToHome ? "Unpin from Home" : "Pin to Home"}"
-                        aria-label="${bm.pinnedToHome ? "Unpin" : "Pin"} ${escapeHtml(rawTitle)} to Home">${icon("pinFilled", 13)}</button>
+                        aria-label="${bm.pinnedToHome ? "Unpin" : "Pin"} ${escapeHtml(name)} to Home">${icon("pinFilled", 13)}</button>
               </div>
             `;
                   })
@@ -1206,8 +1249,8 @@ const BoardRenderer = (() => {
       `
       <div class="dialog-stack">
         <div class="dialog-field">
-          <label class="dialog-label">Title</label>
-          <input type="text" id="bmTitleInp" class="dialog-input" placeholder="Title" />
+          <label class="dialog-label">Title (optional)</label>
+          <input type="text" id="bmTitleInp" class="dialog-input" placeholder="Leave empty to show only the icon" />
         </div>
         <div class="dialog-field">
           <label class="dialog-label">URL</label>
@@ -1219,16 +1262,9 @@ const BoardRenderer = (() => {
         const urlEl = $("bmUrlInp");
         const title = titleEl.value.trim();
         const url = urlEl.value.trim();
-        if (!title || !url) {
-          markInvalid(titleEl, !title);
-          markInvalid(urlEl, !url);
-          showModalError(
-            !title && !url
-              ? "Title and URL are required."
-              : !title
-                ? "Title is required."
-                : "URL is required.",
-          );
+        if (!url) {
+          markInvalid(urlEl, true);
+          showModalError("URL is required.");
           return false;
         }
         let finalUrl = url;
@@ -1250,16 +1286,12 @@ const BoardRenderer = (() => {
       `
       <div class="dialog-stack">
         <div class="dialog-field">
-          <label class="dialog-label">Title</label>
-          <input type="text" id="bmTitleInp" class="dialog-input" value="${escapeHtml(bm.title)}" />
+          <label class="dialog-label">Title (optional)</label>
+          <input type="text" id="bmTitleInp" class="dialog-input" placeholder="Leave empty to show only the icon" value="${escapeHtml(bm.title)}" />
         </div>
         <div class="dialog-field">
           <label class="dialog-label">URL</label>
           <input type="text" id="bmUrlInp" class="dialog-input" value="${escapeHtml(bm.url)}" />
-        </div>
-        <div class="dialog-field">
-          <label class="dialog-label">Tags (optional)</label>
-          <input type="text" id="bmTagsInp" class="dialog-input" value="${(bm.tags || []).join(", ")}" />
         </div>
       </div>`,
       () => {
@@ -1267,26 +1299,14 @@ const BoardRenderer = (() => {
         const urlEl = $("bmUrlInp");
         const title = titleEl.value.trim();
         const url = urlEl.value.trim();
-        if (!title || !url) {
-          markInvalid(titleEl, !title);
-          markInvalid(urlEl, !url);
-          showModalError(
-            !title && !url
-              ? "Title and URL are required."
-              : !title
-                ? "Title is required."
-                : "URL is required.",
-          );
+        if (!url) {
+          markInvalid(urlEl, true);
+          showModalError("URL is required.");
           return false;
         }
-        const rawTags = $("bmTagsInp").value;
         let finalUrl = url;
         if (!/^https?:\/\//i.test(finalUrl)) finalUrl = "https://" + finalUrl;
-        const tags = rawTags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean);
-        BookmarkManager.edit(boardId, bm.id, title, finalUrl, tags);
+        BookmarkManager.edit(boardId, bm.id, title, finalUrl, bm.tags || []);
         renderBoards();
         HomeRenderer.renderPinned();
         return true;
@@ -1294,16 +1314,6 @@ const BoardRenderer = (() => {
     );
   }
 
-  /** @returns {{col:number,numCols:number,index:number,count:number}|null} */
-  /**
-   * Brings one board into view, open, and briefly outlined - the landing for a
-   * board picked from Ctrl+K.
-   *
-   * Boards paint on the next frame, so the card may not exist yet when this is
-   * called. It waits two frames, with a timeout as the backstop for a tab that
-   * is not being painted, and runs exactly once whichever fires first -
-   * running twice would click the chevron twice and close the board again.
-   */
   function reveal(boardId) {
     let done = false;
     const go = () => {
@@ -1330,25 +1340,17 @@ const BoardRenderer = (() => {
     return boardPositions.get(boardId) || null;
   }
 
-  /**
-   * Moves a board one column left or right, at the height it sits on screen.
-   *
-   * The data move kept the board's row number, and a row number is not a
-   * height: the second board in one column can sit a long way below the
-   * second board in the next, under a tall first one. So "move left" dropped
-   * the board lower than it was, even with room beside it. It now goes in
-   * before the first board in the other column that reaches below its own top
-   * edge - so it lands level with where it was, or higher beside a tall board,
-   * but never further down.
-   */
   function moveSideways(boardId, delta) {
-    const board = BoardManager.find(boardId);
     const pos = boardPositions.get(boardId);
-    if (!board || !pos) return false;
+    if (!pos) return false;
+
+    commitPaintedLayout();
+    const board = BoardManager.find(boardId);
+    if (!board) return false;
     const target = pos.col + delta;
     if (target < 0 || target >= pos.numCols) return false;
     const dest = BoardManager.columnBoards(target);
-    // A lone board stepping into an empty column only slides the grid over.
+
     if (!dest.length && BoardManager.columnBoards(board.col).length < 2) return false;
 
     let index = dest.length;
@@ -1373,6 +1375,8 @@ const BoardRenderer = (() => {
     showAddLinkPopup,
     showEditLinkPopup,
     getBoardPosition,
+    commitPaintedLayout,
+    flushBoards,
     moveSideways,
     reveal,
   };
@@ -1400,85 +1404,16 @@ const ViewController = (() => {
         show(tab);
       }
     });
-    // Not "home": main.js already restores the persisted tab right after
-    // this, and forcing Home first made every remote-sync repaint flash the
-    // Home view before snapping back.
+
     show(TabManager.get());
   }
 
-  // The view the user last asked for. A view transition runs its callback
-  // asynchronously, and starting a second one aborts the first *after* its
-  // callback is already queued - so two quick clicks could run their swaps out
-  // of order and leave you on the earlier view. Every swap reads this instead
-  // of the tab it was created with, so whichever callback runs last still
-  // lands on the newest request.
   let requestedTab = null;
-
-  // Views that have already been shown once this page. A transition is worth
-  // one frame the first time a view appears, because that is the only moment
-  // it carries information: something new arrived. Every visit after that is
-  // a return to something already on screen a second ago, and animating it
-  // just puts a delay between the click and the result. So the first visit
-  // gets the motion and the rest are instant.
-  const seenTabs = new Set();
 
   function show(tab) {
     if (!views[tab]) tab = "home";
     requestedTab = tab;
-
-    const swap = () => applyTab(requestedTab);
-    const firstVisit = !seenTabs.has(tab);
-    seenTabs.add(tab);
-
-    if (
-      !firstVisit ||
-      typeof document.startViewTransition !== "function" ||
-      document.visibilityState !== "visible" ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-      document.body.classList.contains("performance-mode")
-    ) {
-      swap();
-      return;
-    }
-
-    // A view transition cannot run its callback until the browser has captured
-    // the outgoing frame, and a frame is exactly what a new tab page does not
-    // reliably get: painting is throttled while the window is occluded,
-    // minimised or still opening, even though `visibilityState` reads
-    // "visible" (this is the same starvation `main.js` already guards the boot
-    // reveal against). With the swap living only inside that callback, a click
-    // on Boards or Notes in a page that is not being painted did nothing at
-    // all - the view changed later, when the window finally drew, or not until
-    // the next click. The swap is idempotent, so a short deadline that runs it
-    // directly costs nothing but guarantees the button always responds.
-    let swapped = false;
-    const swapOnce = () => {
-      if (swapped) return;
-      swapped = true;
-      swap();
-    };
-    const deadline = setTimeout(swapOnce, 120);
-
-    try {
-      const transition = document.startViewTransition(() => {
-        clearTimeout(deadline);
-        swapOnce();
-      });
-      // A transition started while another is still running is aborted, and
-      // switching tabs quickly does exactly that. The abort is expected and
-      // harmless - the view still swaps, because the callback has already run
-      // - but its promises reject, and an unhandled rejection surfaces as an
-      // "InvalidStateError: Transition was aborted" in the console. Settle
-      // them here so a fast double-click stays silent.
-      transition.ready?.catch(() => {});
-      transition.finished?.catch(() => {});
-      transition.updateCallbackDone?.catch(() => {});
-    } catch {
-      // Nothing about a decorative transition is worth failing a tab change
-      // over, so an engine that refuses the call still gets the plain swap.
-      clearTimeout(deadline);
-      swapOnce();
-    }
+    applyTab(tab);
   }
 
   function applyTab(tab) {
@@ -1492,14 +1427,15 @@ const ViewController = (() => {
       b.classList.toggle("active", b.dataset.tab === tab),
     );
 
-    // The active view on <body>, so CSS can scope rules to one page. The
-    // topbar's corner clusters move around for the Home clock's benefit and
-    // have no business doing that on Boards or Notes.
     Object.keys(views).forEach((name) =>
       document.body.classList.toggle(`view-${name}`, name === tab),
     );
 
-    if (tab === "boards") BoardRenderer.renderBoards();
+    if (tab === "boards") {
+      BoardRenderer.renderBoards();
+
+      BoardRenderer.flushBoards();
+    }
     else if (tab === "notes") NotesRenderer.render();
     else HomeRenderer.render();
   }
@@ -1513,7 +1449,8 @@ function showPrompt(title, labelText, defaultVal, onSave) {
     `
     <div class="dialog-field">
       <label class="dialog-label">${labelText}</label>
-      <input type="text" id="dlgInput" class="dialog-input" value="${escapeHtml(defaultVal)}" />
+      <input type="text" id="dlgInput" class="dialog-input" value="${escapeHtml(defaultVal)}"
+             maxlength="80" autocomplete="off" spellcheck="false" />
     </div>`,
     () => {
       const val = $("dlgInput").value.trim();
@@ -1524,8 +1461,6 @@ function showPrompt(title, labelText, defaultVal, onSave) {
   $("dlgInput")?.select();
 }
 
-/* Glyphs for the icon a confirmation leads with. Same set the toasts use, so
-   "this will destroy something" looks the same wherever it is said. */
 const DIALOG_GLYPHS = {
   danger:
     '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
@@ -1533,14 +1468,6 @@ const DIALOG_GLYPHS = {
   info: '<path d="M12 16v-5"/><path d="M12 8h.01"/>',
 };
 
-/**
- * The pattern people already know from every OS and every app that asks before
- * throwing something away: a tone-coloured icon, the question under it, and the
- * choices under that - centred, in a card no wider than it needs to be, so the
- * eye lands on the icon, reads one line and then picks. The old layout put a
- * left-aligned heading across a 440px box with two buttons pushed into the
- * far corner, which is a lot of empty card for one short question.
- */
 function showConfirm(title, messageText, onConfirm, opts = {}) {
   const tone = opts.tone || "danger";
   const glyph = DIALOG_GLYPHS[tone] || DIALOG_GLYPHS.danger;
@@ -1561,12 +1488,6 @@ function showConfirm(title, messageText, onConfirm, opts = {}) {
   );
 }
 
-/**
- * @param {string} [iconHtml] Optional status icon. Supplying one switches the
- *   card to the centred, icon-led layout confirmations use; without one the
- *   card stays the left-aligned form layout that prompts and settings dialogs
- *   need for their labelled fields.
- */
 function showCustomModal(
   title,
   bodyHtml,

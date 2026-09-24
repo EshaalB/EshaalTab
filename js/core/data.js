@@ -10,9 +10,7 @@ const TabManager = (() => {
     localTab = TABS.includes(t) ? t : "home";
     return localTab;
   }
-  // Kept in this tab only. Every new tab opens on Home regardless, so the
-  // stored value was never read back - but writing it meant two tabs on
-  // different views each saved their own, and each save woke the other.
+
   function set(tab) {
     if (!TABS.includes(tab)) return;
     localTab = tab;
@@ -22,30 +20,21 @@ const TabManager = (() => {
 const BoardManager = (() => {
   const boards = () => StorageManager.getData().boards;
 
-  // A board colour is either one of the preset hex swatches or null, which
-  // means "follow the theme accent". Anything else is ignored so a bad import
-  // cannot inject a value into the style attribute.
-  /* Hue seeds, not final colours. Each one is run through `Contrast.tint` for
-     the current mode before it reaches the page, so the row stays legible
-     against both a dark card and a light one without storing two palettes. */
-  const BOARD_COLORS = [
-    "#6366f1",
-    "#0ea5e9",
-    "#14b8a6",
-    "#22c55e",
-    "#f59e0b",
-    "#f43f5e",
-    "#a855f7",
-    "#64748b",
+  const BOARD_TINTS = [
+    { name: "Gray", light: "#dfdfdd", dark: "#2f2f2f", dot: "#8d8d87", legacy: "#f1f1ef" },
+    { name: "Brown", light: "#e5d7d1", dark: "#4a3228", dot: "#a3705a", legacy: "#f4eeee" },
+    { name: "Orange", light: "#f4d8bb", dark: "#5c3b23", dot: "#d9730d", legacy: "#faebdd" },
+    { name: "Yellow", light: "#ebddc0", dark: "#564328", dot: "#b8851d", legacy: "#fbf3db" },
+    { name: "Green", light: "#cbdcd3", dark: "#243d30", dot: "#448361", legacy: "#edf3ec" },
+    { name: "Blue", light: "#c6dbe7", dark: "#143a4e", dot: "#337ea9", legacy: "#e7f3f8" },
+    { name: "Purple", light: "#e0d4e9", dark: "#3c2d49", dot: "#9065b0", legacy: "#f6f3f9" },
+    { name: "Pink", light: "#eecdde", dark: "#4e2c3c", dot: "#c14c8a", legacy: "#faf1f5" },
+    { name: "Red", light: "#f3cdcb", dark: "#522e2a", dot: "#d44c47", legacy: "#fdebec" },
   ];
 
-  /**
-   * @param {?string} color Any 6-digit hex, or null to follow the theme accent.
-   *   The list above is only the set offered in the menu - a colour picked from
-   *   the wheel is just as valid, and is softened into the mode it is shown in
-   *   at paint time rather than being stored pre-adjusted, so it survives a
-   *   light/dark switch.
-   */
+  const BOARD_COLORS = BOARD_TINTS.map((t) => t.light);
+
+
   function setColor(boardId, color) {
     const b = find(boardId);
     if (!b) return false;
@@ -55,11 +44,17 @@ const BoardManager = (() => {
     return true;
   }
 
+  const MAX_NAME = 80;
+  const cleanName = (name) =>
+    String(name == null ? "" : name)
+      .trim()
+      .slice(0, MAX_NAME);
+
   function addBoard(name = "", targetCol = null) {
     if (!name) name = "New board";
     const board = {
       id: uuid(),
-      name: name.trim(),
+      name: cleanName(name) || "New board",
       color: null,
       col: targetCol,
       order: boards().length,
@@ -73,47 +68,62 @@ const BoardManager = (() => {
   function find(id) {
     return boards().find((b) => b.id === id) || null;
   }
+
   function deleteBoard(id) {
     const d = StorageManager.getData();
+    const board = d.boards.find((b) => b.id === id) || null;
+    const index = d.boards.findIndex((b) => b.id === id);
+    const layout = d.boards.map((b) => ({
+      id: b.id,
+      col: b.col,
+      order: b.order,
+    }));
+
     d.boards = d.boards.filter((b) => b.id !== id);
-    // Without this the id lingers in collapsedBoards forever, so the list
-    // grows by one entry for every board ever deleted.
+
     if (Array.isArray(d.collapsedBoards))
       d.collapsedBoards = d.collapsedBoards.filter((bid) => bid !== id);
+
+    if (board) dropFromPinnedOrder((board.bookmarks || []).map((x) => x.id));
     StorageManager.save();
+    return { board, index, layout };
+  }
+
+  function dropFromPinnedOrder(ids) {
+    const d = StorageManager.getData();
+    if (!Array.isArray(d.pinnedOrder) || !d.pinnedOrder.length) return;
+    const drop = new Set(ids);
+    const kept = d.pinnedOrder.filter((x) => !drop.has(x));
+    if (kept.length !== d.pinnedOrder.length) d.pinnedOrder = kept;
   }
   function rename(id, name) {
     const b = find(id);
-    if (b) {
-      b.name = name.trim();
-      StorageManager.save();
-    }
-  }
-  function restoreBoard(board, index) {
-    const arr = boards();
-    const i =
-      Number.isInteger(index) && index >= 0
-        ? Math.min(index, arr.length)
-        : arr.length;
-    arr.splice(i, 0, board);
+    if (!b) return;
+
+    const next = cleanName(name);
+    if (!next) return;
+    b.name = next;
     StorageManager.save();
   }
-  function reorder(fromId, toId, after) {
+
+  function restoreBoard(token, index) {
     const arr = boards();
-    const from = arr.findIndex((b) => b.id === fromId);
-    if (from < 0) return;
-    const [moved] = arr.splice(from, 1);
-    const to = arr.findIndex((b) => b.id === toId);
-    if (to < 0) {
-      arr.splice(from, 0, moved);
-      return;
+    const board = token && token.board ? token.board : token;
+    if (!board) return;
+    const at = token && token.board ? token.index : index;
+    const i =
+      Number.isInteger(at) && at >= 0 ? Math.min(at, arr.length) : arr.length;
+    arr.splice(i, 0, board);
+
+    if (token && Array.isArray(token.layout)) {
+      const byId = new Map(arr.map((b) => [b.id, b]));
+      token.layout.forEach((entry) => {
+        const b = byId.get(entry.id);
+        if (!b) return;
+        b.col = entry.col;
+        b.order = entry.order;
+      });
     }
-    const targetBoard = arr[to];
-    if (targetBoard && targetBoard.col != null) {
-      moved.col = targetBoard.col;
-    }
-    arr.splice(after ? to + 1 : to, 0, moved);
-    arr.forEach((b, i) => (b.order = i));
     StorageManager.save();
   }
   function shift(id, delta) {
@@ -129,15 +139,6 @@ const BoardManager = (() => {
     return true;
   }
 
-  /**
-   * Writes a computed column layout (id -> column index) back onto the
-   * boards, so the masonry pass in render.js has to figure out "which column
-   * is shortest" only once per shape of the grid rather than on every paint -
-   * and so up/down/left/right moves have something stable to act on. `order`
-   * is left as-is: it already increases with array position, which is
-   * exactly the right within-column sequence for boards that just landed in
-   * a column together for the first time.
-   */
   function applyColumnLayout(idToCol) {
     let changed = false;
     boards().forEach((b) => {
@@ -151,15 +152,6 @@ const BoardManager = (() => {
     return changed;
   }
 
-  /**
-   * Squeezes empty columns out of the persisted layout.
-   *
-   * Columns are stored as absolute indices, so moving the last board out of
-   * column 0 used to leave column 0 empty and every board shifted one place
-   * right of where the grid actually starts - the "add board, gap, board"
-   * layout. Renumbering the occupied columns to 0..n-1 after every move keeps
-   * the stored indices and what is on screen describing the same thing.
-   */
   function compactColumns() {
     const used = [...new Set(boards().map((b) => b.col))]
       .filter((c) => Number.isInteger(c))
@@ -176,21 +168,12 @@ const BoardManager = (() => {
     return changed;
   }
 
-  /** Boards in one column, in the order they stack visually. */
   function columnBoards(col) {
     return boards()
       .filter((b) => b.col === col)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }
 
-  /**
-   * Swaps a board with its neighbour one step up or down in its own column.
-   * Acts on the persisted `col`/`order` pair rather than the flat board
-   * array, so it moves the board exactly where it visibly sits - the flat
-   * array's neighbour and the visual neighbour are different boards as soon
-   * as boards are spread across more than one column, which is what made the
-   * old up/down controls also appear to move things sideways.
-   */
   function moveVertical(id, delta) {
     const b = find(id);
     if (!b || b.col == null) return false;
@@ -205,30 +188,15 @@ const BoardManager = (() => {
     return true;
   }
 
-  /**
-   * Moves a board into the neighbouring column, one step left or right, and
-   * appends it to the end of that column. `numCols` comes from the live
-   * layout (render.js), since the grid's own column count is not something
-   * this module tracks.
-   */
   function moveHorizontal(id, deltaCol, numCols) {
     const b = find(id);
     if (!b || b.col == null) return false;
     const targetCol = b.col + deltaCol;
     if (targetCol < 0 || targetCol >= numCols) return false;
     const dest = columnBoards(targetCol);
-    // Moving into empty space is only a real move when the board leaves
-    // something behind: a lone board stepping right just drags the whole grid
-    // sideways, which is the gap the compaction below would undo anyway.
+
     if (!dest.length && columnBoards(b.col).length < 2) return false;
 
-    /* Same row, not the bottom. The board used to be given an order one past
-       the last board in the target column, so "Move left" on the second
-       board of a column dropped it to the foot of the next column - it moved
-       sideways *and* down, even with room at its own height. It now goes in
-       at the row it came from, or at the end when the target column is
-       shorter than that. Both columns are renumbered so their orders stay a
-       clean 0..n and a later move up/down means exactly one step. */
     const fromCol = b.col;
     const row = columnBoards(fromCol).findIndex((x) => x.id === b.id);
     const at = Math.min(Math.max(row, 0), dest.length);
@@ -242,12 +210,6 @@ const BoardManager = (() => {
     return true;
   }
 
-  /**
-   * Puts a board at a given row of a given column - what a drag and drop
-   * means. `index` is counted without the board itself, and anything past the
-   * end appends. Both the column it leaves and the one it joins are
-   * renumbered 0..n, the same invariant the arrow moves above keep.
-   */
   function placeBoard(id, targetCol, index) {
     const b = find(id);
     if (!b || !Number.isInteger(targetCol) || targetCol < 0) return false;
@@ -264,6 +226,20 @@ const BoardManager = (() => {
     return true;
   }
 
+  function swapBoards(idA, idB) {
+    const a = find(idA);
+    const b = find(idB);
+    if (!a || !b || a === b) return false;
+    const ac = a.col,
+      ao = a.order;
+    a.col = b.col;
+    a.order = b.order;
+    b.col = ac;
+    b.order = ao;
+    StorageManager.save();
+    return true;
+  }
+
   const moveUp = (id) => moveVertical(id, -1);
   const moveDown = (id) => moveVertical(id, 1);
   const moveLeft = (id, numCols) => moveHorizontal(id, -1, numCols);
@@ -276,18 +252,21 @@ const BoardManager = (() => {
     deleteBoard,
     rename,
     restoreBoard,
-    reorder,
     shift,
     applyColumnLayout,
     compactColumns,
+    dropFromPinnedOrder,
     columnBoards,
     placeBoard,
+    swapBoards,
     moveUp,
     moveDown,
     moveLeft,
     moveRight,
     getAll: boards,
+    MAX_NAME,
     BOARD_COLORS,
+    BOARD_TINTS,
   };
 })();
 
@@ -318,7 +297,7 @@ const BookmarkManager = (() => {
     norm.forEach(TagManager.add);
     const bm = {
       id: uuid(),
-      title: String(title || safe)
+      title: String(title || "")
         .trim()
         .slice(0, 300),
       nickname: String(nickname || "")
@@ -338,7 +317,7 @@ const BookmarkManager = (() => {
     if (!bm) return;
     const safe = normalizeUrl(url);
     if (!safe) return;
-    bm.title = String(title || safe)
+    bm.title = String(title || "")
       .trim()
       .slice(0, 300);
     bm.nickname = String(nickname || "")
@@ -353,6 +332,8 @@ const BookmarkManager = (() => {
     const b = BoardManager.find(boardId);
     if (!b) return;
     b.bookmarks = b.bookmarks.filter((x) => x.id !== bmId);
+
+    BoardManager.dropFromPinnedOrder([bmId]);
     StorageManager.save();
   }
   function insertAt(boardId, bm, index) {
@@ -475,8 +456,6 @@ const NotesManager = (() => {
   const MAX_TABS = StorageManager.MAX_NOTE_TABS;
   const MAX_CHARS = StorageManager.MAX_NOTE_CHARS;
 
-  // Guarantees at least one tab exists before any read/write, so callers never
-  // have to null-check. Storage normalises on load; this covers live edits.
   function tabs() {
     const d = StorageManager.getData();
     if (!Array.isArray(d.noteTabs) || !d.noteTabs.length)
@@ -490,14 +469,10 @@ const NotesManager = (() => {
     return list.find((t) => t.id === d.activeNoteId) || list[0];
   }
 
-  // `get`/`set` operate on the active tab, so every existing caller (the
-  // editor, export, the search index) keeps working without changes.
   function get() {
     return activeTab().text || "";
   }
 
-  // Set when a write had to drop characters, so the UI can say so once rather
-  // than the note quietly coming up short.
   let truncated = false;
 
   function write(text) {
@@ -506,11 +481,10 @@ const NotesManager = (() => {
     truncated = full.length > MAX_CHARS;
     t.text = truncated ? full.slice(0, MAX_CHARS) : full;
     t.updatedAt = Date.now();
-    StorageManager.getData().notes = t.text; // legacy mirror
+    StorageManager.getData().notes = t.text;
     return t;
   }
 
-  /** Whether the last write was cut short, and by how much. */
   function lastWriteTruncated() {
     return truncated;
   }
@@ -560,7 +534,7 @@ const NotesManager = (() => {
 
   function remove(id) {
     const list = tabs();
-    if (list.length <= 1) return false; // always keep one note
+    if (list.length <= 1) return false;
     const i = list.findIndex((t) => t.id === id);
     if (i === -1) return false;
     const [removed] = list.splice(i, 1);

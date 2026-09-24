@@ -4,10 +4,8 @@ const NotesRenderer = (() => {
   let bound = false;
   let tabsBound = false;
 
-  // True once the user has actually edited the textarea in this page. Until
-  // then the textarea's value is not authoritative and must never be written
-  // back over stored notes (see the sync guard in js/main.js).
   let dirty = false;
+  let lastEditAt = 0;
 
   let sessionStart = null;
 
@@ -27,17 +25,55 @@ const NotesRenderer = (() => {
     if (!area || !bound || !dirty) return;
     const html = readEditor();
     if (html !== NotesManager.get()) NotesManager.set(html);
+    dirty = false;
     commitSessionToHistory();
   }
 
-  // The textarea only holds real content once it has been rendered *and*
-  // edited. Anything else is an empty placeholder that must not be persisted.
-  function hasLiveEdits() {
-    return bound && dirty;
+  function caretOffset(area) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !area.contains(sel.anchorNode)) return null;
+    const probe = document.createRange();
+    probe.selectNodeContents(area);
+    probe.setEnd(sel.anchorNode, sel.anchorOffset);
+    return probe.toString().length;
   }
 
-  // Rate-limited: `input` fires per keystroke, and once someone is sitting at
-  // the cap every further character would otherwise raise its own toast.
+  function restoreCaret(area, offset) {
+    const range = document.createRange();
+    const walker = document.createTreeWalker(area, NodeFilter.SHOW_TEXT);
+    let left = offset;
+    let node;
+    let placed = false;
+    while ((node = walker.nextNode())) {
+      if (left <= node.length) {
+        range.setStart(node, left);
+        placed = true;
+        break;
+      }
+      left -= node.length;
+    }
+    if (!placed) range.selectNodeContents(area);
+    range.collapse(placed);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function syncFromStore() {
+    const area = $("notesArea");
+    if (!area || !bound) return;
+    renderTabs();
+    const stored = NotesManager.get();
+    if (readEditor() === stored) return;
+    const caret = document.activeElement === area ? caretOffset(area) : null;
+    writeEditor(stored);
+    updateStats(stored);
+    markSaved(true);
+    dirty = false;
+    historyIndex = -1;
+    if (caret !== null) restoreCaret(area, caret);
+  }
+
   let truncWarnedAt = 0;
   function warnTruncated() {
     if (Date.now() - truncWarnedAt < 10000) return;
@@ -47,7 +83,6 @@ const NotesRenderer = (() => {
     );
   }
 
-  // Counts the words a reader would see, not the markup around them.
   function updateStats(stored) {
     const badge = $("notesStatsBadge");
     if (!badge) return;
@@ -59,8 +94,6 @@ const NotesRenderer = (() => {
   function markSaved(saved) {
     $("notesSaveBtn")?.classList.toggle("is-saved", saved);
   }
-
-  // ------------------------------------------------------------- font size
 
   const FONT_MIN = 11;
   const FONT_MAX = 28;
@@ -87,15 +120,11 @@ const NotesRenderer = (() => {
     applyFontSize();
   }
 
-  // -------------------------------------------------------- editing helpers
-
-  /** The editor's content, sanitised, as it should be stored. */
   function readEditor() {
     const area = $("notesArea");
     return area ? NoteHTML.clean(area.innerHTML) : "";
   }
 
-  /** Paints stored content into the editor, converting legacy plain text. */
   function writeEditor(stored) {
     const area = $("notesArea");
     if (!area) return;
@@ -103,9 +132,6 @@ const NotesRenderer = (() => {
     refreshEmpty();
   }
 
-  // contenteditable has no `:placeholder-shown`, and an "empty" editor is
-  // rarely an empty string - browsers leave a stray <br> or <div> behind. So
-  // emptiness is decided by the text, and CSS keys off the class.
   function refreshEmpty() {
     const area = $("notesArea");
     if (!area) return;
@@ -113,15 +139,11 @@ const NotesRenderer = (() => {
     area.classList.toggle("is-empty", blank);
   }
 
-  /**
-   * Records an edit: word count, save badge, and the store. Called from the
-   * `input` event, so it covers typing, formatting commands, paste and the
-   * browser's own undo alike.
-   */
   function commitEdit() {
     const area = $("notesArea");
     if (!area) return;
     dirty = true;
+    lastEditAt = Date.now();
     historyIndex = -1;
     refreshEmpty();
 
@@ -137,7 +159,6 @@ const NotesRenderer = (() => {
     }
   }
 
-  /** True when the caret sits at the very first position in the editor. */
   function caretAtStart() {
     const area = $("notesArea");
     const sel = window.getSelection();
@@ -159,16 +180,6 @@ const NotesRenderer = (() => {
     sel.addRange(range);
   }
 
-  /**
-   * Runs a formatting command against the selection.
-   *
-   * `document.execCommand` is formally deprecated and still the only API that
-   * applies rich formatting to a contenteditable selection while keeping the
-   * browser's native undo stack intact. Every shipping browser implements it;
-   * the replacement everyone points to does not exist yet. Reimplementing bold
-   * over arbitrary DOM ranges is exactly the wrong place to be clever, so it
-   * is used deliberately and kept in this one function.
-   */
   function exec(command, value = null) {
     const area = $("notesArea");
     if (!area) return;
@@ -179,31 +190,6 @@ const NotesRenderer = (() => {
     commitEdit();
   }
 
-  /* ------------------------------------------------------------ note colour
-
-     Colour and highlight are applied with `execCommand` and then immediately
-     rewritten into class names.
-
-     Doing it in two steps looks redundant and is not. Applying a colour to a
-     selection means splitting the text nodes at both ends, walking every
-     element the range crosses, merging with any run that already carries the
-     same formatting, and leaving the caret where the user left it. That is
-     precisely what `execCommand` is good at and precisely the thing not to
-     hand-write over arbitrary DOM ranges - the same reasoning `exec` above
-     already spells out for bold.
-
-     What `execCommand` produces is an inline `style`, which is the one thing
-     notes must not store (see `notes-html.js`). So it is handed a fixed
-     sentinel colour per token, and the moment the command returns, every
-     element wearing that sentinel is converted to the matching class and the
-     inline style is dropped. The sentinels are constants rather than the real
-     palette values so the mapping cannot be confused by a colour that merely
-     happens to look similar, and so it stays correct in either theme.
-
-     The conversion pass also cleans: any inline colour it does *not*
-     recognise - from a paste, or a note written before the sanitiser - is
-     stripped rather than left to be removed later. That is what stops a
-     stray colour appearing to be the note's own default. */
   const COLOR_TOKENS = ["red", "orange", "yellow", "green", "blue", "purple", "grey"];
 
   const SENTINELS = {
@@ -222,7 +208,6 @@ const NotesRenderer = (() => {
     return "#" + [r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("");
   };
 
-  /** Which token, if any, a computed colour string names. */
   function tokenForColor(value) {
     if (!value) return null;
     const v = String(value).trim().replace(/\s+/g, " ");
@@ -234,7 +219,6 @@ const NotesRenderer = (() => {
 
   const groupClass = (group, token) => `et-note-${group}-${token}`;
 
-  /** Strips every class this group owns, leaving other formatting alone. */
   function clearGroupClasses(el, group) {
     if (!el.classList.length) return;
     [...el.classList]
@@ -243,12 +227,6 @@ const NotesRenderer = (() => {
     if (!el.classList.length) el.removeAttribute("class");
   }
 
-  /**
-   * Rewrites the inline colours `execCommand` just wrote into class names, and
-   * drops any it does not recognise.
-   *
-   * @param {"fg"|"bg"} group Which of the two properties was being set.
-   */
   function absorbInlineColors(group) {
     const area = $("notesArea");
     if (!area) return;
@@ -264,9 +242,6 @@ const NotesRenderer = (() => {
         el.classList.add(groupClass(group, token));
       }
 
-      // Whatever it was, the inline declaration does not survive: either it
-      // has just become a class, or it is a colour from outside this palette
-      // that the note has no business carrying.
       if (el.style) {
         el.style.removeProperty("color");
         el.style.removeProperty("background-color");
@@ -274,25 +249,16 @@ const NotesRenderer = (() => {
       }
       el.removeAttribute("color");
 
-      // `<font>` is not in the sanitiser's allowlist, so it would be unwrapped
-      // on the next save and take the class with it. Promoted now, while the
-      // class is still attached to the run it belongs to.
       if (el.tagName === "FONT") {
         const span = document.createElement("span");
         if (el.getAttribute("class")) span.className = el.getAttribute("class");
         span.append(...el.childNodes);
-        el.replaceWith(span.className ? span : document.createRange().createContextualFragment(span.innerHTML));
+        if (span.className) el.replaceWith(span);
+        else el.replaceWith(...span.childNodes);
       }
     }
   }
 
-  /**
-   * Applies a colour token to the selection, or clears it when `token` is
-   * "none".
-   *
-   * @param {"fg"|"bg"} group
-   * @param {string} token One of COLOR_TOKENS, or "none".
-   */
   function applyNoteColor(group, token) {
     const area = $("notesArea");
     if (!area) return;
@@ -306,21 +272,12 @@ const NotesRenderer = (() => {
       return;
     }
 
-    /* `styleWithCSS` is a document-wide sticky flag, not a per-command option.
-
-       It is turned on so `foreColor` emits a span carrying an inline colour -
-       which `absorbInlineColors` can read - instead of a `<font>` element. But
-       leaving it on changes what *every* later command produces: bold stopped
-       being `<b>` and became `<span style="font-weight: bold">`, and since the
-       sanitiser strips `style` from spans, bolding text and reloading silently
-       lost the bold. It is put back the moment the colour command returns. */
     const value = sentinelHex(token);
     try {
       document.execCommand("styleWithCSS", false, true);
       if (group === "fg") {
         document.execCommand("foreColor", false, value);
       } else if (!document.execCommand("hiliteColor", false, value)) {
-        // Firefox has historically only answered to `backColor` here.
         document.execCommand("backColor", false, value);
       }
     } catch {
@@ -336,19 +293,6 @@ const NotesRenderer = (() => {
     updateSwatches();
   }
 
-  /**
-   * Drops "no colour" markers that are not overriding anything.
-   *
-   * `none` only has to exist where it sits inside a coloured run, because that
-   * is the only case where simply removing the class would let the enclosing
-   * colour show through again. Everywhere else it is a span that says the text
-   * is the colour it was already going to be - invisible, but stored, synced
-   * and re-parsed forever after. Clearing a colour you had just applied is the
-   * common case, and it should leave the note exactly as it started.
-   *
-   * The class is removed rather than the element: a span with no attributes
-   * left is unwrapped by the sanitiser on the way to storage.
-   */
   function tidyRedundantNone(group) {
     const area = $("notesArea");
     if (!area) return;
@@ -373,16 +317,6 @@ const NotesRenderer = (() => {
     }
   }
 
-  /**
-   * Drops both colour groups from every element the selection touches.
-   *
-   * `removeFormat` is the browser's own "make this plain again", and it has no
-   * idea these classes exist - so clearing formatting used to strip the bold
-   * and italic and leave the text still bright red. Whole elements are cleared
-   * rather than the exact range: a class always spans a whole run, and a run
-   * the selection reaches into is a run the user is asking to reset. Spans
-   * left holding nothing are unwrapped by the sanitiser on the way out.
-   */
   function clearColorClassesInSelection() {
     const area = $("notesArea");
     const sel = window.getSelection();
@@ -398,7 +332,6 @@ const NotesRenderer = (() => {
     }
   }
 
-  /** The token in force at the caret, for the toolbar swatch bars. */
   function activeColorToken(group) {
     const area = $("notesArea");
     const sel = window.getSelection();
@@ -418,7 +351,6 @@ const NotesRenderer = (() => {
     return null;
   }
 
-  /** Paints the current colour onto the two toolbar buttons. */
   function updateSwatches() {
     const fg = activeColorToken("fg");
     const bg = activeColorToken("bg");
@@ -436,13 +368,6 @@ const NotesRenderer = (() => {
       );
   }
 
-  /* The selection has to survive the picker.
-
-     Clicking a swatch moves focus out of the editor, and a contenteditable
-     drops its selection when it loses focus. `mousedown` is prevented on the
-     picker for the same reason it is on the toolbar, but that alone is not
-     enough on every engine, so the range is also captured when the picker
-     opens and put back before the command runs. */
   let savedRange = null;
 
   function saveRange() {
@@ -467,20 +392,12 @@ const NotesRenderer = (() => {
     ["notesTextColorBtn", "notesHighlightBtn"].forEach((id) =>
       $(id)?.setAttribute("aria-expanded", "false"),
     );
-    // Only when the menu was dismissed from the keyboard. Sending focus back
-    // after a click would drag it away from wherever the pointer went next.
+
     if (returnFocus) {
       $(group === "bg" ? "notesHighlightBtn" : "notesTextColorBtn")?.focus();
     }
   }
 
-  /**
-   * Arrow-key movement inside the picker.
-   *
-   * The swatches are laid out in a four-column grid, so Up and Down move by a
-   * row rather than doing nothing - matching what the eye expects from the
-   * shape on screen. Movement wraps, and lands on a real swatch at both ends.
-   */
   function bindColorMenuKeys() {
     const menu = $("notesColorMenu");
     if (!menu) return;
@@ -519,7 +436,7 @@ const NotesRenderer = (() => {
           closeColorMenu(true);
           return;
         case "Tab":
-          // A menu is one stop in the tab order; leaving it closes it.
+
           closeColorMenu(false);
           return;
       }
@@ -576,22 +493,6 @@ const NotesRenderer = (() => {
         ? `${r.bottom + 6}px`
         : `${Math.max(8, r.top - m.height - 6)}px`;
 
-    /* `role="menu"` is a promise about keyboard behaviour, not just a label: a
-       menu is one tab stop that you then move around inside with the arrow
-       keys. Declaring the role and leaving eight separate tab stops - with
-       focus still back in the editor - would be worse than not declaring it,
-       because a screen reader announces a menu and then nothing behaves like
-       one.
-
-       Only for keyboard opens. A mouse user still has their caret and their
-       selection where they left them, and pulling focus out of the editor
-       under the pointer would take the selection highlight with it for no
-       reason. `detail === 0` is how a button click raised by Enter or Space
-       differs from one raised by a pointer.
-
-       Focus lands on the swatch already in force, or the first one - and
-       after positioning, so it cannot scroll anything toward a menu that is
-       still at its previous coordinates. */
     if (!viaKeyboard) return;
 
     const swatchEls = [...menu.querySelectorAll(".et-note-color-swatch")];
@@ -605,7 +506,6 @@ const NotesRenderer = (() => {
     swatchEls[startAt]?.focus({ preventScroll: true });
   }
 
-  /** The block element the caret is currently inside. */
   function currentBlock() {
     const area = $("notesArea");
     const sel = window.getSelection();
@@ -617,49 +517,93 @@ const NotesRenderer = (() => {
     return node === area ? null : node;
   }
 
-  /**
-   * Checklists.
-   *
-   * There is no `execCommand` for these, so one is built on top of the plain
-   * bullet list: the same `<ul><li>` structure, marked with a class, with the
-   * box drawn by CSS from `data-checked`. That keeps it a real list - Enter
-   * makes a new item, Backspace at the start unwraps it, and the browser
-   * handles all of that - instead of a stack of divs pretending to be one.
-   */
+  function selectionElement() {
+    const area = $("notesArea");
+    const sel = window.getSelection();
+    if (!area || !sel || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    let node = range.startContainer;
+    if (node === area) {
+      node = area.childNodes[range.startOffset] || area.childNodes[range.startOffset - 1] || null;
+    }
+    if (node && node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement;
+    return node && node !== area && area.contains(node) ? node : null;
+  }
+
+  const currentList = (tag = "ul") => selectionElement()?.closest(`${tag}`) || null;
+
+  function clearChecklist(list) {
+    list.classList.remove("et-note-checklist");
+    if (!list.classList.length) list.removeAttribute("class");
+    list.querySelectorAll("li").forEach((li) => li.removeAttribute("data-checked"));
+  }
+
+  function stripExecStyles() {
+    const area = $("notesArea");
+    if (!area) return;
+    area.querySelectorAll("li [style], li[style]").forEach((el) => {
+      el.style.removeProperty("color");
+      el.style.removeProperty("font-family");
+      if (!el.getAttribute("style")?.trim()) el.removeAttribute("style");
+      if (el.tagName === "SPAN" && !el.attributes.length) el.replaceWith(...el.childNodes);
+    });
+  }
+
   function toggleChecklist() {
     const area = $("notesArea");
     if (!area) return;
-    const block = currentBlock();
-    const list = block?.closest("ul");
+    area.focus();
+    const list = currentList("ul");
 
     if (list && list.classList.contains("et-note-checklist")) {
-      // Already a checklist: turn it back into an ordinary list.
-      list.classList.remove("et-note-checklist");
-      list.querySelectorAll("li").forEach((li) =>
-        li.removeAttribute("data-checked"),
-      );
+      clearChecklist(list);
       commitEdit();
+      updateToolbarState();
       return;
     }
 
-    if (!list) exec("insertUnorderedList");
-    const made = currentBlock()?.closest("ul");
+    if (!list) {
+      const numbered = currentList("ol");
+      if (numbered) exec("insertOrderedList");
+      exec("insertUnorderedList");
+    }
+    const made = currentList("ul");
     if (!made) return;
     made.classList.add("et-note-checklist");
     made.querySelectorAll("li").forEach((li) => {
       if (!li.hasAttribute("data-checked")) li.setAttribute("data-checked", "false");
     });
+    stripExecStyles();
     commitEdit();
+    updateToolbarState();
   }
 
-  /** Ticks a checklist item when its box is clicked. */
+  function toggleList(kind) {
+    const area = $("notesArea");
+    if (!area) return;
+    area.focus();
+    const checklist = currentList("ul");
+    if (checklist?.classList.contains("et-note-checklist")) {
+      clearChecklist(checklist);
+      if (kind === "numbered") exec("insertOrderedList");
+      stripExecStyles();
+      commitEdit();
+      updateToolbarState();
+      return;
+    }
+    exec(kind === "numbered" ? "insertOrderedList" : "insertUnorderedList");
+    stripExecStyles();
+    commitEdit();
+    updateToolbarState();
+  }
+
   function bindChecklistClicks() {
     const area = $("notesArea");
     if (!area) return;
     area.addEventListener("click", (e) => {
       const li = e.target.closest("li[data-checked]");
       if (!li) return;
-      // Only the box itself toggles; the rest of the row is editable text.
+
       const box = li.getBoundingClientRect();
       if (e.clientX - box.left > 22) return;
       e.preventDefault();
@@ -671,18 +615,11 @@ const NotesRenderer = (() => {
     });
   }
 
-  /**
-   * Toggles a heading. `formatBlock` sets one but will not clear it, so an
-   * already-heading block is walked back to a plain paragraph.
-   */
   function toggleHeading() {
     const block = currentBlock();
     exec("formatBlock", /^H[123]$/.test(block?.tagName || "") ? "<p>" : "<h3>");
   }
 
-  // ----------------------------------------------------------- note actions
-
-  /** Deletes a note, asking first when it holds anything worth losing. */
   function deleteNote(id) {
     const note = NotesManager.list().find((n) => n.id === id);
     if (!note) return;
@@ -722,10 +659,7 @@ const NotesRenderer = (() => {
     }
   }
 
-  /** Creates a note and moves the editor into it. */
   function createNote() {
-    // Must commit *before* adding: `add` makes the new note active, so
-    // committing afterwards would write the old note's text into it.
     commitCurrent();
     if (!NotesManager.add()) {
       ToastSystem.info(`Notepad holds ${NotesManager.MAX_TABS} notes.`);
@@ -742,14 +676,6 @@ const NotesRenderer = (() => {
     renderTabs();
   }
 
-  // ---------------------------------------------------------------- toolbar
-
-  /**
-   * @param {string} cmd
-   * @param {boolean} viaKeyboard Whether the control was activated from the
-   *   keyboard. Only the colour pickers care - it decides whether focus is
-   *   pulled into the menu that opens.
-   */
   async function runCommand(cmd, viaKeyboard = false) {
     const area = $("notesArea");
     if (!area) return;
@@ -764,15 +690,14 @@ const NotesRenderer = (() => {
       case "heading":
         return toggleHeading();
       case "bullet":
-        return exec("insertUnorderedList");
+        return toggleList("bullet");
       case "numbered":
-        return exec("insertOrderedList");
+        return toggleList("numbered");
       case "checklist":
         return toggleChecklist();
       case "clearFormat":
         exec("removeFormat");
-        // `removeFormat` does not know about the colour classes, so it would
-        // strip bold and italic and leave a coloured run coloured.
+
         clearColorClassesInSelection();
         commitEdit();
         updateSwatches();
@@ -782,9 +707,6 @@ const NotesRenderer = (() => {
       case "highlight":
         return openColorMenu("bg", viaKeyboard);
       case "selectAll": {
-        // `area` is a contenteditable div, not a form control - it has no
-        // `.select()` method, so this used to throw and silently select
-        // nothing. A Range over the whole editor is the actual equivalent.
         area.focus();
         const range = document.createRange();
         range.selectNodeContents(area);
@@ -804,7 +726,6 @@ const NotesRenderer = (() => {
     const selection = sel && !sel.isCollapsed ? sel.toString() : "";
 
     if (cmd === "copy") {
-      // Copying with nothing selected almost always means "copy this note".
       const text =
         selection || NoteHTML.toText(NoteHTML.toEditor(readEditor()));
       if (!text.trim()) return;
@@ -828,8 +749,7 @@ const NotesRenderer = (() => {
         ToastSystem.error("Clipboard access was blocked.");
         return;
       }
-      // `delete` rather than splicing strings: it removes exactly the selected
-      // range across whatever elements it spans, and stays undoable.
+
       exec("delete");
       return;
     }
@@ -839,30 +759,17 @@ const NotesRenderer = (() => {
       try {
         text = await navigator.clipboard.readText();
       } catch {
-        // Reading the clipboard needs a permission the user may have refused.
-        // Ctrl+V never does, so point at it rather than failing silently.
         ToastSystem.info("Clipboard read was blocked. Press Ctrl+V instead.");
         return;
       }
       if (!text) return;
-      exec("insertHTML", NoteHTML.toEditor(text));
+      exec("insertText", text.replace(/\r\n?/g, "\n"));
     }
   }
 
-  // Commands whose current on/off state can be read straight from the
-  // selection, the same way Word or Google Docs presses a button in while the
-  // caret sits inside bold text. `document.queryCommandState` covers the
-  // native ones; heading and checklist have no such query, since neither is a
-  // real execCommand, so they are read off the block the caret is in instead.
   const TOGGLE_COMMANDS = ["bold", "italic", "underline"];
   const LIST_COMMANDS = { bullet: "insertUnorderedList", numbered: "insertOrderedList" };
 
-  /**
-   * Reflects the caret's current formatting onto the toolbar, exactly once
-   * per selection change - the thing a plain execCommand toolbar never did
-   * here, so bold looked like a one-shot action instead of a state you could
-   * see yourself sitting inside of.
-   */
   function updateToolbarState() {
     const area = $("notesArea");
     const bar = $("notesToolbar");
@@ -887,18 +794,14 @@ const NotesRenderer = (() => {
       setActive(cmd, on);
     });
     const block = currentBlock();
-    const isChecklist = !!block
-      ?.closest("ul")
-      ?.classList.contains("et-note-checklist");
+    const isChecklist = !!currentList("ul")?.classList.contains("et-note-checklist");
 
     Object.entries(LIST_COMMANDS).forEach(([cmd, native]) => {
       let on = false;
       try {
         on = document.queryCommandState(native);
       } catch {}
-      // A checklist is a <ul>, so the browser reports it as a bullet list too.
-      // Lighting both up at once reads as two active modes when there is only
-      // one, so the more specific of the two wins.
+
       if (cmd === "bullet" && isChecklist) on = false;
       setActive(cmd, on);
     });
@@ -907,7 +810,6 @@ const NotesRenderer = (() => {
     setActive("checklist", isChecklist);
   }
 
-  /** Every toggle button off, for when the caret is not usefully anywhere. */
   function clearToolbarState() {
     $("notesToolbar")
       ?.querySelectorAll("[data-note-cmd].is-active")
@@ -917,7 +819,6 @@ const NotesRenderer = (() => {
       });
   }
 
-  /** Opens or closes the toolbar's overflow menu. */
   function setMoreMenu(open) {
     const btn = $("notesMoreBtn");
     const menu = $("notesMoreMenu");
@@ -939,27 +840,18 @@ const NotesRenderer = (() => {
       const btn = e.target.closest("[data-note-cmd]");
       if (!btn) return;
       e.preventDefault();
-      // `detail` is 0 for a click raised by Enter or Space on a focused
-      // button, and 1+ for one raised by a pointer.
+      if (btn.classList.contains("et-notes-menu-item")) setMoreMenu(false);
+
       runCommand(btn.dataset.noteCmd, e.detail === 0);
       updateToolbarState();
       updateSwatches();
     });
 
-    // The picker steals focus the same way the toolbar buttons do, and for
-    // the same reason must not be allowed to collapse the selection it is
-    // about to colour. Pointer only - a keyboard user needs focus to actually
-    // move into the menu, which is what `bindColorMenuKeys` then drives.
     $("notesColorMenu")?.addEventListener("mousedown", (e) =>
       e.preventDefault(),
     );
     bindColorMenuKeys();
 
-    // Anywhere else closes it, including the Escape ladder.
-    //
-    // `closest` only exists on Elements: a pointerdown whose target is the
-    // document or a text node threw here, and a listener that throws stops
-    // running, so the menu could be left open with no way to dismiss it.
     document.addEventListener("pointerdown", (e) => {
       const el = e.target instanceof Element ? e.target : null;
       if (el && el.closest("#notesMoreMenu, #notesMoreBtn")) return;
@@ -981,7 +873,7 @@ const NotesRenderer = (() => {
     );
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
-      // The colour picker sits above the overflow menu, so it comes off first.
+
       if ($("notesColorMenu")?.hidden === false) {
         e.stopPropagation();
         closeColorMenu(true);
@@ -992,29 +884,17 @@ const NotesRenderer = (() => {
         setMoreMenu(false);
       }
     });
-    /* Fixed-position and anchored to a button, so it has to go when the thing
-       it is anchored to moves.
 
-       `capture` because the thing that scrolls is an inner element - the notes
-       body or the toolbar - and a scroll event does not bubble to the window.
-       `passive` because a capture-phase scroll listener sees *every* scroll in
-       the document, and one that has not promised to skip `preventDefault`
-       forces the browser to wait for it before each frame. This one only reads
-       and hides a menu; saying so keeps scrolling off the main thread. */
     window.addEventListener("resize", closeColorMenu, { passive: true });
     window.addEventListener("scroll", closeColorMenu, {
       capture: true,
       passive: true,
     });
 
-    // Buttons steal focus from the textarea on mousedown, which collapses the
-    // very selection the command is about to act on.
     bar.addEventListener("mousedown", (e) => {
       if (e.target.closest("[data-note-cmd]")) e.preventDefault();
     });
-    // Caret movement by keyboard or mouse, not just typing, changes what
-    // "currently active" means - arrowing out of bold text should turn Bold
-    // back off without needing an edit to trigger it.
+
     const syncToolbar = () => {
       updateToolbarState();
       updateSwatches();
@@ -1027,8 +907,6 @@ const NotesRenderer = (() => {
     });
   }
 
-  // Commits whatever is in the textarea to the *current* note before the
-  // active note changes underneath it, so switching tabs can't lose edits.
   function commitCurrent() {
     const area = $("notesArea");
     if (!area || !bound) return;
@@ -1046,8 +924,7 @@ const NotesRenderer = (() => {
       writeEditor(NotesManager.get());
       updateStats(NotesManager.get());
       markSaved(true);
-      // The new note's caret is not sitting inside whatever the previous
-      // note's toolbar last lit up, so that state has to go with it.
+
       clearToolbarState();
     }
     historyIndex = -1;
@@ -1098,8 +975,7 @@ const NotesRenderer = (() => {
 
         if (e.target.closest(".et-notes-tab-close")) {
           e.stopPropagation();
-          // Committing first means the confirmation prompt cannot strand the
-          // edits that are still only in the textarea.
+
           if (id === NotesManager.getActiveId()) commitCurrent();
           deleteNote(id);
           return;
@@ -1147,33 +1023,30 @@ const NotesRenderer = (() => {
       });
 
       area.addEventListener("blur", () => {
-        // Write through immediately rather than via the debounce, so the
-        // "saved" badge is truthful and a fast tab-close cannot drop it.
-        NotesManager.setImmediate(readEditor());
+        const html = readEditor();
+        if (html !== NotesManager.get()) NotesManager.setImmediate(html);
+        dirty = false;
         markSaved(true);
         commitSessionToHistory();
       });
 
-      // Paste arrives as whatever the source page was marked up as - fonts,
-      // colours, tracking pixels. It is put through the same allowlist as
-      // stored content, so the note keeps the words and the structure and
-      // nothing else.
       area.addEventListener("paste", (e) => {
         const dt = e.clipboardData;
         if (!dt) return;
         e.preventDefault();
         const html = dt.getData("text/html");
-        const text = dt.getData("text/plain");
-        const safe = html
-          ? NoteHTML.clean(html)
-          : NoteHTML.toEditor(text || "");
-        document.execCommand("insertHTML", false, safe);
+        const text = (dt.getData("text/plain") || "").replace(/\r\n?/g, "\n");
+        const structured =
+          html && /<(p|div|li|ul|ol|h[1-6]|table|blockquote|pre)\b/i.test(html);
+        if (structured) {
+          document.execCommand("insertHTML", false, NoteHTML.clean(html));
+        } else if (text) {
+          document.execCommand("insertText", false, text);
+        }
         commitEdit();
       });
 
       area.addEventListener("keydown", (e) => {
-        // The toolbar's formatting commands on the shortcuts people already
-        // have in their fingers. Ctrl+A/C/X/V are the browser's own.
         if ((e.ctrlKey || e.metaKey) && !e.altKey) {
           const key = e.key.toLowerCase();
           if (key === "b" || key === "i" || key === "u") {
@@ -1186,8 +1059,6 @@ const NotesRenderer = (() => {
         }
 
         if (e.key === "Tab") {
-          // Inside a list, Tab is what nests an item - that is what everyone
-          // expects there, and indenting with spaces instead would be wrong.
           e.preventDefault();
           const inList = !!currentBlock()?.closest("li");
           if (inList) exec(e.shiftKey ? "outdent" : "indent");
@@ -1228,10 +1099,6 @@ const NotesRenderer = (() => {
         ToastSystem.success("Notes saved");
       });
 
-      // A note that was typed here stays authoritative for the life of the
-      // page, so `dirty` is deliberately never reset - clearing it would
-      // reopen the window where a remote sync overwrites local edits.
-
       $("notesExportBtn")?.addEventListener("click", () => {
         NotesManager.set(readEditor());
         NotesManager.exportTxt();
@@ -1242,7 +1109,8 @@ const NotesRenderer = (() => {
   return {
     render,
     flushPending,
-    hasLiveEdits,
+    syncFromStore,
+    lastEditAt: () => lastEditAt,
     switchTo,
     applyFontSize,
     readEditor,
@@ -1357,14 +1225,10 @@ const ClipboardRenderer = (() => {
 })();
 
 const HomeRenderer = (() => {
-  // Three open tasks on Home by default, five if chosen in Settings - but never
-  // more than three when the window is short enough that five would push the
-  // centre column up into the toolbar.
   const TODO_LIMIT_SHORT = 3;
   const shortWindow = window.matchMedia("(max-height: 760px)");
   const visibleTodoLimit = () => {
-    const chosen = StorageManager.getSettings().homeTaskCount === 5 ? 5 : 3;
-    return shortWindow.matches ? Math.min(chosen, TODO_LIMIT_SHORT) : chosen;
+    return shortWindow.matches ? Math.min(3, TODO_LIMIT_SHORT) : 3;
   };
   const MAX_TODO_ORDER = 500;
 
@@ -1381,9 +1245,6 @@ const HomeRenderer = (() => {
     if (typeof PinnedBoards !== "undefined") PinnedBoards.render();
   }
 
-  /* A narrower window means a narrower column, which changes which lines
-     overflow. Re-measuring is cheap - at most three rows - so it is done on
-     resize rather than tracked with an observer per row. */
   let clipTimer = null;
   window.addEventListener("resize", () => {
     clearTimeout(clipTimer);
@@ -1417,16 +1278,6 @@ const HomeRenderer = (() => {
     "dec",
   ];
 
-  /**
-   * Reads a date out of a to-do's own words.
-   *
-   * Derived from the text every time it is rendered rather than stored: a
-   * checklist item is a line of HTML with no id of its own, so there is
-   * nowhere to keep a parsed date that would survive the line being edited.
-   * Re-reading is also self-correcting - fix the wording and the date follows.
-   *
-   * @returns {{date: Date, label: string, matched: string}|null}
-   */
   function parseDueDate(text) {
     const raw = String(text || "");
     const s = raw.toLowerCase();
@@ -1453,7 +1304,6 @@ const HomeRenderer = (() => {
             : shift(0);
     }
 
-    // "friday", "next friday" - the coming one, or the week after for "next".
     if (!date) {
       const wd = s.match(
         new RegExp(`\\b(next\\s+)?(${WEEKDAYS.join("|")})\\b`),
@@ -1468,7 +1318,6 @@ const HomeRenderer = (() => {
       }
     }
 
-    // "12 sep" / "sep 12" / "september 12th"
     if (!date) {
       const md = s.match(
         new RegExp(
@@ -1482,8 +1331,7 @@ const HomeRenderer = (() => {
         if (day >= 1 && day <= 31 && mon >= 0) {
           let year = now.getFullYear();
           let candidate = new Date(year, mon, day);
-          // A bare month and day that has already gone by almost always means
-          // next year rather than a date in the past.
+
           if (candidate < startOfDay(now)) candidate = new Date(++year, mon, day);
           date = candidate;
         }
@@ -1523,17 +1371,6 @@ const HomeRenderer = (() => {
     StorageManager.save();
   }
 
-  /**
-   * Every open checklist item across all notes, in the order Home shows them.
-   *
-   * Items the user has placed in the Tasks dialog come first, in that order.
-   * Everything else follows, most recently edited note first, so without an
-   * order of its own Home still leads with what was being worked on last.
-   *
-   * An item is known by its note and its words rather than by its line number,
-   * which moves whenever a line is added above it. Two identical lines in one
-   * note are told apart by a counter.
-   */
   function collectTodos() {
     const notes = [...NotesManager.list()].sort(
       (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0),
@@ -1549,8 +1386,7 @@ const HomeRenderer = (() => {
           noteId: note.id,
           noteTitle: note.title,
           text: entry.text,
-          // Position within the note, so ticking from Home writes back to the
-          // line the user actually clicked.
+
           index: entry.index,
           key: n ? `${base}#${n}` : base,
         });
@@ -1567,7 +1403,6 @@ const HomeRenderer = (() => {
       .map((x) => x.item);
   }
 
-  /** Moves one task to `toIndex` and saves the whole order. */
   function reorderTodos(key, toIndex) {
     const keys = collectTodos().map((t) => t.key);
     const from = keys.indexOf(key);
@@ -1581,15 +1416,10 @@ const HomeRenderer = (() => {
     return true;
   }
 
-  /**
-   * Lists the first few open tasks on Home, with a way to the rest.
-   */
   function renderTodos() {
     const wrap = $("homeTodos");
     if (!wrap) return;
 
-    // Switched off in Settings > Home page. Checked before any of the work of
-    // scanning every note for checklist lines, not after.
     if (StorageManager.getSettings().widgets?.notesTodos === false) {
       wrap.style.display = "none";
       wrap.replaceChildren();
@@ -1607,17 +1437,11 @@ const HomeRenderer = (() => {
     wrap.style.display = "flex";
     const frag = document.createDocumentFragment();
 
-    // A heading, so the list is announced as "what is open today" rather than
-    // appearing as unexplained lines under the clock.
     const label = document.createElement("div");
     label.className = "et-home-todos-label";
     label.textContent = "Today";
     frag.appendChild(label);
 
-    // One column for the boxes. Each row used to be centred on its own width,
-    // so a short task's box sat further right than a long one's and the ticks
-    // zig-zagged down the page. The list is centred as a block instead, and
-    // its rows share a left edge.
     const list = document.createElement("div");
     list.className = "et-home-todo-list";
     list.setAttribute("role", "list");
@@ -1625,9 +1449,6 @@ const HomeRenderer = (() => {
     items.forEach((item) => {
       const due = parseDueDate(item.text);
 
-      // A row of two controls rather than one button wrapping everything: the
-      // box completes the item and the text opens the note it lives in, and a
-      // button cannot legally contain another button.
       const row = document.createElement("div");
       row.className = `et-home-todo${pendingTodoDeletes.has(item.key) ? " is-striking" : ""}`;
       row.setAttribute("role", "listitem");
@@ -1667,9 +1488,6 @@ const HomeRenderer = (() => {
     });
     frag.appendChild(list);
 
-    // "+3 more" when tasks are left off; otherwise a quiet "Reorder" that
-    // shows on hover or focus, so setting priorities is always possible
-    // without adding a permanent control under a short list.
     if (all.length > 1) {
       const hidden = all.length - items.length;
       const more = document.createElement("button");
@@ -1693,13 +1511,6 @@ const HomeRenderer = (() => {
   const chevronSvg = (up) =>
     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="${up ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}"/></svg>`;
 
-  /**
-   * Every open task, and the order Home shows them in.
-   *
-   * Three ways to move one, so none of them is the only way: drag a row, use
-   * its arrow buttons, or focus it and press Alt+Up / Alt+Down. Up and Down on
-   * their own move between rows.
-   */
   function openTodoModal() {
     showCustomModal(
       "Tasks",
@@ -1709,7 +1520,7 @@ const HomeRenderer = (() => {
       () => true,
       "Done",
     );
-    // A list you edit in place has nothing to cancel.
+
     $("modalCancelBtn")?.remove();
     paintTodoModal();
     $("todoModalList")?.querySelector(".et-todo-m-row")?.focus();
@@ -1837,27 +1648,15 @@ const HomeRenderer = (() => {
     });
   }
 
-  /**
-   * Marks the task lines that are actually too long for their box.
-   *
-   * The edge fade is only honest when something has been cut off, and CSS has
-   * no way to ask that question - so it is measured once per paint, after the
-   * rows are in the document and have a width. `scrollWidth` exceeding
-   * `clientWidth` by a pixel is rounding, not overflow, hence the small
-   * tolerance.
-   */
   function markClippedTodos(wrap) {
     for (const el of wrap.querySelectorAll(".et-home-todo-text")) {
       el.classList.toggle("is-clipped", el.scrollWidth - el.clientWidth > 1);
     }
   }
 
-  // Tasks ticked and waiting to be deleted, by key: the timer that deletes
-  // each, the toast offering to undo it, and the delete itself.
   const pendingTodoDeletes = new Map();
   const TODO_UNDO_MS = 3000;
 
-  /** Removes a task's line from its note. Found by key, not by a stale index. */
   function deleteTodoLine(key) {
     const item = collectTodos().find((t) => t.key === key);
     if (!item) return false;
@@ -1868,22 +1667,12 @@ const HomeRenderer = (() => {
     note.text = updated;
     note.updatedAt = Date.now();
     const data = StorageManager.getData();
-    // The editor renders from this mirror when the note is the open one.
+
     if (data.activeNoteId === note.id) data.notes = updated;
     StorageManager.saveImmediate();
     return true;
   }
 
-  /**
-   * Ticks a task off: struck through straight away, deleted from its note a
-   * few seconds later unless the toast's Undo is pressed first.
-   *
-   * Deleted rather than marked done, because a finished task has nothing left
-   * to do in the note either, and ticked lines were piling up there. The undo
-   * window is what makes deleting safe. The line is looked up again by its key
-   * when the time runs out rather than by the index it had when clicked: a
-   * second tick in the same note meanwhile moves every line after it.
-   */
   function completeTodo(item, row, after) {
     if (!item || pendingTodoDeletes.has(item.key)) return;
     row?.classList.add("is-striking");
@@ -1915,7 +1704,6 @@ const HomeRenderer = (() => {
     pendingTodoDeletes.set(item.key, { timer, toast, commit });
   }
 
-  // Closing the tab inside the undo window still deletes what was ticked.
   window.addEventListener("pagehide", () => {
     [...pendingTodoDeletes.values()].forEach((pending) => pending.commit());
   });
@@ -1951,7 +1739,7 @@ const HomeRenderer = (() => {
           showModalError("URL is required.");
           return false;
         }
-        // Silently use the first board - no need to expose board selector
+
         const boardId = boards[0]?.id;
         const bm = BookmarkManager.add(boardId, title || url, url, []);
         if (!bm) {
@@ -1979,14 +1767,15 @@ const HomeRenderer = (() => {
     const wrap = $("homePinned");
     if (!wrap) return;
     const settings = StorageManager.getSettings();
-    if (settings.hidePinnedOnHome) {
+    const linksOn = !settings.hidePinnedOnHome;
+    const boardsOn = typeof PinnedBoards !== "undefined" && PinnedBoards.enabled();
+    if (!linksOn && !boardsOn) {
       wrap.style.display = "none";
       return;
     }
-    const pinned = BookmarkManager.getPinned();
+    const pinned = linksOn ? BookmarkManager.getPinned() : [];
     wrap.style.display = "flex";
-    // Assembled off-DOM and swapped in once. Appending each pin to the live
-    // dock re-laid the row out per tile and flashed an empty dock in between.
+
     const frag = document.createDocumentFragment();
 
     pinned.forEach((bm) => {
@@ -2008,8 +1797,6 @@ const HomeRenderer = (() => {
           cell.style.transform = "scale(1.05)";
       });
       cell.addEventListener("dragleave", (e) => {
-        // dragleave also fires as the pointer crosses into the tile's own
-        // children, which made the hovered pin flicker between scales.
         if (e.relatedTarget && cell.contains(e.relatedTarget)) return;
         cell.style.transform = "";
       });
@@ -2032,21 +1819,21 @@ const HomeRenderer = (() => {
         }
       });
 
-      /* Icon only. The name moved into a tooltip and the accessible name, so the
-         row reads as a dock of icons rather than a grid of captioned tiles -
-         and nothing is lost for a screen reader, which announces the link by
-         its `aria-label` exactly as it announced the caption before. */
       const a = document.createElement("a");
       a.className = "dock-pin";
       a.href = safeHref(bm.url);
       a.setAttribute("data-id", bm.id);
-      a.setAttribute("aria-label", bm.title);
-      a.setAttribute("data-tooltip", bm.title);
+      let pinName = (bm.title || "").trim();
+      if (!pinName) {
+        try { pinName = new URL(bm.url).hostname.replace(/^www\./, ""); } catch { pinName = bm.url; }
+      }
+      a.setAttribute("aria-label", pinName);
+      a.setAttribute("data-tooltip", pinName);
       setSafeHTML(
         a,
         `
         <span class="dock-pin-icon">
-          <img class="dock-pin-fav" ${faviconAttr(bm.url)} alt="" />
+          <img class="dock-pin-fav" ${faviconAttr(bm.url)} alt="" width="26" height="26" />
         </span>
       `,
       );
@@ -2078,7 +1865,7 @@ const HomeRenderer = (() => {
 
       a.addEventListener("contextmenu", showMenu);
       menuBtn.addEventListener("click", showMenu);
-      // The keyboard's way to a context menu: the Menu key, or Shift+F10.
+
       a.addEventListener("keydown", (e) => {
         if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) showMenu(e);
       });
@@ -2087,8 +1874,6 @@ const HomeRenderer = (() => {
       frag.appendChild(cell);
     });
 
-    // Pinned boards open from the end of this row, beside the links they sit
-    // with, rather than from a button of their own in a corner of the page.
     const appendBoardsButton = () => {
       if (typeof PinnedBoards === "undefined" || !PinnedBoards.enabled()) return;
       const btn = document.createElement("button");
@@ -2109,7 +1894,7 @@ const HomeRenderer = (() => {
       frag.appendChild(btn);
     };
 
-    if (pinned.length >= BookmarkManager.PIN_LIMIT) {
+    if (!linksOn || pinned.length >= BookmarkManager.PIN_LIMIT) {
       appendBoardsButton();
       wrap.replaceChildren(frag);
       return;

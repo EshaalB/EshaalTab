@@ -1,11 +1,8 @@
 "use strict";
 
 const SettingsRenderer = (() => {
-  // Which subject the sheet is showing. The tab modules are an authoring
-  // detail underneath this - a page may need one of them or two.
-  let activePage = "appearance";
-  // Queued scroll target, consumed by the next paint. Used by deep links such
-  // as "open settings at the wallpaper picker".
+  let activePage = "home";
+
   let pendingSection = null;
 
   const PRESETS = [
@@ -155,9 +152,6 @@ const SettingsRenderer = (() => {
 
   const PRESET_GROUPS = ["Pastel", "Neon"];
 
-  // Presets retired when the Gamer group was replaced. Anyone still on one
-  // keeps the exact colours they had -- the theme simply becomes "Custom" --
-  // so the swap cannot silently restyle someone's page.
   const RETIRED_PRESETS = {
     neon: "0px",
     synthwave: "0px",
@@ -179,6 +173,10 @@ const SettingsRenderer = (() => {
   function effectiveAccent() {
     const s = StorageManager.getSettings();
     if (HEX6.test(s.accentOverride || "")) return s.accentOverride;
+    const overMedia =
+      s.backgroundType === "image" || s.backgroundType === "video";
+    if (overMedia && HEX6.test(s.wpExtractedAccent || ""))
+      return s.wpExtractedAccent;
     if (HEX6.test(s.accentColor || "")) return s.accentColor;
     return liveVar("--accent-color", "#6366f1");
   }
@@ -359,41 +357,15 @@ const SettingsRenderer = (() => {
     });
   }
 
-  /**
-   * The settings pages, in sidebar order.
-   *
-   * A page is a subject, not a module. "Wallpaper" means every wallpaper
-   * control there is, wherever it happens to be authored - the picker lives in
-   * the theme module and the crop and blur controls in the widgets module, and
-   * the user should never have to know or care. Each page names the tab modules
-   * whose markup it needs; everything rendered is then filtered down to the
-   * blocks tagged `data-page` with this page's id, so one module can contribute
-   * sections to several pages without any of them being rendered twice.
-   *
-   * `find` carries the words someone might search for that are not in the
-   * title. Adding a setting later is a row here plus a `data-page` attribute.
-   */
   const PAGES = [
     {
-      group: "Customize",
+      group: "Preferences",
       items: [
         {
           id: "appearance",
           label: "Appearance",
-          tabs: ["widgets", "theme"],
-          find: "corner radius rounded sharp font typeface board width size interface background strength opacity transparency surface performance ambient wash",
-        },
-        {
-          id: "themes",
-          label: "Themes",
-          tabs: ["theme"],
-          find: "light dark system mode accent colour color two-tone secondary base background scheme",
-        },
-        {
-          id: "presets",
-          label: "Presets",
-          tabs: ["theme"],
-          find: "preset share copy code export import theme pastel neon",
+          tabs: ["theme", "widgets"],
+          find: "theme light dark system mode accent colour color two-tone secondary base background scheme preset pastel neon share copy code corner radius rounded sharp font typeface board width size interface strength opacity transparency surface performance ambient wash",
         },
         {
           id: "wallpaper",
@@ -403,44 +375,68 @@ const SettingsRenderer = (() => {
         },
         {
           id: "home",
-          label: "Home page",
+          label: "Home layout",
           tabs: ["theme", "widgets"],
-          find: "widgets clock greeting name date weather search bar pinned links launcher time format 12 24 hour shadow",
+          find: "widgets clock greeting name date weather search bar pinned links launcher time format 12 24 hour shadow top bar library timer palette tasks",
         },
         {
           id: "search",
-          label: "Search engines",
+          label: "Search",
           tabs: ["search"],
           find: "engine default browser google duckduckgo yandex yahoo bing chatgpt claude gemini perplexity brave youtube reddit pinterest quora ai",
         },
       ],
     },
     {
-      group: "Your data",
+      group: "Advanced",
       items: [
-        { id: "backup", label: "Backup & import", tabs: ["data"], find: "export json bookmarks raindrop restore" },
-        { id: "maintenance", label: "Maintenance", tabs: ["data"], find: "duplicates repair wallpaper cache" },
-        { id: "privacy", label: "Privacy", tabs: ["data"], find: "favicons remote tracking permissions" },
-        { id: "reset", label: "Reset", tabs: ["data"], find: "clear boards wipe delete everything factory danger" },
-      ],
-    },
-    {
-      group: "About",
-      items: [
-        { id: "help", label: "Help", tabs: ["help"], find: "guide how to shortcuts keyboard" },
-        { id: "support", label: "Support", tabs: ["support"], find: "discord instagram contact feedback bug" },
+        {
+          id: "data",
+          label: "Data & backup",
+          tabs: ["data"],
+          find: "export import csv json bookmarks raindrop restore backup reminder daily weekly monthly duplicates repair wallpaper cache clear boards wipe delete everything factory danger reset",
+        },
+        {
+          id: "privacy",
+          label: "Privacy",
+          tabs: ["data"],
+          find: "favicons web icons remote tracking permissions",
+        },
+        {
+          id: "help",
+          label: "Help & support",
+          tabs: ["help", "support"],
+          find: "guide how to shortcuts keyboard discord instagram contact feedback bug",
+        },
       ],
     },
   ];
 
-  /* Deep links from elsewhere in the app still name the old tabs. */
   const TAB_TO_PAGE = {
-    theme: "themes",
+    theme: "appearance",
     widgets: "appearance",
     search: "search",
-    data: "backup",
+    data: "data",
     help: "help",
-    support: "support",
+    support: "help",
+  };
+
+  const PAGE_SECTION_ORDER = {
+    appearance: [
+      "theme and colours",
+      "themes",
+      "general appearance",
+      "interface background",
+      "share your theme",
+    ],
+    home: [
+      "home visibility",
+      "clock, greeting and date",
+      "weather",
+      "pinned links",
+      "top bar",
+    ],
+    data: ["data management", "maintenance", "danger zone"],
   };
 
   const allPages = () => PAGES.flatMap((g) => g.items);
@@ -450,9 +446,7 @@ const SettingsRenderer = (() => {
     const nav = $("settingsNav");
     if (!nav) return;
     const q = filter.trim().toLowerCase();
-    // The group name comes from the group, not the item - matching a section by
-    // the heading it sits under is half of what makes searching for "data" or
-    // "customize" work.
+
     const match = (it, group) =>
       !q ||
       it.label.toLowerCase().includes(q) ||
@@ -491,7 +485,6 @@ const SettingsRenderer = (() => {
     markActiveNavItem();
   }
 
-  /** Opens a page from a sidebar row, a search hit or a deep link. */
   function goToPage(id) {
     const page = pageById(id);
     if (!page) return;
@@ -504,14 +497,6 @@ const SettingsRenderer = (() => {
     renderSideSheetContent(false);
   }
 
-  /**
-   * Marks the one sidebar row that is on screen.
-   *
-   * A tab can render several sections, so "same tab" is not enough to identify
-   * a row - matching on that alone lit up four rows at once. When no section
-   * has been chosen (the sheet was opened cold on its last tab) the first row
-   * belonging to that tab stands in, because that is what the page opens at.
-   */
   function markActiveNavItem() {
     $$("#settingsNav .et-set-nav-item").forEach((el) => {
       const on = el.dataset.page === activePage;
@@ -530,9 +515,472 @@ const SettingsRenderer = (() => {
     if (closeBtn) closeBtn.addEventListener("click", closeSideSheet);
 
     if (overlay) {
+      let pop = null;
+      let popInput = null;
+
+      const hsvToHex = (h, sat, val) => {
+        const f = (n) => {
+          const k = (n + h / 60) % 6;
+          const v = val - val * sat * Math.max(0, Math.min(k, 4 - k, 1));
+          return Math.round(v * 255);
+        };
+        return Contrast.toHex({ r: f(5), g: f(3), b: f(1) });
+      };
+
+      const hexToHsv = (hex) => {
+        const { r, g, b } = Contrast.toRgb(hex);
+        const max = Math.max(r, g, b) / 255;
+        const min = Math.min(r, g, b) / 255;
+        const d = max - min;
+        let h = 0;
+        if (d) {
+          if (max === r / 255) h = ((g - b) / 255 / d) % 6;
+          else if (max === g / 255) h = (b - r) / 255 / d + 2;
+          else h = (r - g) / 255 / d + 4;
+          h *= 60;
+          if (h < 0) h += 360;
+        }
+        return { h, s: max ? d / max : 0, v: max };
+      };
+
+      const closeHooks = [];
+      const closePop = () => {
+        while (closeHooks.length) closeHooks.pop()();
+        document.body.classList.remove("is-eyedropping");
+        if (pop && popInput) rememberColor(popInput.value);
+        document.querySelector(".st-loupe")?.remove();
+        pop?.remove();
+        pop = null;
+        popInput = null;
+      };
+      closeColorPopover = closePop;
+
+      const commitColor = (hex) => {
+        if (!popInput || !HEX6_RE.test(hex)) return;
+        popInput.value = hex.toLowerCase();
+        popInput.dispatchEvent(new Event("input", { bubbles: true }));
+        popInput.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+
+      function openPop(input) {
+        closePop();
+        closeHooks.length = 0;
+        popInput = input;
+        let { h, s: sat, v: val } = hexToHsv(input.value);
+
+        pop = document.createElement("div");
+        pop.className = "st-picker";
+        setSafeHTML(
+          pop,
+          '<div class="st-picker-head">' +
+            '<span class="st-picker-title">Colour</span>' +
+            '<button type="button" class="st-picker-close" aria-label="Close">&#10005;</button>' +
+            "</div>" +
+            '<div class="st-picker-area" tabindex="0" role="slider" aria-label="Saturation and brightness"><span class="st-picker-thumb"></span></div>' +
+            '<input type="range" class="st-picker-hue" min="0" max="359" step="1" aria-label="Hue" />' +
+            '<div class="st-picker-foot">' +
+            '<span class="st-picker-preview"></span>' +
+            '<input type="text" class="st-picker-hex" maxlength="7" spellcheck="false" aria-label="Hex colour" />' +
+            '<button type="button" class="st-picker-drop" title="Pick a colour: click, or drag this onto what you want" aria-label="Pick a colour from the page">' +
+            '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="m2 22 1.5-1.5h3l8-8"/><path d="M3.5 20.5v-3l8-8"/>' +
+            '<path d="m14.5 6.5 3.2-3.2a2.1 2.1 0 1 1 3 3L17.5 9.5l.5.5a2 2 0 0 1-2.8 2.8l-4-4A2 2 0 0 1 14 6l.5.5Z"/></svg></button>' +
+            "</div>" +
+            '<div class="st-picker-recent"></div>',
+        );
+
+        const area = pop.querySelector(".st-picker-area");
+        const thumb = pop.querySelector(".st-picker-thumb");
+        const hue = pop.querySelector(".st-picker-hue");
+        const hexField = pop.querySelector(".st-picker-hex");
+        const preview = pop.querySelector(".st-picker-preview");
+        const recent = pop.querySelector(".st-picker-recent");
+
+        const paint = (apply = true) => {
+          const value = hsvToHex(h, sat, val);
+          area.style.setProperty("--hue", hsvToHex(h, 1, 1));
+          thumb.style.left = `${sat * 100}%`;
+          thumb.style.top = `${(1 - val) * 100}%`;
+          thumb.style.background = value;
+          preview.style.background = value;
+          hue.value = String(Math.round(h));
+          if (document.activeElement !== hexField) hexField.value = value;
+          if (apply) commitColor(value);
+        };
+
+        recent.replaceChildren(
+          ...recentColors().map((c) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "st-recent-swatch";
+            b.style.background = c;
+            b.title = `Use ${c}`;
+            b.setAttribute("aria-label", `Use colour ${c}`);
+            b.addEventListener("click", () => {
+              ({ h, s: sat, v: val } = hexToHsv(c));
+              paint();
+            });
+            return b;
+          }),
+        );
+
+        const fromPointer = (e) => {
+          const r = area.getBoundingClientRect();
+          sat = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+          val = 1 - Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+          paint();
+        };
+        area.addEventListener("pointerdown", (e) => {
+          area.setPointerCapture(e.pointerId);
+          fromPointer(e);
+        });
+        area.addEventListener("pointermove", (e) => {
+          if (e.buttons) fromPointer(e);
+        });
+        area.addEventListener("keydown", (e) => {
+          const step = e.shiftKey ? 0.1 : 0.02;
+          if (e.key === "ArrowRight") sat = Math.min(1, sat + step);
+          else if (e.key === "ArrowLeft") sat = Math.max(0, sat - step);
+          else if (e.key === "ArrowUp") val = Math.min(1, val + step);
+          else if (e.key === "ArrowDown") val = Math.max(0, val - step);
+          else return;
+          e.preventDefault();
+          paint();
+        });
+        hue.addEventListener("input", () => {
+          h = +hue.value;
+          paint();
+        });
+        hexField.addEventListener("input", () => {
+          const v = hexField.value.trim().replace(/^#?/, "#");
+          if (!HEX6_RE.test(v)) return;
+          ({ h, s: sat, v: val } = hexToHsv(v));
+          paint();
+        });
+        pop.querySelector(".st-picker-close").addEventListener("click", closePop);
+
+        const sampleCanvas = document.createElement("canvas");
+        sampleCanvas.width = 0;
+        sampleCanvas.height = 0;
+        const sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
+        let samplePainted = false;
+        let hasWallpaper = false;
+        let blurPx = 0;
+
+        const paintSampleCanvas = async () => {
+          if (samplePainted && hasWallpaper) return;
+          samplePainted = true;
+          hasWallpaper = false;
+          const bg = $("photo-bg");
+          const src = /^url\("(.*)"\)$/.exec(bg?.style.backgroundImage || "")?.[1];
+          const s = StorageManager.getSettings();
+          blurPx = parseFloat(getComputedStyle(bg || document.body).filter.replace(/[^\d.]/g, "")) || 0;
+          if (!src) return;
+          try {
+            const img = new Image();
+            const ready = new Promise((res, rej) => {
+              img.onload = res;
+              img.onerror = rej;
+            });
+            img.src = src;
+            if (!img.complete) await ready;
+            const w = innerWidth;
+            const h = innerHeight;
+            sampleCanvas.width = w;
+            sampleCanvas.height = h;
+            const zoom = (s.wallpaperZoom || 100) / 100;
+            const cover = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+            const dw = img.naturalWidth * cover * zoom;
+            const dh = img.naturalHeight * cover * zoom;
+            const px = (s.wallpaperPosX ?? 50) / 100;
+            const py = (s.wallpaperPosY ?? 50) / 100;
+            sampleCtx.drawImage(img, (w - dw) * px, (h - dh) * py, dw, dh);
+            hasWallpaper = true;
+          } catch {
+            sampleCanvas.width = 0;
+            samplePainted = false;
+          }
+        };
+
+        const rgbOf = (value) => {
+          const parts = String(value).match(/[\d.]+/g);
+          if (!parts || parts.length < 3) return null;
+          return { r: +parts[0], g: +parts[1], b: +parts[2], a: parts[3] === undefined ? 1 : +parts[3] };
+        };
+
+        const layerColor = (node) => {
+          const cs = getComputedStyle(node);
+          if (cs.display === "none" || cs.visibility === "hidden") return null;
+          const c = rgbOf(cs.backgroundColor);
+          if (!c) return null;
+          c.a *= parseFloat(cs.opacity);
+          return c.a > 0.01 ? c : null;
+        };
+
+        const over = (top, base) => ({
+          r: top.r * top.a + base.r * (1 - top.a),
+          g: top.g * top.a + base.g * (1 - top.a),
+          b: top.b * top.a + base.b * (1 - top.a),
+          a: 1,
+        });
+
+        const BACKDROP = new Set(["photo-bg", "video-bg", "wallpaper-overlay", "wallpaper-vignette"]);
+        const isBackdrop = (node) =>
+          node === document.body ||
+          BACKDROP.has(node.id) ||
+          node.classList?.contains("app") ||
+          node.classList?.contains("et-view");
+
+        const wallpaperAt = (x, y) => {
+          if (!hasWallpaper) return null;
+          const step = blurPx > 1 ? Math.min(12, Math.round(blurPx)) : 0;
+          let r = 0;
+          let g = 0;
+          let b = 0;
+          let n = 0;
+          for (let dy = -step; dy <= step; dy += step || 1) {
+            for (let dx = -step; dx <= step; dx += step || 1) {
+              const sx = Math.min(sampleCanvas.width - 1, Math.max(0, Math.round(x + dx)));
+              const sy = Math.min(sampleCanvas.height - 1, Math.max(0, Math.round(y + dy)));
+              const d = sampleCtx.getImageData(sx, sy, 1, 1).data;
+              r += d[0];
+              g += d[1];
+              b += d[2];
+              n += 1;
+              if (!step) break;
+            }
+            if (!step) break;
+          }
+          return { r: r / n, g: g / n, b: b / n, a: 1 };
+        };
+
+        const baseColor = (x, y) => {
+          let base = wallpaperAt(x, y);
+          if (!base) {
+            for (const node of [$("photo-bg"), document.body, document.documentElement]) {
+              const c = node && layerColor(node);
+              if (c && c.a > 0.01) {
+                base = c;
+                break;
+              }
+            }
+          }
+          if (!base) base = { r: 20, g: 21, b: 26, a: 1 };
+          for (const id of ["wallpaper-overlay", "wallpaper-vignette"]) {
+            const layer = $(id);
+            const tint = layer && layerColor(layer);
+            if (tint) base = over(tint, base);
+          }
+          return base;
+        };
+
+        const inkAt = (el, x, y) => {
+          const svg = el.closest?.("svg");
+          if (svg) {
+            const cs = getComputedStyle(el.tagName === "svg" ? el : el);
+            const paint = cs.stroke !== "none" ? cs.stroke : cs.fill;
+            const c = rgbOf(paint);
+            if (c && c.a > 0.01) {
+              c.a *= parseFloat(getComputedStyle(svg).opacity);
+              return c;
+            }
+          }
+          for (const node of el.childNodes || []) {
+            if (node.nodeType !== 3 || !node.textContent.trim()) continue;
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            for (const r of range.getClientRects()) {
+              if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+                const cs = getComputedStyle(el);
+                const c = rgbOf(cs.color);
+                if (!c) return null;
+                c.a *= parseFloat(cs.opacity);
+                return c.a > 0.01 ? c : null;
+              }
+            }
+          }
+          return null;
+        };
+
+        const sampleAt = (x, y) => {
+          const el = document.elementFromPoint(x, y);
+          if (!el) return null;
+          const stack = [];
+          for (let node = el; node && node !== document.documentElement; node = node.parentElement) {
+            if (isBackdrop(node)) break;
+            const c = layerColor(node);
+            if (c) {
+              stack.push(c);
+              if (c.a > 0.995) break;
+            }
+          }
+          let color =
+            stack.length && stack[stack.length - 1].a > 0.995
+              ? stack.pop()
+              : baseColor(x, y);
+          for (let i = stack.length - 1; i >= 0; i -= 1) color = over(stack[i], color);
+          const ink = inkAt(el, x, y);
+          if (ink) color = over(ink, color);
+          return Contrast.toHex({
+            r: Math.round(color.r),
+            g: Math.round(color.g),
+            b: Math.round(color.b),
+          });
+        };
+
+        const loupe = document.createElement("div");
+        loupe.className = "st-loupe";
+        loupe.hidden = true;
+        document.body.append(loupe);
+
+        let armed = null;
+
+        const disarm = (restore) => {
+          if (!armed) return;
+          document.removeEventListener("pointermove", armed.move, true);
+          document.removeEventListener("pointerdown", armed.pick, true);
+          document.removeEventListener("keydown", armed.key, true);
+          armed = null;
+          document.body.classList.remove("is-eyedropping");
+          loupe.hidden = true;
+          overlay.classList.remove("is-sampling", "is-live");
+          pop?.classList.remove("is-hidden");
+          dropBtn?.classList.remove("is-armed");
+          if (restore) {
+            ({ h, s: sat, v: val } = hexToHsv(restore));
+            paint();
+          }
+        };
+
+        const armSampling = () => {
+          if (armed) {
+            disarm(armed.startHex);
+            return;
+          }
+          paintSampleCanvas();
+          const startHex = hsvToHex(h, sat, val);
+          dropBtn?.classList.add("is-armed");
+          document.body.classList.add("is-eyedropping");
+
+          const outside = (x, y) => {
+            const panel = $("sidesheetPanel");
+            const inBox = (el) => {
+              if (!el) return false;
+              const r = el.getBoundingClientRect();
+              return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+            };
+            return !inBox(panel) && !inBox(pop);
+          };
+
+          let cleared = false;
+          let lastRead = 0;
+
+          const readAt = (x, y) => {
+            if (!cleared && outside(x, y)) {
+              cleared = true;
+              overlay.classList.add("is-live", "is-sampling");
+              pop.classList.add("is-hidden");
+            }
+            return sampleAt(x, y);
+          };
+
+          const move = (ev) => {
+            const { clientX: x, clientY: y } = ev;
+            loupe.hidden = false;
+            loupe.style.left = `${x + 18}px`;
+            loupe.style.top = `${y + 18}px`;
+            const now = performance.now();
+            if (now - lastRead < 16) return;
+            lastRead = now;
+            const hex = readAt(x, y);
+            if (!hex) return;
+            loupe.style.background = hex;
+            loupe.dataset.hex = hex.toUpperCase();
+            ({ h, s: sat, v: val } = hexToHsv(hex));
+            paint();
+          };
+
+          const pick = (ev) => {
+            if (!cleared || ev.target.closest?.(".st-picker-drop")) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            const hex = readAt(ev.clientX, ev.clientY);
+            disarm(null);
+            if (hex) {
+              ({ h, s: sat, v: val } = hexToHsv(hex));
+              paint();
+            }
+          };
+
+          const key = (ev) => {
+            if (ev.key !== "Escape") return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            disarm(startHex);
+          };
+
+          armed = { move, pick, key, startHex };
+          document.addEventListener("pointermove", move, true);
+          document.addEventListener("pointerdown", pick, true);
+          document.addEventListener("keydown", key, true);
+        };
+
+        const dropBtn = pop.querySelector(".st-picker-drop");
+        dropBtn?.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          armSampling();
+        });
+        closeHooks.push(() => disarm(null));
+
+        pop.querySelector(".st-picker-head").addEventListener("pointerdown", (e) => {
+          if (e.target.closest(".st-picker-close")) return;
+          const box = pop.getBoundingClientRect();
+          const dx = e.clientX - box.left;
+          const dy = e.clientY - box.top;
+          const move = (ev) => {
+            pop.style.left = `${Math.max(4, Math.min(innerWidth - box.width - 4, ev.clientX - dx))}px`;
+            pop.style.top = `${Math.max(4, Math.min(innerHeight - box.height - 4, ev.clientY - dy))}px`;
+          };
+          const up = () => {
+            document.removeEventListener("pointermove", move);
+            document.removeEventListener("pointerup", up);
+          };
+          document.addEventListener("pointermove", move);
+          document.addEventListener("pointerup", up);
+        });
+
+        document.body.append(pop);
+        const at = (input.previousElementSibling || input).getBoundingClientRect();
+        const box = pop.getBoundingClientRect();
+        const left =
+          at.left - box.width - 10 >= 8
+            ? at.left - box.width - 10
+            : Math.min(at.right + 10, innerWidth - box.width - 8);
+        pop.style.left = `${Math.max(8, left)}px`;
+        pop.style.top = `${Math.max(8, Math.min(at.top - 8, innerHeight - box.height - 8))}px`;
+        paint(false);
+      }
+
       overlay.addEventListener("click", (e) => {
-        // Ignores a text selection that was dragged out of the panel onto the
-        // backdrop; that reports the backdrop as the click target.
+        const btn = e.target.closest?.(".st-swatch");
+        if (!btn) return;
+        const input = $(btn.dataset.for);
+        if (!input) return;
+        if (popInput === input) closePop();
+        else openPop(input);
+      });
+
+      document.addEventListener("pointerdown", (e) => {
+        if (!pop || pop.contains(e.target) || e.target.closest?.(".st-swatch")) return;
+        closePop();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && pop) closePop();
+      });
+
+      overlay.addEventListener("click", (e) => {
         if (e.target === overlay && !gestureStartedIn($("sidesheetPanel")))
           closeSideSheet();
       });
@@ -551,9 +999,7 @@ const SettingsRenderer = (() => {
           const isExp = acc.classList.contains("is-expanded");
           const ownBody = header.nextElementSibling;
           const isBody = ownBody?.classList.contains("st-accordion-body");
-          // Measured before the class flip below changes which CSS rule is
-          // active, so the slide has a real starting height to animate from
-          // - measuring after would read the height it is becoming.
+
           const fromHeight = isBody
             ? ownBody.getBoundingClientRect().height
             : null;
@@ -573,9 +1019,7 @@ const SettingsRenderer = (() => {
           const expanded = new Set(
             settings.expandedSettingsAccordions?.[activePage] || [],
           );
-          // Recorded in both directions. Only tracking what was collapsed made
-          // "never touched" and "deliberately expanded" the same state, so a
-          // section that ships collapsed was force-opened on every load.
+
           if (isExp) {
             collapsed.add(key);
             expanded.delete(key);
@@ -611,8 +1055,7 @@ const SettingsRenderer = (() => {
         renderSettingsNav("");
         return;
       }
-      // Enter goes to the first thing left in the list, so a search that has
-      // narrowed to one answer does not also need a click to accept it.
+
       if (e.key === "Enter") {
         const first = nav?.querySelector(".et-set-nav-item");
         if (first) goToPage(first.dataset.page);
@@ -624,6 +1067,9 @@ const SettingsRenderer = (() => {
 
   let sheetReturnFocus = null;
 
+  let sheetCloseTimer = null;
+  let stopSheetClose = () => {};
+
   function openSideSheet(tab = null, section = null) {
     const overlay = $("sidesheetOverlay");
     const topBtn = $("topSettingsBtn");
@@ -631,22 +1077,24 @@ const SettingsRenderer = (() => {
 
     sheetReturnFocus = document.activeElement;
     const settings = StorageManager.getSettings();
-    // Callers still name a tab ("theme") or a page ("wallpaper"); both resolve
-    // to a page, so old deep links keep working.
+
     const asked = TAB_TO_PAGE[tab] || tab;
     activePage = pageById(asked)
       ? asked
       : pageById(settings.lastSettingsPage || "")
         ? settings.lastSettingsPage
-        : "appearance";
+        : "home";
     pendingSection = section;
     settings.lastSettingsPage = activePage;
     StorageManager.saveSettings();
 
     renderSettingsNav($("settingsSearch")?.value || "");
     renderSideSheetContent(false);
-    overlay.classList.remove("closing");
+    stopSheetClose();
+    overlay.classList.remove("closing", "is-in");
     overlay.classList.add("open");
+    void overlay.offsetWidth;
+    overlay.classList.add("is-in");
     if (topBtn) topBtn.classList.add("is-active");
 
     ($("sidesheetCloseBtn") || overlay).focus?.();
@@ -661,18 +1109,29 @@ const SettingsRenderer = (() => {
     sheetReturnFocus = null;
     rememberSettingsScroll(activePage);
 
-    if (overlay) {
-      overlay.classList.add("closing");
-      overlay.classList.remove("open");
-      const onEnd = (e) => {
-        if (e.target !== overlay) return;
-        overlay.classList.remove("closing");
-        overlay.removeEventListener("transitionend", onEnd);
-        const body = $("sidesheetBody");
-        if (body) setSafeHTML(body, "");
-      };
-      overlay.addEventListener("transitionend", onEnd);
-    }
+    if (!overlay) return;
+
+    stopSheetClose();
+    overlay.classList.remove("open", "is-in");
+    overlay.classList.add("closing");
+
+    const settle = () => {
+      stopSheetClose();
+      overlay.classList.remove("closing");
+      const body = $("sidesheetBody");
+      if (body) setSafeHTML(body, "");
+    };
+    const onEnd = (e) => {
+      if (e.target === overlay) settle();
+    };
+
+    overlay.addEventListener("transitionend", onEnd);
+    sheetCloseTimer = setTimeout(settle, 600);
+    stopSheetClose = () => {
+      clearTimeout(sheetCloseTimer);
+      overlay.removeEventListener("transitionend", onEnd);
+      stopSheetClose = () => {};
+    };
   }
 
   function accordionKey(header) {
@@ -704,16 +1163,56 @@ const SettingsRenderer = (() => {
     StorageManager.saveSettings();
   }
 
-  /**
-   * Paints one page.
-   *
-   * A page may be authored across two tab modules, so each one it needs is
-   * rendered in turn and appended, then bound. Every section carries a
-   * `data-page`; anything not tagged for this page is dropped, so a module that
-   * contributes to three pages still only ever renders once per paint and the
-   * user sees exactly the subject they asked for.
-   */
+  const HEX6_RE = /^#[0-9a-f]{6}$/i;
+  let closeColorPopover = () => {};
+
+  function recentColors() {
+    const list = StorageManager.getSettings().recentColors;
+    return Array.isArray(list) ? list.filter((c) => HEX6_RE.test(c)).slice(0, 5) : [];
+  }
+
+  function rememberColor(hex) {
+    if (!HEX6_RE.test(hex)) return;
+    const settings = StorageManager.getSettings();
+    const next = [hex.toLowerCase(), ...recentColors().filter((c) => c !== hex.toLowerCase())];
+    settings.recentColors = next.slice(0, 5);
+    StorageManager.saveSettings();
+  }
+
+  function paintSwatches(root) {
+    root.querySelectorAll("input.st-color").forEach((input) => {
+      if (input.previousElementSibling?.classList.contains("st-swatch")) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "st-swatch";
+      btn.dataset.for = input.id;
+      btn.style.background = input.value;
+      const label = input.closest(".st-row")?.querySelector(".st-label")?.textContent;
+      btn.setAttribute("aria-label", label ? `${label.trim()}: choose colour` : "Choose colour");
+      input.before(btn);
+      input.hidden = true;
+      input.tabIndex = -1;
+      input.addEventListener("input", () => (btn.style.background = input.value));
+    });
+  }
+
+  function orderSections(body, page) {
+    const order = PAGE_SECTION_ORDER[page];
+    const first = body.querySelector(".st-container");
+    if (!order || !first) return;
+    const rank = (el) => {
+      const key = accordionKey(el.querySelector(":scope > .st-accordion-header"));
+      const i = order.indexOf(key);
+      return i === -1 ? order.length : i;
+    };
+    [...body.querySelectorAll(".st-container > .st-accordion")]
+      .map((el, i) => ({ el, at: rank(el), i }))
+      .sort((a, b) => a.at - b.at || a.i - b.i)
+      .forEach(({ el }) => first.append(el));
+  }
+
   function paintPage(mods, page, token, savedScrollTop) {
+    closeColorPopover();
     const body = $("sidesheetBody");
     if (!body || token !== renderToken || activePage !== page) return;
     const settings = StorageManager.getSettings();
@@ -726,13 +1225,16 @@ const SettingsRenderer = (() => {
       body.append(...holder.childNodes);
     }
 
-    // Sections belonging to another page are removed rather than hidden: a
-    // hidden duplicate still answers `getElementById`, so a binding meant for
-    // the visible copy could silently attach to an off-page one.
     body.querySelectorAll("[data-page]").forEach((el) => {
       if (el.dataset.page !== page) el.remove();
     });
-    // A container left holding nothing is a stack of padding with no content.
+
+    paintSwatches(body);
+
+
+
+    orderSections(body, page);
+
     body.querySelectorAll(".st-container").forEach((el) => {
       if (!el.children.length) el.remove();
     });
@@ -742,11 +1244,9 @@ const SettingsRenderer = (() => {
     const collapsed = lower(settings.collapsedSettingsAccordions?.[page]);
     const expanded = lower(settings.expandedSettingsAccordions?.[page]);
     body.querySelectorAll(".st-accordion").forEach((acc) => {
-      // `querySelector` would reach into a nested accordion when the outer one
-      // has no header of its own, which would key the two together.
       const header = acc.querySelector(":scope > .st-accordion-header");
       const key = accordionKey(header);
-      // An accordion nobody has touched keeps whatever the markup asked for.
+
       if (collapsed.has(key)) acc.classList.remove("is-expanded");
       else if (expanded.has(key)) acc.classList.add("is-expanded");
     });
@@ -760,13 +1260,6 @@ const SettingsRenderer = (() => {
     markActiveNavItem();
   }
 
-  /**
-   * Opens and scrolls to whichever section was asked for, then forgets it.
-   *
-   * Was a single hardcoded case for the wallpaper card. Every sidebar row and
-   * every search hit needs the same behaviour, so it looks the section up by
-   * the key the accordion already carries rather than by knowing what is in it.
-   */
   function revealSection(body, page) {
     if (!pendingSection) return;
 
@@ -804,8 +1297,6 @@ const SettingsRenderer = (() => {
       : settings.settingsScrollPositions?.[page] || 0;
     const token = ++renderToken;
 
-    // Everything this page needs already in memory: paint without a frame of
-    // "Loading", which is the common case once a module has been fetched.
     if (spec.tabs.every((t) => tabModules[t])) {
       paintPage(
         spec.tabs.map((t) => tabModules[t]),
@@ -854,7 +1345,6 @@ const SettingsRenderer = (() => {
     }
   }
 
-  /** The overall interface strength, 0-100, with the legacy key folded in. */
   function overallStrength(settings) {
     const legacy =
       typeof settings.boardOpacity === "number" ? settings.boardOpacity * 100 : 8;
@@ -865,23 +1355,9 @@ const SettingsRenderer = (() => {
     return Math.max(0, Math.min(100, raw));
   }
 
-  /**
-   * Resolves each interface surface to a concrete strength, 0-100.
-   *
-   * The overall slider is a promise: 0% is fully transparent and 100% fully
-   * opaque. Surfaces that carry small text (notes, widgets, the topbar) want a
-   * little more body than a board card at the same setting, but that boost has
-   * to fade out towards both ends - otherwise 0% is not really transparent and
-   * 100% is reached early.
-   *
-   * There is one slider now. The per-surface overrides that used to sit under
-   * it were six more ways to end up with unreadable text, for a distinction
-   * most people never wanted to draw; the relationships between the surfaces
-   * are what this curve is for.
-   */
   function surfaceStrengths(settings) {
     const t = overallStrength(settings) / 100;
-    // Peaks mid-slider and vanishes at both ends.
+
     const lift = (amount) => (t + amount * t * (1 - t) * 4) * 100;
     const auto = {
       boards: t * 100,
@@ -889,16 +1365,13 @@ const SettingsRenderer = (() => {
       search: lift(0.04),
       notes: lift(0.06),
       widgets: lift(0.08),
-      // Panels, popovers and dialogs sit *over* the page rather than being part
-      // of it, and they carry the densest text in the app. They stay solid
-      // unless the user asks otherwise, so dragging the overall slider down for
-      // a glassier home page does not also make the settings sheet unreadable.
+      pins: lift(0.08),
+
       panels: 100,
     };
-    // A surface listed in `surfaceOpacity` opts out of the curve: the override
-    // is an absolute strength, taken literally, because someone who reached for
-    // one surface wants that number and not that number plus a boost.
-    const overrides = settings.surfaceOpacity || {};
+
+    const overrides = { ...(settings.surfaceOpacity || {}) };
+    delete overrides.panels;
     const out = {};
     for (const key of Object.keys(auto)) {
       out[key] = Math.max(
@@ -1332,59 +1805,15 @@ const SettingsRenderer = (() => {
     WidgetsRenderer.applyClockAppearance(settings);
   }
 
-  /**
-   * One angle for every gradient in the UI.
-   *
-   * Mixed angles are the single loudest tell of a slapped-together gradient:
-   * a 135deg button next to a 90deg pill reads as two unrelated surfaces. The
-   * horizontal variant exists only for elements that are far wider than they
-   * are tall, where a diagonal compresses into a visible corner-to-corner
-   * band.
-   */
   const GRADIENT_ANGLE = 135;
 
-  /**
-   * Constrains an accent pair into a gradient that reads as one colour with
-   * depth rather than two colours fighting.
-   *
-   * Three things make an interface gradient look cheap, and this fixes all
-   * three:
-   *
-   * 1. *Too much hue travel.* A sweep across more than a quarter of the wheel
-   *    stops being a shade and becomes a rainbow. The secondary hue is pulled
-   *    to sit within MAX_HUE_TRAVEL of the primary, taking the short way
-   *    round the wheel.
-   * 2. *Too much lightness travel.* A stop much lighter than the other forces
-   *    the label to fight for contrast at one end. Lightness delta is capped,
-   *    and the darker stop is placed last so the diagonal falls off into
-   *    shadow the way a lit surface does.
-   * 3. *A dead midpoint.* sRGB interpolation routes between saturated hues
-   *    through a desaturated middle, which is where the grey smear in the
-   *    centre of a bad gradient comes from. Interpolating in oklab keeps
-   *    chroma up across the whole ramp.
-   *
-   * @param {string} [bg] Background the pair is read against, so the tuned
-   *   stop goes through the same contrast pass as the accent itself - nudging
-   *   a hue can push a stop under AA, and a label has to stay readable at
-   *   both ends of the ramp, not just the one it was checked against.
-   * @returns {{from:string,to:string}} Ordered stops, lighter first.
-   */
   function harmoniseGradient(primary, secondary, bg) {
     const a = hexToHsl(primary);
     const b = hexToHsl(secondary);
 
-    /* How far the second stop may sit from the first. These were 45deg and
-       0.16, tuned back when the ramp interpolated through sRGB and anything
-       wider went grey in the middle. The ramp runs in OKLab now, which stays
-       chromatic across the transit, so the clamp no longer has to protect the
-       midpoint - only the composition. Widening it is what lets a deliberately
-       chosen second colour actually show up instead of being pulled back onto
-       the first and rendering as one flat colour twice. */
     const MAX_HUE_TRAVEL = 110;
     const MAX_LIGHT_TRAVEL = 0.26;
 
-    // Signed shortest distance around the wheel, so a red->magenta pair does
-    // not travel the long way through green.
     let dh = ((b.h - a.h + 540) % 360) - 180;
     dh = Math.max(-MAX_HUE_TRAVEL, Math.min(MAX_HUE_TRAVEL, dh));
 
@@ -1393,28 +1822,11 @@ const SettingsRenderer = (() => {
       Math.min(MAX_LIGHT_TRAVEL, b.l - a.l),
     );
 
-    /* Keep the second stop in the same register as the first - a vivid stop
-       next to a washed-out one looks like a rendering error rather than a
-       choice - but band it around the *pair* rather than pinning it to the
-       primary. The old rule multiplied the primary's saturation, so a near-grey
-       primary forced the secondary grey too and every pairing involving a
-       muted colour came out muddy whatever the user picked. A floor keeps the
-       ramp from collapsing when both are desaturated. */
     const sat = Math.max(0.25, Math.min(Math.max(a.s, b.s), (a.s + b.s) / 2 + 0.18));
 
     let tuned = hslToHex(a.h + dh, sat, a.l + dl);
     if (bg) tuned = accentTokens(tuned, bg).ui;
 
-    // The label colour is picked once, from the primary, but it has to stay
-    // legible everywhere along the ramp - the far stop is a background too.
-    // So the tuned stop is mixed back toward the primary until the ink clears
-    // AA against it.
-    //
-    // The mix runs in RGB rather than HSL: HSL lightness is not luminance, and
-    // a blue and a cyan at the same nominal lightness sit almost three stops
-    // apart in contrast, so nudging lightness could iterate to no effect.
-    // Mixing toward the primary always converges, because the primary is by
-    // definition the colour the ink was chosen for.
     const ink = contrastText(primary);
     const base = hexToRgb(primary);
     const far = hexToRgb(tuned);
@@ -1435,19 +1847,9 @@ const SettingsRenderer = (() => {
         .join("")}`;
     }
 
-    // Lighter stop first: light reads as coming from the top-left, so a
-    // 135deg ramp that darkens matches how every other surface is lit.
     return dl >= 0 ? { from: tuned, to: primary } : { from: primary, to: tuned };
   }
 
-  /**
-   * True when the browser understands perceptual gradient interpolation.
-   *
-   * Custom properties accept almost any token sequence, so an unsupported
-   * `in oklab` would sail into `--accent-fill` and only fail later, at the
-   * `background: var(--accent-fill)` that uses it - painting nothing at all.
-   * The support question is settled once, here.
-   */
   const SUPPORTS_OKLAB_GRADIENT = (() => {
     try {
       return CSS.supports(
@@ -1459,13 +1861,6 @@ const SettingsRenderer = (() => {
     }
   })();
 
-  /**
-   * Builds the gradient, interpolated perceptually where the browser allows.
-   *
-   * The sRGB fallback adds a midpoint stop: without perceptual interpolation
-   * the centre of the ramp desaturates, and an explicit middle colour is what
-   * keeps it from going grey there.
-   */
   function gradientCss(angle, { from, to }) {
     if (SUPPORTS_OKLAB_GRADIENT)
       return `linear-gradient(${angle}deg in oklab, ${from} 0%, ${to} 100%)`;
@@ -1481,20 +1876,6 @@ const SettingsRenderer = (() => {
     return `linear-gradient(${angle}deg, ${from} 0%, ${mid} 50%, ${to} 100%)`;
   }
 
-  /**
-   * Publishes the secondary accent.
-   *
-   * Historically this was handed the primary accent, so `--accent-2` was only
-   * ever a duplicate of `--accent-1` and the stored `accent2` did nothing. It
-   * now prefers the real secondary, run through the same contrast pass as the
-   * primary so a theme cannot ship an unreadable second colour, and falls back
-   * to the primary whenever no secondary is set.
-   *
-   * @param {string} primary Already contrast-corrected primary accent.
-   * @param {string} [secondary] Raw secondary from settings, may be empty.
-   * @param {string} [bg] Background the pair is read against.
-   * @param {boolean} [gradient] Whether `--accent-fill` sweeps the two colours.
-   */
   function applyAccent2(el, primary, secondary, bg, gradient) {
     const raw = HEX6.test(secondary || "") ? secondary : primary;
     const value = bg ? accentTokens(raw, bg).ui : raw;
@@ -1502,10 +1883,7 @@ const SettingsRenderer = (() => {
     el.setProperty("--accent-2-contrast", contrastText(value));
     const rgb = hexToRgb(value);
     el.setProperty("--accent-2-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
-    // The gradient tokens always describe the accent pair, so anything that
-    // specifically wants a sweep can reach for `--accent-gradient` directly.
-    // `--accent-fill` is what every button, pill and active tab paints with,
-    // and it stays flat unless the user asked for two-tone.
+
     const stops = harmoniseGradient(primary, value, bg);
     el.setProperty("--accent-gradient", gradientCss(GRADIENT_ANGLE, stops));
     el.setProperty("--accent-gradient-h", gradientCss(90, stops));
@@ -1517,17 +1895,6 @@ const SettingsRenderer = (() => {
     );
   }
 
-  /**
-   * The ground a surface that carries its *own* colour is built on.
-   *
-   * `--board-rgb` is deliberately tinted with the theme accent, which is right
-   * for anything that should follow the theme - but wrong for a board the user
-   * has given a colour of its own. Mixing a red board into a blue-tinted ground
-   * produces a muddy purple that is neither colour, which is exactly the "my
-   * board colour got blended with the accent" complaint. Boards with a colour
-   * mix into this neutral instead, so the only hue in the result is the one
-   * that was picked.
-   */
   function setNeutralGround(el, isLight) {
     el.setProperty("--board-neutral-rgb", isLight ? "247, 248, 250" : "18, 19, 24");
   }
@@ -1540,16 +1907,18 @@ const SettingsRenderer = (() => {
     const posX = settings.wallpaperPosX ?? 50;
     const posY = settings.wallpaperPosY ?? 50;
 
+    const origin = `${posX}% ${posY}%`;
+
     if (photoBg) {
       photoBg.style.backgroundSize = settings.wallpaperFit || "cover";
-      photoBg.style.backgroundPosition = `${posX}% ${posY}%`;
-      photoBg.style.transform = `scale(${zoom})`;
-      photoBg.style.transformOrigin = `${posX}% ${posY}%`;
+      photoBg.style.backgroundPosition = origin;
+      photoBg.style.setProperty("--wp-zoom", String(zoom));
+      photoBg.style.setProperty("--wp-origin", origin);
     }
     if (videoBg) {
-      videoBg.style.transform = `scale(${zoom})`;
-      videoBg.style.transformOrigin = `${posX}% ${posY}%`;
-      videoBg.style.objectPosition = `${posX}% ${posY}%`;
+      videoBg.style.setProperty("--wp-zoom", String(zoom));
+      videoBg.style.setProperty("--wp-origin", origin);
+      videoBg.style.objectPosition = origin;
       const shouldMute = settings.wallpaperMuted !== false;
       videoBg.muted = shouldMute;
       if (shouldMute) {
@@ -1559,18 +1928,10 @@ const SettingsRenderer = (() => {
       }
       videoBg.volume = settings.wallpaperVolume ?? 0.5;
     }
+
+    applyWallpaperBlur();
   }
 
-  /**
-   * Darkens the edges of the wallpaper and leaves the middle alone.
-   *
-   * A photo is usually brightest where the clock sits, and the ink measurement
-   * then has to work hardest exactly where the largest text is. A vignette buys
-   * that contrast back without dimming the picture as a whole the way the
-   * overlay does - the subject stays lit and only the corners give way. It is
-   * one radial gradient on a layer that already exists, so it costs nothing to
-   * have switched on.
-   */
   function applyWallpaperVignette() {
     const settings = StorageManager.getSettings();
     const on =
@@ -1595,34 +1956,8 @@ const SettingsRenderer = (() => {
     );
   }
 
-  /**
-   * Blurs the wallpaper itself rather than laying anything over it, so a busy
-   * photo stops competing with the text without being darkened as well. The
-   * filter goes on the two background layers only - putting it on a wrapper
-   * would blur the interface along with the picture.
-   */
-  /* Radius, in pixels, that 100% blur means. Past roughly this the picture has
-     stopped being a picture and the extra cost buys nothing but a slower
-     paint, so the slider spends its whole range where the change is visible. */
-  const BLUR_MAX_PX = 26;
+  const BLUR_MAX_PX = 12;
 
-  /**
-   * Blur strength as a percentage of "as blurred as this is worth going",
-   * rather than as a raw pixel radius.
-   *
-   * Two things were harsh about the old control. It was labelled in pixels,
-   * which is a number about the implementation rather than about the picture -
-   * nobody knows what 12px of blur looks like until they try it. And it was
-   * linear, so the first third of the slider went from sharp to unrecognisable
-   * and the rest was mush; the useful range - a photo softened just enough to
-   * read text over - lived in about four pixels near the bottom.
-   *
-   * The curve fixes the second problem: raising the fraction to 1.8 spends most
-   * of the travel in the gentle end, where the differences are actually worth
-   * choosing between, while still reaching full blur at 100%. A straight square
-   * pushed too far the other way and left the bottom quarter of the slider
-   * doing nothing visible at all.
-   */
   const blurRadius = (percent) =>
     BLUR_MAX_PX * Math.pow(Math.max(0, Math.min(100, percent)) / 100, 1.8);
 
@@ -1634,37 +1969,77 @@ const SettingsRenderer = (() => {
     document.body.classList.toggle("wp-blur-on", on);
     const el = document.documentElement.style;
     el.setProperty("--wp-blur-amount", `${px.toFixed(1)}px`);
-    // A blur samples past the edge of its own element, so an un-compensated
-    // one leaves a feathered grey border around the viewport - which is what
-    // "harsh" looked like at the top of the old slider, where a fixed 1.06
-    // scale could not cover a 40px radius. Overscanning by three radii on
-    // every side keeps the edge off screen at any strength, and costs nothing
-    // at zero.
+
     const shortest = Math.min(window.innerWidth, window.innerHeight) || 1;
+    const pagePx = Math.max(px, 8);
+    const extra = Math.sqrt(Math.max(0, pagePx * pagePx - px * px));
+    const blurScale = 1 + (px * 6) / shortest;
+    const pageScale = 1 + (pagePx * 6) / shortest;
+
+    el.setProperty("--wp-blur-scale", String(blurScale));
+    el.setProperty("--wp-page-blur", `${pagePx.toFixed(1)}px`);
+    el.setProperty("--wp-page-extra", `${extra.toFixed(1)}px`);
+    el.setProperty("--wp-page-scale", String(pageScale));
     el.setProperty(
-      "--wp-blur-scale",
-      String(1 + (px * 6) / shortest),
+      "--wp-page-rel",
+      String(on ? pageScale / blurScale : pageScale),
     );
+    scheduleBake(extra);
   }
 
-  /**
-   * Turns the measured wallpaper tone into the ink and halo that everything
-   * sitting over the picture is drawn with.
-   *
-   * Three grounds come out of the analysis - the strip under the toolbar, the
-   * middle where the clock and pins are, the strip under the date and weather -
-   * and each one picks its own ink through the same APCA call the rest of the
-   * app uses, so a bright sky gets dark icons while dark ground below it keeps
-   * light ones. The scrim is folded in first: a wallpaper the user has dimmed
-   * by 40% is a genuinely darker ground and choosing ink for the undimmed
-   * picture is choosing it for something nobody can see.
-   *
-   * The halo is the inverse of whatever ink won, and its weight is derived
-   * rather than fixed: busy pictures (high luminance spread) and grounds where
-   * the winning ink only just cleared the bar get a real shadow, flat ones get
-   * almost none. A uniform heavy halo is what made the toolbar look smudged on
-   * wallpapers that never needed one.
-   */
+  let bakedKey = "";
+  let bakedUrl = "";
+  let bakeTimer = null;
+
+  function scheduleBake(extra) {
+    clearTimeout(bakeTimer);
+    bakeTimer = setTimeout(() => bakePageBlur(extra), 180);
+  }
+
+  async function bakePageBlur(extra) {
+    const photoBg = $("photo-bg");
+    const src = /^url\("(.*)"\)$/.exec(photoBg?.style.backgroundImage || "")?.[1];
+    const zoom = (StorageManager.getSettings().wallpaperZoom || 100) / 100;
+    const key = `${src}|${extra.toFixed(1)}|${zoom}|${innerWidth}x${innerHeight}`;
+    if (key === bakedKey) return;
+    bakedKey = key;
+    document.body.classList.remove("wp-baked");
+    if (!src) return;
+    try {
+      const img = new Image();
+      const ready = new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = rej;
+      });
+      img.decoding = "async";
+      img.src = src;
+      if (!img.complete) await ready;
+      if (key !== bakedKey) return;
+      const w = 480;
+      const h = Math.round((w * img.naturalHeight) / img.naturalWidth);
+      const shown =
+        img.naturalWidth *
+        Math.max(innerWidth / img.naturalWidth, innerHeight / img.naturalHeight) *
+        zoom;
+      const r = (extra * w) / shown;
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.filter = `blur(${r}px)`;
+      ctx.drawImage(img, 0, 0, w, h);
+      ctx.filter = "none";
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.drawImage(img, 0, 0, w, h);
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/webp", 0.9));
+      if (!blob || key !== bakedKey) return;
+      if (bakedUrl) URL.revokeObjectURL(bakedUrl);
+      bakedUrl = URL.createObjectURL(blob);
+      document.documentElement.style.setProperty("--wp-page-img", `url("${bakedUrl}")`);
+      document.body.classList.add("wp-baked");
+    } catch {}
+  }
+
   function applyWallpaperTone() {
     const settings = StorageManager.getSettings();
     const el = document.documentElement.style;
@@ -1705,8 +2080,7 @@ const SettingsRenderer = (() => {
       const ink = Contrast.ink(ground);
       const light = ink === Contrast.INK_LIGHT;
       el.setProperty(inkVar, ink);
-      // The same pair as rgb components, for the borders and plates that need
-      // the ink at a partial alpha rather than as a solid colour.
+
       el.setProperty(
         inkVar.replace("--wp-ink", "--wp-ink-rgb"),
         light ? "255, 255, 255" : "20, 21, 26",
@@ -1722,14 +2096,8 @@ const SettingsRenderer = (() => {
     applyTextHalo(settings, { spread: tone.spread, worstLc });
   }
 
-  /* Weakest contrast, in Lc, a band can reach before the halo stops scaling up. */
   const HALO_FLOOR_LC = 78;
 
-  /**
-   * Writes the halo the wallpaper text shadows are built from - derived from
-   * the picture when the user has not overridden it, and taken verbatim from
-   * their own colour and opacity the moment they have.
-   */
   function applyTextHalo(settings, measured) {
     const el = document.documentElement.style;
     if (settings.wpShadowAuto === false || !measured) {
@@ -1753,8 +2121,7 @@ const SettingsRenderer = (() => {
     );
     el.setProperty("--wp-shadow-rgb", "var(--wp-halo-mid, 0, 0, 0)");
     el.setProperty("--wp-shadow-opacity", strength.toFixed(3));
-    // A busier picture needs the halo spread wider as well as darker, or it
-    // reads as an outline rather than as separation.
+
     el.setProperty("--wp-shadow-blur", `${Math.round(12 + strength * 16)}px`);
   }
 
@@ -1793,15 +2160,18 @@ const SettingsRenderer = (() => {
 
     el.setProperty("--board-opacity", px(strengths.boards));
     el.setProperty("--board-opacity-pct", `${strengths.boards}%`);
-    // At full strength a board is painted as a plain solid colour. The mix
-    // toward transparent is exact in most engines, but a browser that cannot
-    // evaluate it drops the whole background and the board turned see-through
-    // at the very setting that asks for it to be solid.
+
     document.body.classList.toggle("boards-opaque", strengths.boards >= 100);
+    document.body.classList.toggle("boards-glass", strengths.boards < 70);
     el.setProperty("--search-opacity", px(strengths.search));
     el.setProperty("--notes-opacity", px(strengths.notes));
-    // No `--topbar-opacity` / `--widget-bg-alpha`: neither has a consumer since
-    // the tab bar and toolbar buttons stopped having a fill of their own.
+    el.setProperty("--topbar-opacity", px(strengths.topbar));
+    el.setProperty("--widgets-opacity", px(strengths.widgets));
+    el.setProperty("--pins-opacity", px(strengths.pins));
+    document.body.classList.toggle("topbar-plate", strengths.topbar >= 1);
+    document.body.classList.toggle("widgets-plate", strengths.widgets >= 1);
+    document.body.classList.toggle("pins-plate", strengths.pins >= 1);
+
     el.setProperty("--panel-opacity", px(strengths.panels));
 
     document.body.classList.toggle(
@@ -1814,6 +2184,7 @@ const SettingsRenderer = (() => {
     if (solid) {
       const seed = settings.solidSeed || (isLight ? "#c7d2fe" : "#0d1117");
       const p = derivePalette(seed, activeMode);
+      if (settings.solidExact && HEX6.test(seed)) p.bg = seed;
 
       document.body.classList.toggle("theme-light", isLight);
       document.body.classList.toggle("theme-dark", !isLight);
@@ -1837,9 +2208,12 @@ const SettingsRenderer = (() => {
       el.setProperty("--accent-color", ui);
       el.setProperty("--accent-ink", ink);
       el.setProperty("--accent-display", display);
-      // The deeper body-text step: the brighter display step washed logos out
-      // on white tiles in pastel themes.
-      applyIconTint(ink);
+
+      const tileBg = isLight ? PIN_TILE_LIGHT : PIN_TILE_DARK;
+      el.setProperty("--pin-tile-bg", tileBg);
+      document.body.classList.toggle("icon-duotone", isLight);
+      if (isLight)
+        applyIconTint(accentTokens(accent, tileBg, presetSwatch(settings)).ink);
       el.setProperty("--accent-contrast", contrastText(ui));
       applyAccent2(el, ui, settings.accent2, p.bg, !!settings.accentGradient);
       el.setProperty("--accent-rgb", `${accRgb.r}, ${accRgb.g}, ${accRgb.b}`);
@@ -1847,12 +2221,7 @@ const SettingsRenderer = (() => {
       const sRgb = hexToRgb(p.surface);
       el.setProperty("--board-rgb", `${sRgb.r}, ${sRgb.g}, ${sRgb.b}`);
       setNeutralGround(el, isLight);
-      // The wallpaper branch writes `--page-bg` and only clears it in its own
-      // light case, so switching to a solid background left whatever the last
-      // wallpaper render had put there. Solid mode owns the page colour while
-      // it is on, and derives it from the base colour for both modes - which is
-      // what makes a chosen base survive a light/dark switch instead of
-      // reverting to the stock grey.
+
       el.setProperty("--page-bg", p.bg);
 
       const bodyEl = document.body.style;
@@ -1866,7 +2235,10 @@ const SettingsRenderer = (() => {
       document.body.classList.toggle("theme-dark", !isLight);
 
       const accent =
-        settings.accentOverride || settings.accentColor || "#6366f1";
+        settings.accentOverride ||
+        settings.wpExtractedAccent ||
+        settings.accentColor ||
+        "#6366f1";
 
       const { ui, ink, display } = accentTokens(
         accent,
@@ -1877,9 +2249,8 @@ const SettingsRenderer = (() => {
       el.setProperty("--accent-color", ui);
       el.setProperty("--accent-ink", ink);
       el.setProperty("--accent-display", display);
-      // The deeper body-text step: the brighter display step washed logos out
-      // on white tiles in pastel themes.
-      applyIconTint(ink);
+
+      document.body.classList.remove("icon-duotone");
       el.setProperty("--accent-contrast", contrastText(ui));
       applyAccent2(
         el,
@@ -1898,7 +2269,6 @@ const SettingsRenderer = (() => {
             b: Math.round(a.b * 0.35 + 240 * 0.65),
           }
         : {
-            // Dark mode: slate black base (18, 19, 24) without cold blue cast
             r: Math.round(a.r * 0.12 + 18 * 0.88),
             g: Math.round(a.g * 0.12 + 19 * 0.88),
             b: Math.round(a.b * 0.12 + 24 * 0.88),
@@ -1906,7 +2276,6 @@ const SettingsRenderer = (() => {
       el.setProperty("--board-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
       setNeutralGround(el, isLight);
 
-      // In dark mode, tint the obsidian slate background and panel with a clean, subtle hue
       if (!isLight) {
         const pageBg = {
           r: Math.round(a.r * 0.03 + 9 * 0.97),
@@ -1920,14 +2289,9 @@ const SettingsRenderer = (() => {
         };
         const toHex = (c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, "0");
         el.setProperty("--page-bg", `#${toHex(pageBg.r)}${toHex(pageBg.g)}${toHex(pageBg.b)}`);
-        // Components, not a hex: `--panel` is composed from these plus the
-        // strength alpha, so overriding the colour here must not also pin the
-        // opacity back to solid.
+
         el.setProperty("--panel-rgb", `${panel.r}, ${panel.g}, ${panel.b}`);
       } else {
-        // Light mode over a wallpaper: the page colour is barely visible behind
-        // the photo, but it is what the browser paints before the picture
-        // loads, so it is set rather than left to whatever ran last.
         el.setProperty("--page-bg", "#f4f6f8");
         el.removeProperty("--panel-rgb");
       }
@@ -1964,6 +2328,7 @@ const SettingsRenderer = (() => {
     if (!metaMs.parentNode) document.head.appendChild(metaMs);
 
     StorageManager.setBootBg(topColor);
+    if (typeof repaintBoardInk === "function") repaintBoardInk();
   }
 
   function setMode(mode) {
@@ -1976,35 +2341,9 @@ const SettingsRenderer = (() => {
     applyTheme();
   }
 
-  /* How long the boot will wait for a wallpaper before showing the page.
-
-     This is an anti-flash measure, not a correctness one: `boot.js` has
-     already painted a small cached preview of this very wallpaper as the page
-     background, so revealing a few frames before the full-resolution image is
-     ready costs a slight sharpening, not a flash of the wrong colour. Half a
-     second is far longer than a local file needs and short enough that a
-     wallpaper which is not coming back never holds up the page. */
   const WALLPAPER_PAINT_DEADLINE = 500;
   const DECODE_DEADLINE = 250;
 
-  /**
-   * Resolves once the wallpaper is ready to be shown - or once waiting for it
-   * has stopped being worth it - with the decoded image when there is one, so
-   * the caller can reuse it instead of decoding the same file again.
-   *
-   * Two deadlines, because the two ways this can hang are different.
-   *
-   * `img.decode()` does not settle at all in a document that is not being
-   * painted, and a new tab page is very often opened in the background:
-   * ctrl-clicked, restored with a session, or in a window that opens behind
-   * another. The previous version awaited it with only a 5000ms backstop, so
-   * every background new tab sat blank for five seconds before revealing
-   * itself - measured at 5651ms against 314ms for the image to actually load.
-   * The decode is now raced rather than awaited.
-   *
-   * And when the document is hidden there is nothing being painted to flash,
-   * so there is nothing to wait for at all.
-   */
   function waitForImagePaint(src) {
     if (!src) return Promise.resolve();
     if (document.hidden) return Promise.resolve();
@@ -2012,7 +2351,7 @@ const SettingsRenderer = (() => {
     return new Promise((resolve) => {
       const img = new Image();
       let done = false;
-      /** @param {HTMLImageElement|null} loaded The decoded image, when there is one. */
+
       const finish = (loaded) => {
         if (!done) {
           done = true;
@@ -2036,8 +2375,6 @@ const SettingsRenderer = (() => {
     });
   }
 
-  /* Same reasoning as the image path: a hidden document paints nothing, and a
-     video that has not produced a frame must not hold the page back. */
   function waitForVideoPaint(video) {
     if (!video || video.readyState >= 2) return Promise.resolve();
     if (document.hidden) return Promise.resolve();
@@ -2058,57 +2395,6 @@ const SettingsRenderer = (() => {
     });
   }
 
-  function cacheBootPreview(source, type) {
-    try {
-      const paint = (media) => {
-        try {
-          const sw = media.videoWidth || media.naturalWidth || media.width;
-          const sh = media.videoHeight || media.naturalHeight || media.height;
-          if (!sw || !sh) return;
-          const canvas = document.createElement("canvas");
-          canvas.width = 160;
-          canvas.height = 90;
-          const ctx = canvas.getContext("2d", { alpha: false });
-          const scale = Math.max(canvas.width / sw, canvas.height / sh);
-          const dw = sw * scale,
-            dh = sh * scale;
-          ctx.drawImage(
-            media,
-            (canvas.width - dw) / 2,
-            (canvas.height - dh) / 2,
-            dw,
-            dh,
-          );
-          StorageManager.setBootPreview(canvas.toDataURL("image/jpeg", 0.68));
-        } catch {}
-      };
-      if (type === "video") paint(source);
-      else if (source instanceof HTMLImageElement) {
-        // Already decoded by the caller. Decoding a 2560x1440 wallpaper a
-        // second time, purely to shrink it to a 160x90 thumbnail, is a whole
-        // extra full-size bitmap in memory and a second pass of decode work -
-        // on the same image that was decoded a moment ago.
-        paint(source);
-      } else {
-        const img = new Image();
-        img.onload = () => paint(img);
-        img.src = source;
-      }
-    } catch {}
-  }
-
-  /* The wallpaper that ships inside the package.
-
-     Referenced by its path rather than copied into storage. A packaged file is
-     already on disk, already the right size, and already served from the
-     extension's own origin, so putting a base64 copy of it into
-     `chrome.storage.local` would spend quota and startup time duplicating
-     something the browser can read directly. It also means the picture
-     survives an update without migration - the path is still the path.
-
-     `.webp` because every image the extension stores goes through
-     `downscaleImage`, which encodes WebP; shipping a PNG or JPEG here would
-     make the one wallpaper users start on the only one that is not. */
   const PACKAGED_WALLPAPER = "wallpaper/default.webp";
 
   const packagedWallpaperUrl = () => {
@@ -2116,26 +2402,10 @@ const SettingsRenderer = (() => {
       if (HAS_EXT && EXT.runtime && EXT.runtime.getURL)
         return EXT.runtime.getURL(PACKAGED_WALLPAPER);
     } catch {}
-    // Outside the extension host the page is served from the project root, so
-    // the relative path resolves on its own.
+
     return PACKAGED_WALLPAPER;
   };
 
-  /**
-   * Applies the packaged wallpaper, once, on a profile that has not chosen a
-   * background of its own.
-   *
-   * Deliberately conditional on three things:
-   *
-   *  - it has not been tried before, so a user who switches back to a solid
-   *    colour is not overruled on the next new tab;
-   *  - the profile is still on a solid background, so an install that arrives
-   *    with a wallpaper already configured (a restored backup, a managed
-   *    deployment, a synced profile) keeps the one it came with;
-   *  - the file actually exists, checked with a real request rather than
-   *    assumed, so a build that ships without one degrades to the solid
-   *    default instead of painting a broken image.
-   */
   async function applyPackagedWallpaper() {
     const settings = StorageManager.getSettings();
     if (settings.packagedWallpaperTried) return false;
@@ -2151,8 +2421,6 @@ const SettingsRenderer = (() => {
 
     const url = packagedWallpaperUrl();
     try {
-      // HEAD would be lighter, but the extension protocol does not answer it
-      // consistently across engines, so the file is fetched and discarded.
       const res = await fetch(url, { cache: "force-cache" });
       if (!res.ok) {
         StorageManager.saveSettings();
@@ -2174,8 +2442,8 @@ const SettingsRenderer = (() => {
       value: url,
       name: "Included wallpaper",
     });
-    await applyWallpaper("image", url);
-    return true;
+    StorageManager.saveSettings();
+    return false;
   }
 
   async function applyWallpaper(type, value, extract = true) {
@@ -2222,10 +2490,10 @@ const SettingsRenderer = (() => {
     const src = await StorageManager.resolveMedia(value);
 
     if (type === "video") {
+      if (photoBg) photoBg.style.backgroundColor = "";
       if (videoBg) {
         videoBg.src = src;
         await waitForVideoPaint(videoBg);
-        cacheBootPreview(videoBg, "video");
         videoBg.classList.add("active");
         if (!document.hidden && !settings.performanceMode)
           videoBg.play().catch(() => {});
@@ -2233,13 +2501,11 @@ const SettingsRenderer = (() => {
       if (photoBg) photoBg.classList.remove("active");
     } else if (type === "image") {
       if (photoBg) {
-        const decoded = await waitForImagePaint(src);
+        photoBg.style.backgroundColor = "";
+        await waitForImagePaint(src);
         photoBg.style.backgroundImage = `url("${String(src).replace(/"/g, "%22")}")`;
         photoBg.classList.add("active");
-        // The element when the wait produced one, the URL when it did not
-        // (a hidden document skips the wait entirely) - `cacheBootPreview`
-        // takes either and only re-decodes in the second case.
-        cacheBootPreview(decoded || src, "image");
+        applyWallpaperBlur();
       }
       if (videoBg) {
         videoBg.pause();
@@ -2247,10 +2513,13 @@ const SettingsRenderer = (() => {
         videoBg.classList.remove("active");
       }
     } else {
-      StorageManager.setBootPreview(null);
+      if (HEX6.test(settings.solidSeed || "")) {
+        settings.backgroundValue = settings.solidSeed;
+      } else if (HEX6.test(value || "")) {
+        settings.solidSeed = value;
+      }
       if (photoBg) {
         photoBg.style.backgroundImage = "none";
-        photoBg.style.backgroundColor = value;
         photoBg.classList.add("active");
       }
       if (videoBg) videoBg.classList.remove("active");
@@ -2287,63 +2556,28 @@ const SettingsRenderer = (() => {
     return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
   }
 
-  /* Accent text has to clear APCA Lc 60 - the body-text floor - not WCAG 2's
-     4.5:1 ratio.
-
-     The two disagree badly on exactly the colours this app deals in. A
-     saturated mid-tone accent can pass 4.5:1 and still score Lc 34, which is
-     roughly a third of readable; that is precisely what left the Boards and
-     Notes labels washed out on a solid ground for any accent a user picked.
-     WCAG 2's formula is symmetric and does not know that light-on-mid reads
-     worse than dark-on-mid, which is the whole reason DESIGN.md picked APCA
-     for the ink decision in the first place. This is the last place that had
-     not caught up. */
   const INK_MIN_LC = 60;
 
-  // Fills only have to separate from the ground, not be read as text, so the
-  // bar is deliberately much lower and the accent nearly always survives it.
+  const PIN_TILE_LIGHT = "#ffffff";
+  const PIN_TILE_DARK = "#25262c";
+
   const FILL_MIN_LC = 25;
-  // Display type: the clock and other very large accent text.
+
   const DISPLAY_MIN_LC = 35;
 
-  /**
-   * @param {string} [swatch] A preset's second colour - the dot its swatch
-   *   shows. Pastel presets pair a very pale first colour with a stronger
-   *   second one, and deriving everything from the pale one produced an accent
-   *   that matched nothing on the swatch: too faint to use as-is, so it was
-   *   darkened into a muted shade the user never picked. The shown colour now
-   *   leads the ink, and stands in for the fill when the first is too faint.
-   */
   function accentTokens(accent, bg, swatch) {
     const shown = HEX6.test(swatch || "") ? swatch : accent;
     const ink = readableInk(shown, bg);
-    // Large type - the clock above all - stays readable at far lower contrast
-    // than body text, so it gets its own, brighter step of the same colour.
-    // Holding it to the body-text bar is what turned a pastel pink swatch into
-    // a dark wine on the page.
+
     const display = Contrast.readable(shown, bg, DISPLAY_MIN_LC);
-    const ui =
-      [accent, shown].find((c) => Math.abs(Contrast.lc(c, bg)) >= FILL_MIN_LC) ||
-      Contrast.readable(shown, bg, FILL_MIN_LC + 5);
+    const ui = HEX6.test(accent || "") ? accent : Contrast.readable(shown, bg, FILL_MIN_LC + 5);
     return { ui, ink, display };
   }
 
-  /** The swatch colour, only for a preset - a custom second colour is a gradient stop, not an ink. */
   const presetSwatch = (s) => (presetById(s.preset) ? s.accent2 : "");
 
   const SVG_NS = "http://www.w3.org/2000/svg";
 
-  /**
-   * Recolours pinned-link icons on a solid background as a duotone.
-   *
-   * The dark parts of a logo take the accent and the light parts stay light,
-   * by mapping each pixel's luminance between the two. It replaced a mask that
-   * painted the icon's whole shape in the accent: that was fine for a line
-   * glyph and useless for a logo drawn as a filled shape - YouTube's play
-   * button, a solid app tile - which became a blank coloured blob. A filter
-   * works on the rendered pixels, so it also applies to icons loaded from
-   * another site, which a mask cannot read.
-   */
   function applyIconTint(hex) {
     if (!document.body || !HEX6.test(hex || "")) return;
     let svg = document.getElementById("etIconTintSvg");
@@ -2372,44 +2606,31 @@ const SettingsRenderer = (() => {
     matrix.setAttribute("values", `${row(r)} ${row(g)} ${row(b)} 0 0 0 1 0`);
   }
 
-  /**
-   * The accent, kept as itself where it is already legible and nudged along
-   * its own hue toward the ground's ink where it is not.
-   *
-   * `Contrast.readable` walks the colour toward whichever ink the background
-   * calls for and stops the moment it clears the bar, so the hue survives and
-   * only lightness moves - a brand colour stays recognisable instead of
-   * collapsing to grey.
-   */
-  function readableInk(accent, bg) {
-    return Contrast.readable(accent, bg, INK_MIN_LC);
+  function wcagRatio(a, b) {
+    const lin = (v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    };
+    const lum = (hex) => {
+      const { r, g, b: bl } = Contrast.toRgb(hex);
+      return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(bl);
+    };
+    const x = lum(a);
+    const y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
   }
 
-  // --- APCA (Accessible Perceptual Contrast Algorithm), constants from the
-  // published 0.98G-4g formulation.
-  //
-  // WCAG 2's contrast ratio is symmetric: it does not know that light text on
-  // a mid colour reads far worse than dark text on the same colour. Picking
-  // black-vs-white by ratio therefore flips to white too early on saturated
-  // mid-tones - the classic "white label on a medium blue button" that looks
-  // washed out. APCA models polarity, so the flip lands where the eye puts it.
-  /** Picks the ink - near-black or white - that reads best on `color`. */
-  const contrastText = (color) => Contrast.ink(color);
+  function readableInk(accent, bg) {
+    let ink = Contrast.readable(accent, bg, INK_MIN_LC);
+    for (let lc = INK_MIN_LC + 5; wcagRatio(ink, bg) < 4.5 && lc <= 105; lc += 5) {
+      ink = Contrast.readable(accent, bg, lc);
+    }
+    return ink;
+  }
 
-  /**
-   * Makes every slider's numeric readout directly editable, everywhere in
-   * Settings, without touching each slider's own binding code.
-   *
-   * A value label opts in with `data-slider-val="<slider id>"`, or, for a
-   * slider addressed by a data-attribute rather than an id (the per-surface
-   * strength sliders), `data-slider-val-key="<key>"` naming the value of its
-   * `data-surface-slider`. Clicking the label swaps it for a number input;
-   * Enter or blur commits by writing the slider's `value` and dispatching a
-   * real `input` and `change` event on it, so the slider's own listener does
-   * the clamping, the storage write and the repaint exactly as if the user
-   * had dragged it. Escape cancels. This file never needs to know what a
-   * given slider is for.
-   */
+  const contrastText = (color) =>
+    wcagRatio("#ffffff", color) >= wcagRatio("#14151a", color) ? "#ffffff" : "#14151a";
+
   const SliderValueEditor = (() => {
     function resolveSlider(label) {
       const key = label.getAttribute("data-slider-val-key");
@@ -2448,16 +2669,12 @@ const SettingsRenderer = (() => {
         slider.value = String(clamped);
         slider.dispatchEvent(new Event("input", { bubbles: true }));
         slider.dispatchEvent(new Event("change", { bubbles: true }));
-        // The dispatched events already repaint most labels; this covers the
-        // rare slider whose `input` handler does not touch its own label.
+
         if (label.isConnected && label.querySelector("input"))
           label.textContent = `${clamped}${suffix}`;
       };
 
       input.addEventListener("keydown", (e) => {
-        // Without this, Enter/Escape bubbles up to the label's own keydown
-        // listener (there so the label itself is keyboard-operable) and
-        // immediately reopens the editor it was just told to close.
         e.stopPropagation();
         if (e.key === "Enter") {
           e.preventDefault();
@@ -2501,18 +2718,21 @@ const SettingsRenderer = (() => {
     return { wire };
   })();
 
-  /** Coalesces repeated repaints per key into one animation frame. */
   function createFrameScheduler() {
     const pending = new Map();
     return function paintNextFrame(key, fn) {
       if (pending.has(key)) return;
-      pending.set(
-        key,
-        requestAnimationFrame(() => {
-          pending.delete(key);
-          fn();
-        }),
-      );
+      const entry = {};
+      const run = () => {
+        if (pending.get(key) !== entry) return;
+        pending.delete(key);
+        cancelAnimationFrame(entry.raf);
+        clearTimeout(entry.timer);
+        fn();
+      };
+      pending.set(key, entry);
+      entry.raf = requestAnimationFrame(run);
+      entry.timer = setTimeout(run, 32);
     };
   }
 
