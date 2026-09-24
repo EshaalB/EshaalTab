@@ -2385,8 +2385,8 @@ const SettingsRenderer = (() => {
       value: url,
       name: "Included wallpaper",
     });
-    await applyWallpaper("image", url);
-    return true;
+    StorageManager.saveSettings();
+    return false;
   }
 
   async function applyWallpaper(type, value, extract = true) {
