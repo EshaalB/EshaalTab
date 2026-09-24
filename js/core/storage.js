@@ -256,8 +256,6 @@ const StorageManager = (() => {
     backupFreq: "weekly",
     backupDay: 1,
     backupDate: 1,
-    backupTime: "09:00",
-    backupEveryDays: 14,
     clockColor: "",
     clockScale: 100,
     greetingScale: 100,
@@ -1655,11 +1653,9 @@ const StorageManager = (() => {
         ? raw.recentColors.filter((c) => /^#[0-9a-f]{6}$/i.test(c)).slice(0, 5)
         : undefined,
     );
-    pick("backupFreq", ["off", "daily", "weekly", "monthly", "custom"].includes(raw.backupFreq) ? raw.backupFreq : undefined);
+    pick("backupFreq", ["off", "daily", "weekly", "monthly"].includes(raw.backupFreq) ? raw.backupFreq : undefined);
     pick("backupDay", Number.isInteger(raw.backupDay) && raw.backupDay >= 0 && raw.backupDay <= 6 ? raw.backupDay : undefined);
     pick("backupDate", Number.isInteger(raw.backupDate) && raw.backupDate >= 1 && raw.backupDate <= 31 ? raw.backupDate : undefined);
-    pick("backupTime", /^([01]\d|2[0-3]):[0-5]\d$/.test(raw.backupTime || "") ? raw.backupTime : undefined);
-    pick("backupEveryDays", Number.isInteger(raw.backupEveryDays) && raw.backupEveryDays >= 1 && raw.backupEveryDays <= 365 ? raw.backupEveryDays : undefined);
     pick("clockFont", CLOCK_FONTS.some((f) => f.value === raw.clockFont) ? raw.clockFont : undefined);
     pick(
       "clockColor",

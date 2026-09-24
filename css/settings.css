@@ -564,6 +564,10 @@ body.radius-sharp .et-set-panel {
   min-height: calc(30px * var(--ui-scale));
 }
 
+.st-row[hidden] {
+  display: none;
+}
+
 .st-label {
   font-size: var(--fs-base);
   font-weight: 500;

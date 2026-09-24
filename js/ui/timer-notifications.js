@@ -673,8 +673,7 @@ const PomodoroMode = (() => {
 })();
 
 const BackupReminder = (() => {
-  const DAY = 864e5;
-  const FREQS = ["off", "daily", "weekly", "monthly", "custom"];
+  const FREQS = ["off", "daily", "weekly", "monthly"];
   let toast = null;
 
   function schedule(s) {
@@ -683,41 +682,27 @@ const BackupReminder = (() => {
       freq: FREQS.includes(s.backupFreq) ? s.backupFreq : "weekly",
       day: int(s.backupDay, 0, 6, 1),
       date: int(s.backupDate, 1, 31, 1),
-      time: /^([01]\d|2[0-3]):[0-5]\d$/.test(s.backupTime || "") ? s.backupTime : "09:00",
-      every: int(s.backupEveryDays, 1, 365, 14),
     };
   }
 
-  function lastDue(r, now, since) {
-    const [h, m] = r.time.split(":").map(Number);
-    const at = (d) => {
+  function lastDue(r, now) {
+    const midnight = (d) => {
       const t = new Date(d);
-      t.setHours(h, m, 0, 0);
+      t.setHours(0, 0, 0, 0);
       return t;
     };
     const n = new Date(now);
     let t;
     if (r.freq === "daily") {
-      t = at(n);
-      if (t > n) t.setDate(t.getDate() - 1);
+      t = midnight(n);
     } else if (r.freq === "weekly") {
-      t = at(n);
+      t = midnight(n);
       t.setDate(t.getDate() - ((t.getDay() - r.day + 7) % 7));
-      if (t > n) t.setDate(t.getDate() - 7);
     } else if (r.freq === "monthly") {
       const inMonth = (y, mo) =>
-        new Date(y, mo, Math.min(r.date, new Date(y, mo + 1, 0).getDate()), h, m);
+        new Date(y, mo, Math.min(r.date, new Date(y, mo + 1, 0).getDate()));
       t = inMonth(n.getFullYear(), n.getMonth());
       if (t > n) t = inMonth(n.getFullYear(), n.getMonth() - 1);
-    } else if (r.freq === "custom") {
-      const base = at(since);
-      const days = Math.round(
-        (Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) -
-          Date.UTC(base.getFullYear(), base.getMonth(), base.getDate())) / DAY,
-      );
-      t = new Date(base);
-      t.setDate(t.getDate() + Math.floor(days / r.every) * r.every);
-      if (t > n) t.setDate(t.getDate() - r.every);
     } else return 0;
     return t.getTime();
   }
@@ -727,7 +712,7 @@ const BackupReminder = (() => {
     if (r.freq === "off") return false;
     const seen = (v) => (Number.isFinite(v) && v <= now ? v : 0);
     const since = seen(s.backupSince) || now;
-    const due = lastDue(r, now, since);
+    const due = lastDue(r, now);
     return due > Math.max(since, seen(s.lastBackupAt), seen(s.backupDismissedAt));
   }
 

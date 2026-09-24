@@ -359,13 +359,6 @@
     $("stBackupFreq")?.addEventListener("change", (e) => setBackup("backupFreq", e.target.dataset.value ?? e.target.value));
     $("stBackupDay")?.addEventListener("change", (e) => setBackup("backupDay", Number(e.target.dataset.value ?? e.target.value)));
     $("stBackupDate")?.addEventListener("change", (e) => setBackup("backupDate", Number(e.target.dataset.value ?? e.target.value)));
-    $("stBackupTime")?.addEventListener("change", (e) => {
-      if (/^([01]\d|2[0-3]):[0-5]\d$/.test(e.target.value)) setBackup("backupTime", e.target.value);
-    });
-    $("stBackupEvery")?.addEventListener("change", (e) => {
-      const n = Math.round(Number(e.target.value));
-      setBackup("backupEveryDays", Number.isFinite(n) ? Math.min(365, Math.max(1, n)) : 14);
-    });
 
     $("stExportBtn")?.addEventListener("click", async () => {
       try {
@@ -487,7 +480,6 @@
                       { value: "daily", label: "Every day" },
                       { value: "weekly", label: "Every week" },
                       { value: "monthly", label: "Every month" },
-                      { value: "custom", label: "Custom interval" },
                     ],
                     style: "width:180px;",
                   })}
@@ -499,14 +491,6 @@
                 <div class="st-row"${r.freq === "monthly" ? "" : " hidden"}>
                   <label class="st-label" for="stBackupDate">Day of month</label>
                   ${CustomSelect.render({ id: "stBackupDate", value: r.date, options: Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: i + 1 === 31 ? "31 (or last day)" : String(i + 1) })), style: "width:180px;" })}
-                </div>
-                <div class="st-row"${r.freq === "custom" ? "" : " hidden"}>
-                  <label class="st-label" for="stBackupEvery">Every (days)</label>
-                  <input type="number" id="stBackupEvery" class="st-input" min="1" max="365" step="1" value="${r.every}" style="width:90px;" />
-                </div>
-                <div class="st-row"${r.freq === "off" ? " hidden" : ""}>
-                  <label class="st-label" for="stBackupTime">Time</label>
-                  <input type="time" id="stBackupTime" class="st-input" value="${r.time}" />
                 </div>
                 <div class="st-hint">Shows a reminder on your new tab when a backup is due. ${last}</div>
               </div>`;
