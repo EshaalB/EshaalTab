@@ -151,17 +151,22 @@ const StorageManager = (() => {
 
   const SETTINGS_PAGES = [
     "appearance",
-    "themes",
-    "presets",
     "wallpaper",
     "home",
-    "backup",
-    "maintenance",
+    "search",
+    "data",
     "privacy",
-    "reset",
     "help",
-    "support",
   ];
+
+  const RETIRED_SETTINGS_PAGES = {
+    themes: "appearance",
+    presets: "appearance",
+    backup: "data",
+    maintenance: "data",
+    reset: "data",
+    support: "help",
+  };
 
   const DEFAULT_SETTINGS = {
     mode: "light",
@@ -216,7 +221,7 @@ const StorageManager = (() => {
     },
 
     expandedSettingsAccordions: {},
-    settingsLayoutVersion: 13,
+    settingsLayoutVersion: 14,
     settingsScrollPositions: {},
     lastSavedBoardId: "",
     boardWidth: 260,
@@ -981,6 +986,22 @@ const StorageManager = (() => {
         loadedSettings.fontFamily = APP_FONTS[0].value;
       loadedSettings.clockFont = clockFont(loadedSettings.clockFont).value;
 
+      if ((loadedSettings.settingsLayoutVersion || 0) < 14) {
+        const moved = RETIRED_SETTINGS_PAGES[loadedSettings.lastSettingsPage];
+        if (moved) loadedSettings.lastSettingsPage = moved;
+        for (const key of [
+          "collapsedSettingsAccordions",
+          "expandedSettingsAccordions",
+          "settingsScrollPositions",
+        ]) {
+          const map = loadedSettings[key];
+          if (!map || typeof map !== "object" || Array.isArray(map)) continue;
+          for (const gone of Object.keys(RETIRED_SETTINGS_PAGES)) delete map[gone];
+        }
+        for (const gone of Object.keys(RETIRED_SETTINGS_PAGES))
+          delete collapsedSettingsAccordions[gone];
+      }
+
       if ((loadedSettings.settingsLayoutVersion || 0) < 11) {
         if (loadedSettings.searchEngine === "google")
           loadedSettings.searchEngine = "default";
@@ -1052,7 +1073,7 @@ const StorageManager = (() => {
         ...packagedWallpaperDefaults,
         interfaceOpacity,
         surfaceOpacity,
-        settingsLayoutVersion: 13,
+        settingsLayoutVersion: 14,
         clockPosition:
           normalizeClockPosition(loadedSettings.clockPosition) ??
           DEFAULT_SETTINGS.clockPosition,
@@ -1490,11 +1511,11 @@ const StorageManager = (() => {
       typeof raw.wallpaperMuted === "boolean" ? raw.wallpaperMuted : undefined,
     );
     pick("wallpaperVolume", num(raw.wallpaperVolume, 0, 1));
+    const askedPage =
+      RETIRED_SETTINGS_PAGES[raw.lastSettingsPage] || raw.lastSettingsPage;
     pick(
       "lastSettingsPage",
-      SETTINGS_PAGES.includes(raw.lastSettingsPage)
-        ? raw.lastSettingsPage
-        : undefined,
+      SETTINGS_PAGES.includes(askedPage) ? askedPage : undefined,
     );
     pick("settingsLayoutVersion", num(raw.settingsLayoutVersion, 0, 20));
     const pickAccordionMap = (key) => {

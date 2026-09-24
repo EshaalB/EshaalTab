@@ -359,13 +359,13 @@ const SettingsRenderer = (() => {
 
   const PAGES = [
     {
-      group: "Everyday",
+      group: "Preferences",
       items: [
         {
-          id: "home",
-          label: "Home page",
+          id: "appearance",
+          label: "Appearance",
           tabs: ["theme", "widgets"],
-          find: "widgets clock greeting name date weather search bar pinned links launcher time format 12 24 hour shadow top bar library timer palette tasks",
+          find: "theme light dark system mode accent colour color two-tone secondary base background scheme preset pastel neon share copy code corner radius rounded sharp font typeface board width size interface strength opacity transparency surface performance ambient wash",
         },
         {
           id: "wallpaper",
@@ -374,61 +374,69 @@ const SettingsRenderer = (() => {
           find: "photo video upload url blur soften dim crop zoom position fit gallery saved mute volume",
         },
         {
+          id: "home",
+          label: "Home layout",
+          tabs: ["theme", "widgets"],
+          find: "widgets clock greeting name date weather search bar pinned links launcher time format 12 24 hour shadow top bar library timer palette tasks",
+        },
+        {
           id: "search",
-          label: "Search engines",
+          label: "Search",
           tabs: ["search"],
           find: "engine default browser google duckduckgo yandex yahoo bing chatgpt claude gemini perplexity brave youtube reddit pinterest quora ai",
         },
       ],
     },
     {
-      group: "Look and feel",
+      group: "Advanced",
       items: [
         {
-          id: "themes",
-          label: "Themes",
-          tabs: ["theme"],
-          find: "light dark system mode accent colour color two-tone secondary base background scheme",
+          id: "data",
+          label: "Data & backup",
+          tabs: ["data"],
+          find: "export import csv json bookmarks raindrop restore backup reminder daily weekly monthly duplicates repair wallpaper cache clear boards wipe delete everything factory danger reset",
         },
         {
-          id: "presets",
-          label: "Presets",
-          tabs: ["theme"],
-          find: "preset share copy code export import theme pastel neon",
+          id: "privacy",
+          label: "Privacy",
+          tabs: ["data"],
+          find: "favicons web icons remote tracking permissions",
         },
         {
-          id: "appearance",
-          label: "Appearance",
-          tabs: ["widgets", "theme"],
-          find: "corner radius rounded sharp font typeface board width size interface background strength opacity transparency surface performance ambient wash",
+          id: "help",
+          label: "Help & support",
+          tabs: ["help", "support"],
+          find: "guide how to shortcuts keyboard discord instagram contact feedback bug",
         },
-      ],
-    },
-    {
-      group: "Your data",
-      items: [
-        { id: "backup", label: "Backup & import", tabs: ["data"], find: "export import csv json bookmarks raindrop restore" },
-        { id: "privacy", label: "Privacy", tabs: ["data"], find: "favicons remote tracking permissions" },
-        { id: "maintenance", label: "Maintenance", tabs: ["data"], find: "duplicates repair wallpaper cache" },
-        { id: "reset", label: "Reset", tabs: ["data"], find: "clear boards wipe delete everything factory danger" },
-      ],
-    },
-    {
-      group: "About",
-      items: [
-        { id: "help", label: "Help", tabs: ["help"], find: "guide how to shortcuts keyboard" },
-        { id: "support", label: "Support", tabs: ["support"], find: "discord instagram contact feedback bug" },
       ],
     },
   ];
 
   const TAB_TO_PAGE = {
-    theme: "themes",
+    theme: "appearance",
     widgets: "appearance",
     search: "search",
-    data: "backup",
+    data: "data",
     help: "help",
-    support: "support",
+    support: "help",
+  };
+
+  const PAGE_SECTION_ORDER = {
+    appearance: [
+      "theme and colours",
+      "themes",
+      "general appearance",
+      "interface background",
+      "share your theme",
+    ],
+    home: [
+      "home visibility",
+      "clock, greeting and date",
+      "weather",
+      "pinned links",
+      "top bar",
+    ],
+    data: ["data management", "maintenance", "danger zone"],
   };
 
   const allPages = () => PAGES.flatMap((g) => g.items);
@@ -1171,6 +1179,21 @@ const SettingsRenderer = (() => {
     });
   }
 
+  function orderSections(body, page) {
+    const order = PAGE_SECTION_ORDER[page];
+    const first = body.querySelector(".st-container");
+    if (!order || !first) return;
+    const rank = (el) => {
+      const key = accordionKey(el.querySelector(":scope > .st-accordion-header"));
+      const i = order.indexOf(key);
+      return i === -1 ? order.length : i;
+    };
+    [...body.querySelectorAll(".st-container > .st-accordion")]
+      .map((el, i) => ({ el, at: rank(el), i }))
+      .sort((a, b) => a.at - b.at || a.i - b.i)
+      .forEach(({ el }) => first.append(el));
+  }
+
   function paintPage(mods, page, token, savedScrollTop) {
     closeColorPopover();
     const body = $("sidesheetBody");
@@ -1193,18 +1216,11 @@ const SettingsRenderer = (() => {
 
 
 
+    orderSections(body, page);
+
     body.querySelectorAll(".st-container").forEach((el) => {
       if (!el.children.length) el.remove();
     });
-
-    if (page === "home") {
-      const topBar = body.querySelector('[data-accordion-key="top bar"]');
-      const containers = body.querySelectorAll(".st-container");
-      const last = containers[containers.length - 1];
-      if (topBar && last && !last.contains(topBar)) last.append(topBar);
-      const oldHolder = [...containers].find((c) => !c.children.length);
-      oldHolder?.remove();
-    }
 
     const lower = (list) =>
       new Set((list || []).map((v) => String(v).toLowerCase()));

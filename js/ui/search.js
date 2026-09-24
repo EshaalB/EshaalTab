@@ -238,7 +238,7 @@ const SearchRenderer = (() => {
           desc: "Open the wallpaper controls",
           action: () => {
             close();
-            SettingsRenderer.openSideSheet("theme", "wallpaper");
+            SettingsRenderer.openSideSheet("wallpaper");
           },
         },
         {
@@ -256,7 +256,7 @@ const SearchRenderer = (() => {
           desc: "Choose what appears on Home",
           action: () => {
             close();
-            SettingsRenderer.openSideSheet("widgets");
+            SettingsRenderer.openSideSheet("home");
           },
         },
         {

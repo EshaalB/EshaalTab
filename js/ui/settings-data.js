@@ -499,7 +499,7 @@
   function render(settings, data) {
     return `
         <div class="st-container">
-          <div class="st-accordion is-expanded" data-page="backup" data-accordion-key="data management">
+          <div class="st-accordion is-expanded" data-page="data" data-accordion-key="data management">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Backup and import</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -525,7 +525,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded" data-page="maintenance">
+          <div class="st-accordion is-expanded" data-page="data">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Maintenance</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -538,7 +538,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded" data-page="reset">
+          <div class="st-accordion is-expanded" data-page="data">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Danger zone</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>

@@ -945,7 +945,7 @@
     let html = `
         <div class="st-container">
           ${homeVisibilityHtml}
-          <div class="st-accordion is-expanded" data-page="presets" data-accordion-key="themes">
+          <div class="st-accordion is-expanded" data-page="appearance" data-accordion-key="themes">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Presets <span class="st-group-note">${escapeHtml(activeName)}</span></span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -985,7 +985,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded" data-page="themes" data-accordion-key="theme and colours">
+          <div class="st-accordion is-expanded" data-page="appearance" data-accordion-key="theme and colours">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Colours and background</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -1132,7 +1132,7 @@
             </div>
           </div>
 
-          <div class="st-accordion is-expanded" data-page="presets">
+          <div class="st-accordion is-expanded" data-page="appearance">
             <button class="st-accordion-header" type="button">
               <span class="st-group-title">Share your theme</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
