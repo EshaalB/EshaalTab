@@ -1067,6 +1067,9 @@ const SettingsRenderer = (() => {
 
   let sheetReturnFocus = null;
 
+  let sheetCloseTimer = null;
+  let stopSheetClose = () => {};
+
   function openSideSheet(tab = null, section = null) {
     const overlay = $("sidesheetOverlay");
     const topBtn = $("topSettingsBtn");
@@ -1087,8 +1090,11 @@ const SettingsRenderer = (() => {
 
     renderSettingsNav($("settingsSearch")?.value || "");
     renderSideSheetContent(false);
-    overlay.classList.remove("closing");
+    stopSheetClose();
+    overlay.classList.remove("closing", "is-in");
     overlay.classList.add("open");
+    void overlay.offsetWidth;
+    overlay.classList.add("is-in");
     if (topBtn) topBtn.classList.add("is-active");
 
     ($("sidesheetCloseBtn") || overlay).focus?.();
@@ -1103,18 +1109,29 @@ const SettingsRenderer = (() => {
     sheetReturnFocus = null;
     rememberSettingsScroll(activePage);
 
-    if (overlay) {
-      overlay.classList.add("closing");
-      overlay.classList.remove("open");
-      const onEnd = (e) => {
-        if (e.target !== overlay) return;
-        overlay.classList.remove("closing");
-        overlay.removeEventListener("transitionend", onEnd);
-        const body = $("sidesheetBody");
-        if (body) setSafeHTML(body, "");
-      };
-      overlay.addEventListener("transitionend", onEnd);
-    }
+    if (!overlay) return;
+
+    stopSheetClose();
+    overlay.classList.remove("open", "is-in");
+    overlay.classList.add("closing");
+
+    const settle = () => {
+      stopSheetClose();
+      overlay.classList.remove("closing");
+      const body = $("sidesheetBody");
+      if (body) setSafeHTML(body, "");
+    };
+    const onEnd = (e) => {
+      if (e.target === overlay) settle();
+    };
+
+    overlay.addEventListener("transitionend", onEnd);
+    sheetCloseTimer = setTimeout(settle, 600);
+    stopSheetClose = () => {
+      clearTimeout(sheetCloseTimer);
+      overlay.removeEventListener("transitionend", onEnd);
+      stopSheetClose = () => {};
+    };
   }
 
   function accordionKey(header) {

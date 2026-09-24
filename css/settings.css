@@ -5,13 +5,20 @@
   background: var(--scrim);
   display: none;
   justify-content: flex-end;
+  opacity: 0;
   animation: none !important;
-  transition: none !important;
+  transition: opacity var(--dur-2) var(--ease-out);
 }
 
 .et-set-overlay.open,
-.et-set-overlay.active {
+.et-set-overlay.active,
+.et-set-overlay.closing {
   display: flex;
+}
+
+.et-set-overlay.is-in,
+.et-set-overlay.active {
+  opacity: 1;
 }
 
 .et-set-overlay.is-sampling {
@@ -272,9 +279,23 @@ body.is-eyedropping * {
   display: flex;
   flex-direction: column;
   animation: none !important;
-  transition: none !important;
+  transform: translateX(calc(100% + var(--sp-4)));
+  transition: transform var(--dur-3) var(--ease-out);
+  will-change: transform;
   border: 1px solid var(--panel-border);
   overflow: hidden;
+}
+
+.et-set-overlay.is-in .et-set-panel,
+.et-set-overlay.active .et-set-panel {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .et-set-overlay,
+  .et-set-panel {
+    transition: none;
+  }
 }
 
 body.radius-sharp .et-set-panel {
