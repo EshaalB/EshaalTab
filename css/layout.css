@@ -11,7 +11,8 @@
   z-index: 0;
   opacity: 0;
   transition: opacity var(--dur-4) var(--ease-out);
-  transform: translateZ(0);
+  transform: translateZ(0) scale(calc(var(--wp-zoom, 1) * var(--wp-layer-scale, 1)));
+  transform-origin: var(--wp-origin, 50% 50%);
 }
 
 #photo-bg {
@@ -22,9 +23,11 @@
 
 body.wp-blur-on #photo-bg,
 body.wp-blur-on #video-bg {
+  --wp-layer-scale: var(--wp-blur-scale, 1);
   filter: blur(var(--wp-blur-amount, 0px));
-  transform: translateZ(0) scale(var(--wp-blur-scale, 1));
-  transition: filter var(--dur-3) var(--ease-out);
+  transition:
+    filter var(--dur-3) var(--ease-out),
+    opacity var(--dur-4) var(--ease-out);
 }
 
 #photo-bg::after {
@@ -33,7 +36,8 @@ body.wp-blur-on #video-bg {
   inset: 0;
   background: inherit;
   filter: blur(var(--wp-page-extra, 8px));
-  transform: scale(var(--wp-page-scale, 1.04));
+  transform: scale(var(--wp-page-rel, 1.04));
+  transform-origin: inherit;
   opacity: 0;
   transition: opacity var(--dur-2) var(--ease-out);
   will-change: opacity;
@@ -47,11 +51,19 @@ body:is(.view-boards, .view-notes) #photo-bg::after {
 body.wp-baked #photo-bg::after {
   background-image: var(--wp-page-img);
   filter: none;
+  transform: none;
 }
 
 body:is(.view-boards, .view-notes) #video-bg.active {
+  --wp-layer-scale: var(--wp-page-scale, 1.04);
   filter: blur(var(--wp-page-blur, 8px));
-  transform: translateZ(0) scale(var(--wp-page-scale, 1.04));
+}
+
+html.is-lite {
+  --dur-1: 80ms;
+  --dur-2: 100ms;
+  --dur-3: 130ms;
+  --dur-4: 160ms;
 }
 
 html.is-lite #photo-bg::after {

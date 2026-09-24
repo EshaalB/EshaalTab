@@ -10,6 +10,7 @@
     var raw = localStorage.getItem("et_boot");
     if (!raw) return;
     var b = JSON.parse(raw);
+    if (b.lite) root.classList.add("is-lite");
     if (typeof b.pageBg === "string" && /^#[0-9a-f]{3,6}$/i.test(b.pageBg)) {
       root.style.setProperty("--page-bg", b.pageBg);
       root.style.backgroundColor = b.pageBg;

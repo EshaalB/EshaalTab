@@ -88,7 +88,7 @@ const StorageManager = (() => {
       {
         id: uuid(),
         name: "AI Tools",
-        color: "#a855f7",
+        color: "#e0d4e9",
         col: 0,
         order: 0,
 
@@ -104,7 +104,7 @@ const StorageManager = (() => {
       {
         id: uuid(),
         name: "Social Media",
-        color: "#ec4899",
+        color: "#eecdde",
         col: 1,
         order: 0,
         pinnedToHome: false,
@@ -1143,7 +1143,10 @@ const StorageManager = (() => {
         bg = isLight ? "#f4f6f8" : "#0d1117";
       }
 
-      localStorage.setItem("et_boot", JSON.stringify({ mode, pageBg: bg }));
+      localStorage.setItem(
+        "et_boot",
+        JSON.stringify({ ...(prev || {}), mode, pageBg: bg }),
+      );
     } catch (e) {}
   }
 

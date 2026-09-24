@@ -1874,16 +1874,18 @@ const SettingsRenderer = (() => {
     const posX = settings.wallpaperPosX ?? 50;
     const posY = settings.wallpaperPosY ?? 50;
 
+    const origin = `${posX}% ${posY}%`;
+
     if (photoBg) {
       photoBg.style.backgroundSize = settings.wallpaperFit || "cover";
-      photoBg.style.backgroundPosition = `${posX}% ${posY}%`;
-      photoBg.style.transform = `scale(${zoom})`;
-      photoBg.style.transformOrigin = `${posX}% ${posY}%`;
+      photoBg.style.backgroundPosition = origin;
+      photoBg.style.setProperty("--wp-zoom", String(zoom));
+      photoBg.style.setProperty("--wp-origin", origin);
     }
     if (videoBg) {
-      videoBg.style.transform = `scale(${zoom})`;
-      videoBg.style.transformOrigin = `${posX}% ${posY}%`;
-      videoBg.style.objectPosition = `${posX}% ${posY}%`;
+      videoBg.style.setProperty("--wp-zoom", String(zoom));
+      videoBg.style.setProperty("--wp-origin", origin);
+      videoBg.style.objectPosition = origin;
       const shouldMute = settings.wallpaperMuted !== false;
       videoBg.muted = shouldMute;
       if (shouldMute) {
@@ -1893,6 +1895,8 @@ const SettingsRenderer = (() => {
       }
       videoBg.volume = settings.wallpaperVolume ?? 0.5;
     }
+
+    applyWallpaperBlur();
   }
 
   function applyWallpaperVignette() {
@@ -1934,46 +1938,66 @@ const SettingsRenderer = (() => {
     el.setProperty("--wp-blur-amount", `${px.toFixed(1)}px`);
 
     const shortest = Math.min(window.innerWidth, window.innerHeight) || 1;
-    el.setProperty(
-      "--wp-blur-scale",
-      String(1 + (px * 6) / shortest),
-    );
     const pagePx = Math.max(px, 8);
+    const extra = Math.sqrt(Math.max(0, pagePx * pagePx - px * px));
+    const blurScale = 1 + (px * 6) / shortest;
+    const pageScale = 1 + (pagePx * 6) / shortest;
+
+    el.setProperty("--wp-blur-scale", String(blurScale));
     el.setProperty("--wp-page-blur", `${pagePx.toFixed(1)}px`);
+    el.setProperty("--wp-page-extra", `${extra.toFixed(1)}px`);
+    el.setProperty("--wp-page-scale", String(pageScale));
     el.setProperty(
-      "--wp-page-extra",
-      `${Math.sqrt(Math.max(0, pagePx * pagePx - px * px)).toFixed(1)}px`,
+      "--wp-page-rel",
+      String(on ? pageScale / blurScale : pageScale),
     );
-    el.setProperty("--wp-page-scale", String(1 + (pagePx * 6) / shortest));
-    bakePageBlur(Math.sqrt(Math.max(0, pagePx * pagePx - px * px)));
+    scheduleBake(extra);
   }
 
   let bakedKey = "";
   let bakedUrl = "";
+  let bakeTimer = null;
+
+  function scheduleBake(extra) {
+    clearTimeout(bakeTimer);
+    bakeTimer = setTimeout(() => bakePageBlur(extra), 180);
+  }
+
   async function bakePageBlur(extra) {
     const photoBg = $("photo-bg");
     const src = /^url\("(.*)"\)$/.exec(photoBg?.style.backgroundImage || "")?.[1];
-    const key = `${src}|${extra.toFixed(1)}|${innerWidth}x${innerHeight}`;
+    const zoom = (StorageManager.getSettings().wallpaperZoom || 100) / 100;
+    const key = `${src}|${extra.toFixed(1)}|${zoom}|${innerWidth}x${innerHeight}`;
     if (key === bakedKey) return;
     bakedKey = key;
     document.body.classList.remove("wp-baked");
     if (!src) return;
     try {
       const img = new Image();
+      const ready = new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = rej;
+      });
+      img.decoding = "async";
       img.src = src;
-      await img.decode();
+      if (!img.complete) await ready;
       if (key !== bakedKey) return;
       const w = 480;
       const h = Math.round((w * img.naturalHeight) / img.naturalWidth);
-      const shown = img.naturalWidth * Math.max(innerWidth / img.naturalWidth, innerHeight / img.naturalHeight);
+      const shown =
+        img.naturalWidth *
+        Math.max(innerWidth / img.naturalWidth, innerHeight / img.naturalHeight) *
+        zoom;
       const r = (extra * w) / shown;
-      const m = r * 3;
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d");
       ctx.filter = `blur(${r}px)`;
-      ctx.drawImage(img, -m, -m, w + m * 2, h + m * 2);
+      ctx.drawImage(img, 0, 0, w, h);
+      ctx.filter = "none";
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.drawImage(img, 0, 0, w, h);
       const blob = await new Promise((res) => canvas.toBlob(res, "image/webp", 0.9));
       if (!blob || key !== bakedKey) return;
       if (bakedUrl) URL.revokeObjectURL(bakedUrl);

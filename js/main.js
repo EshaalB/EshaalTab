@@ -21,6 +21,37 @@ async function repaintAll() {
   ViewController.show(TabManager.get());
 }
 
+const SLOW_DEVICE_MS = 14;
+
+function cpuCost() {
+  const started = performance.now();
+  let x = 0;
+  for (let i = 0; i < 2000000; i += 1) x = (x + i) % 9973;
+  const spent = performance.now() - started;
+  return x < 0 ? Infinity : spent;
+}
+
+function gradeDeviceSpeed() {
+  try {
+    const cost = cpuCost();
+    const raw = localStorage.getItem("et_boot");
+    const b = raw ? JSON.parse(raw) : {};
+    if (cost > SLOW_DEVICE_MS) {
+      b.slow = (Number(b.slow) || 0) + 1;
+      b.fast = 0;
+    } else if (cost < SLOW_DEVICE_MS * 0.6) {
+      b.fast = (Number(b.fast) || 0) + 1;
+      b.slow = 0;
+    }
+    if (!b.lite && b.slow >= 2) b.lite = true;
+    else if (b.lite && b.fast >= 3) {
+      b.lite = false;
+      b.fast = 0;
+    }
+    localStorage.setItem("et_boot", JSON.stringify(b));
+  } catch {}
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     await window.SettingsReady;
@@ -287,5 +318,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.body.classList.add("home-intro");
 
     setTimeout(() => document.body.classList.remove("home-intro"), 180);
+
+    setTimeout(
+      () => (window.requestIdleCallback || setTimeout)(gradeDeviceSpeed),
+      1500,
+    );
   }
 });
