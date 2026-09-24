@@ -192,6 +192,13 @@ body.loaded .app {
   visibility: visible;
 }
 
+#etMain {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .et-topbar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;

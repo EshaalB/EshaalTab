@@ -158,6 +158,13 @@ body.font-handwriting .sr-sub {
 }
 
 input::placeholder,
+textarea::placeholder {
+  color: var(--text-dim) !important;
+  font-weight: 400 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
 .et-sr-only {
   position: absolute;
   width: 1px;
@@ -168,13 +175,6 @@ input::placeholder,
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
-}
-
-textarea::placeholder {
-  color: var(--text-dim) !important;
-  font-weight: 400 !important;
-  opacity: 1 !important;
-  text-shadow: none !important;
 }
 
 ::-webkit-scrollbar {
