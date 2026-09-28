@@ -1407,40 +1407,13 @@ const StorageManager = (() => {
     const blob = new Blob([JSON.stringify(backup, null, 2)], {
       type: "application/json",
     });
-    const name = `eshaaltab-backup-${new Date().toLocaleDateString("sv")}.json`;
-    const url = URL.createObjectURL(blob);
-    if (!(await downloadToBackupFolder(url, name))) {
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = name;
-      a.click();
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `eshaaltab-backup-${new Date().toLocaleDateString("sv")}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     settings.lastBackupAt = Date.now();
     saveSettings();
-  }
-
-  const BACKUP_FOLDER = "EshaalTab Backups";
-
-  async function downloadToBackupFolder(url, name) {
-    if (!HAS_EXT || !EXT.permissions || !EXT.downloads) return false;
-    try {
-      const granted = await new Promise((res) =>
-        EXT.permissions.request({ permissions: ["downloads"] }, (ok) =>
-          res(!!ok && !EXT.runtime.lastError),
-        ),
-      );
-      if (!granted) return false;
-      await new Promise((res, rej) =>
-        EXT.downloads.download(
-          { url, filename: `${BACKUP_FOLDER}/${name}`, saveAs: false },
-          (id) => (id === undefined ? rej(EXT.runtime.lastError) : res(id)),
-        ),
-      );
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
