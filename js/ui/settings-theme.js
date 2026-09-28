@@ -52,9 +52,12 @@
 
       s.accent2 = p.accent2 || "";
       s.cornerRadius = CORNER_STYLES[0].value;
-      s.clockColor = "";
-      s.greetingColor = "";
-      s.metaColor = "";
+
+      const ink = /^#[0-9a-f]{6}$/i.test(p.ink || "") ? p.ink : "";
+      s.clockColor = ink;
+      s.greetingColor = ink;
+      s.metaColor = ink;
+      s.clockFont = clockFont(p.font).value;
 
       if (s.backgroundType && s.backgroundType !== "solid") {
         s.backgroundType = "solid";

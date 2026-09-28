@@ -2222,7 +2222,10 @@ body.has-meta-color #clockWidget :is(.et-home-date, .et-weather-inline, .et-weat
 }
 
 #clockWidget .et-home-meta {
-  margin-bottom: var(--sp-3);
+  margin-bottom: calc(
+    clamp(6px, var(--clock-size) * var(--clock-scale, 1) * 0.1, 22px) +
+      var(--clock-ink-top, 0px)
+  );
   font-size: calc(clamp(14px, calc(var(--clock-size) * 0.19), 21px) * var(--meta-scale, 1));
 }
 
@@ -2472,9 +2475,14 @@ body.pins-pos-right:is(.clock-pos-top-right, .clock-pos-bottom-right) .et-home-c
   right: calc(var(--pins-dock-w, 0px) + (20px * var(--ui-scale)) + var(--sp-4));
 }
 
-body.pins-pos-left .et-view-home.active,
+body.pins-pos-left .et-view-home.active {
+  padding-left: calc(
+    var(--pins-dock-w, 0px) + (20px * var(--ui-scale)) + var(--sp-4)
+  );
+}
+
 body.pins-pos-right .et-view-home.active {
-  padding-inline: calc(
+  padding-right: calc(
     var(--pins-dock-w, 0px) + (20px * var(--ui-scale)) + var(--sp-4)
   );
 }

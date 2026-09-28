@@ -233,16 +233,10 @@ textarea::placeholder {
   --board-text-hover: #fff;
   --board-hover-bg: rgba(255, 255, 255, 0.06);
 
-  --surface: rgba(var(--board-rgb), var(--board-opacity, 0.08));
+  --surface: rgba(255, 255, 255, 0.06);
   --surface-card: rgba(var(--board-rgb), var(--board-opacity, 0.08));
-  --surface-2: rgba(
-    var(--board-rgb),
-    calc(var(--board-opacity, 0.08) * 1.2 + 0.02)
-  );
-  --surface-3: rgba(
-    var(--board-rgb),
-    calc(var(--board-opacity, 0.08) * 1.5 + 0.05)
-  );
+  --surface-2: rgba(255, 255, 255, 0.09);
+  --surface-3: rgba(255, 255, 255, 0.14);
 
   --topbar-opacity: var(--board-opacity, 0.08);
   --notes-opacity: var(--board-opacity, 0.08);
@@ -261,8 +255,8 @@ textarea::placeholder {
 
   --surface-base: #090a0f;
 
-  --surface-panel: rgba(255, 255, 255, 0.04);
-  --surface-panel-2: rgba(255, 255, 255, 0.065);
+  --surface-panel: rgba(255, 255, 255, 0.05);
+  --surface-panel-2: rgba(255, 255, 255, 0.08);
   --border-tactile: 1px solid var(--border-soft);
 
   --panel-rgb: 17, 19, 24;
@@ -409,16 +403,16 @@ body.theme-light {
   --board-text-hover: #000;
   --board-hover-bg: rgba(0, 0, 0, 0.06);
 
-  --surface: rgba(0, 0, 0, 0.04);
-  --surface-2: rgba(0, 0, 0, 0.06);
-  --surface-3: rgba(0, 0, 0, 0.1);
+  --surface: rgba(0, 0, 0, 0.05);
+  --surface-2: rgba(0, 0, 0, 0.08);
+  --surface-3: rgba(0, 0, 0, 0.13);
   --surface-notes: rgba(var(--board-rgb), var(--notes-opacity));
   --surface-search: rgba(var(--board-rgb), var(--search-opacity));
   --surface-base: #f4f6f8;
   --surface-card: rgba(var(--board-rgb), var(--board-opacity, 0.08));
 
-  --surface-panel: rgba(0, 0, 0, 0.04);
-  --surface-panel-2: rgba(0, 0, 0, 0.065);
+  --surface-panel: rgba(0, 0, 0, 0.05);
+  --surface-panel-2: rgba(0, 0, 0, 0.08);
   --border-tactile: 1px solid var(--border-soft);
   --text: rgba(0, 0, 0, 0.88);
   --text-dim: rgba(0, 0, 0, 0.62);

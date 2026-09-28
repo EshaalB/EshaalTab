@@ -13,6 +13,8 @@ const SettingsRenderer = (() => {
       mode: "light",
       accent: "#f9c8d6",
       accent2: "#f18fae",
+      ink: "#7a2743",
+      font: "rounded",
       radius: null,
     },
     {
@@ -22,6 +24,8 @@ const SettingsRenderer = (() => {
       mode: "light",
       accent: "#bbd6fd",
       accent2: "#7db0f5",
+      ink: "#1d4e87",
+      font: "rounded",
       radius: null,
     },
     {
@@ -31,6 +35,8 @@ const SettingsRenderer = (() => {
       mode: "light",
       accent: "#fdbdbd",
       accent2: "#f58585",
+      ink: "#8a2a2a",
+      font: "rounded",
       radius: null,
     },
     {
@@ -40,6 +46,8 @@ const SettingsRenderer = (() => {
       mode: "light",
       accent: "#ffed80",
       accent2: "#f5cf3d",
+      ink: "#6b5310",
+      font: "rounded",
       radius: null,
     },
     {
@@ -49,6 +57,8 @@ const SettingsRenderer = (() => {
       mode: "light",
       accent: "#c7e4c7",
       accent2: "#8ec98e",
+      ink: "#2c5c36",
+      font: "rounded",
       radius: null,
     },
     {
@@ -58,6 +68,8 @@ const SettingsRenderer = (() => {
       mode: "light",
       accent: "#9cefef",
       accent2: "#4fd4d4",
+      ink: "#0f5c60",
+      font: "rounded",
       radius: null,
     },
     {
@@ -67,6 +79,8 @@ const SettingsRenderer = (() => {
       mode: "light",
       accent: "#ffd8b2",
       accent2: "#f7ac68",
+      ink: "#8a4a14",
+      font: "rounded",
       radius: null,
     },
     {
@@ -76,6 +90,8 @@ const SettingsRenderer = (() => {
       mode: "light",
       accent: "#dac2e8",
       accent2: "#b48fd0",
+      ink: "#553277",
+      font: "rounded",
       radius: null,
     },
     {
@@ -85,6 +101,8 @@ const SettingsRenderer = (() => {
       mode: "light",
       accent: "#c6c6c6",
       accent2: "#949494",
+      ink: "#3a3a3a",
+      font: "grotesk",
       radius: null,
     },
 
@@ -96,6 +114,8 @@ const SettingsRenderer = (() => {
       accent: "#fa1e4e",
       accent2: "#ff5c7a",
       seed: "#0f0f13",
+      ink: "#ff5c7a",
+      font: "default",
       radius: "0px",
     },
     {
@@ -106,6 +126,8 @@ const SettingsRenderer = (() => {
       accent: "#9d4edd",
       accent2: "#00f0ff",
       seed: "#100e17",
+      ink: "#c88bff",
+      font: "default",
       radius: "0px",
     },
     {
@@ -116,6 +138,8 @@ const SettingsRenderer = (() => {
       accent: "#00e5ff",
       accent2: "#4361ee",
       seed: "#0b1017",
+      ink: "#5fe8ff",
+      font: "default",
       radius: "0px",
     },
     {
@@ -126,6 +150,8 @@ const SettingsRenderer = (() => {
       accent: "#ff5376",
       accent2: "#c77dff",
       seed: "#140e14",
+      ink: "#ff8fa6",
+      font: "default",
       radius: "0px",
     },
     {
@@ -136,6 +162,8 @@ const SettingsRenderer = (() => {
       accent: "#ff2a85",
       accent2: "#00f5d4",
       seed: "#120e16",
+      ink: "#5cf2d8",
+      font: "default",
       radius: "0px",
     },
     {
@@ -146,6 +174,8 @@ const SettingsRenderer = (() => {
       accent: "#00ff66",
       accent2: "#00e5ff",
       seed: "#090e0c",
+      ink: "#5cff9a",
+      font: "mono",
       radius: "0px",
     },
   ];
@@ -703,9 +733,16 @@ const SettingsRenderer = (() => {
         };
 
         const rgbOf = (value) => {
-          const parts = String(value).match(/[\d.]+/g);
+          const raw = String(value);
+          const parts = raw.match(/[\d.]+/g);
           if (!parts || parts.length < 3) return null;
-          return { r: +parts[0], g: +parts[1], b: +parts[2], a: parts[3] === undefined ? 1 : +parts[3] };
+          const scale = /^color\(/i.test(raw.trim()) ? 255 : 1;
+          return {
+            r: +parts[0] * scale,
+            g: +parts[1] * scale,
+            b: +parts[2] * scale,
+            a: parts[3] === undefined ? 1 : +parts[3],
+          };
         };
 
         const layerColor = (node) => {
@@ -774,6 +811,21 @@ const SettingsRenderer = (() => {
           return base;
         };
 
+        const inkMetrics = document.createElement("canvas").getContext("2d");
+
+        const inkBandOf = (el) => {
+          const cs = getComputedStyle(el);
+          const size = parseFloat(cs.fontSize) || 16;
+          try {
+            inkMetrics.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+            const m = inkMetrics.measureText("Hxg");
+            const up = m.actualBoundingBoxAscent;
+            const down = m.actualBoundingBoxDescent;
+            if (up > 0) return (up + down) / 2;
+          } catch {}
+          return size * 0.36;
+        };
+
         const inkAt = (el, x, y) => {
           const svg = el.closest?.("svg");
           if (svg) {
@@ -789,8 +841,12 @@ const SettingsRenderer = (() => {
             if (node.nodeType !== 3 || !node.textContent.trim()) continue;
             const range = document.createRange();
             range.selectNodeContents(node);
+            const band = inkBandOf(el);
             for (const r of range.getClientRects()) {
-              if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+              const mid = (r.top + r.bottom) / 2;
+              const top = mid - band;
+              const bottom = mid + band;
+              if (x >= r.left && x <= r.right && y >= top && y <= bottom) {
                 const cs = getComputedStyle(el);
                 const c = rgbOf(cs.color);
                 if (!c) return null;
@@ -2440,10 +2496,12 @@ const SettingsRenderer = (() => {
       id: "packaged-default",
       type: "image",
       value: url,
-      name: "Included wallpaper",
+      name: "Default wallpaper",
     });
+
+    await applyWallpaper("image", url, false);
     StorageManager.saveSettings();
-    return false;
+    return true;
   }
 
   async function applyWallpaper(type, value, extract = true) {

@@ -704,7 +704,13 @@ const BoardRenderer = (() => {
       parseFloat(headerStyle.paddingLeft || "0") +
       parseFloat(headerStyle.paddingRight || "0");
 
-    const chrome = left.offsetWidth - title.getBoundingClientRect().width;
+    const leftGap = parseFloat(getComputedStyle(left).columnGap || "0") || 0;
+    const kids = [...left.children];
+    let chrome = leftGap * Math.max(0, kids.length - 1);
+    for (const kid of kids) {
+      if (kid === title || kid.contains(title)) continue;
+      chrome += kid.offsetWidth;
+    }
 
     const MIN_TITLE = 22;
 
