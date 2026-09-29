@@ -320,6 +320,19 @@ function refreshFavicons(root) {
   });
 }
 
+function retryFallbackFavicons() {
+  if (!document.querySelector("img[data-fav].is-fallback")) return;
+  refreshFavicons(document);
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("online", retryFallbackFavicons);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && navigator.onLine)
+      retryFallbackFavicons();
+  });
+}
+
 const FAVICON_PX = (() => {
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
   return dpr > 1.25 ? 64 : 32;

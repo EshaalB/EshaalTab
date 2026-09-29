@@ -367,7 +367,28 @@ const ContextMenu = (() => {
     menuEl.querySelector(".board-menu-item")?.focus({ preventScroll: true });
   }
 
-  return { show, showBoardMenu, hide };
+  function openList(x, y, items) {
+    init();
+    setSafeHTML(
+      menuEl,
+      items
+        .map(
+          (it, i) =>
+            `<button type="button" class="board-menu-item" data-i="${i}">${escapeHtml(it.label)}</button>`,
+        )
+        .join(""),
+    );
+    menuEl.querySelectorAll(".board-menu-item").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        hide(true);
+        items[+btn.dataset.i]?.onClick?.();
+      });
+    });
+    place(x, y);
+  }
+
+  return { show, showBoardMenu, openList, hide };
 })();
 
 const DragDropEngine = (() => {

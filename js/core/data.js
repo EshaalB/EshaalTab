@@ -573,19 +573,120 @@ const NotesManager = (() => {
     StorageManager.save();
   }
 
-  function exportTxt() {
+  function toMarkdown(html) {
+    const root = document.createElement("div");
+    setSafeHTML(root, html || "");
+
+    const inline = (node) => {
+      let out = "";
+      for (const child of node.childNodes) {
+        if (child.nodeType === 3) {
+          out += child.textContent;
+          continue;
+        }
+        if (child.nodeType !== 1) continue;
+        const inner = inline(child);
+        const tag = child.tagName.toLowerCase();
+        if (tag === "br") out += "\n";
+        else if (tag === "b" || tag === "strong") out += "**" + inner + "**";
+        else if (tag === "i" || tag === "em") out += "*" + inner + "*";
+        else if (tag === "u") out += "_" + inner + "_";
+        else if (tag === "s" || tag === "strike" || tag === "del")
+          out += "~~" + inner + "~~";
+        else if (tag === "code") out += "`" + inner + "`";
+        else if (tag === "a")
+          out += "[" + inner + "](" + (child.getAttribute("href") || "") + ")";
+        else out += inner;
+      }
+      return out;
+    };
+
+    const lines = [];
+    const walk = (node, depth) => {
+      for (const child of node.children) {
+        const tag = child.tagName.toLowerCase();
+        if (/^h[1-6]$/.test(tag)) {
+          lines.push("#".repeat(+tag[1]) + " " + inline(child).trim(), "");
+        } else if (tag === "ul" || tag === "ol") {
+          let n = 1;
+          for (const li of child.children) {
+            if (li.tagName.toLowerCase() !== "li") continue;
+            const box = li.querySelector(':scope > input[type="checkbox"]');
+            const mark = box
+              ? box.checked
+                ? "- [x] "
+                : "- [ ] "
+              : tag === "ol"
+                ? n++ + ". "
+                : "- ";
+            lines.push("  ".repeat(depth) + mark + inline(li).trim());
+            walk(li, depth + 1);
+          }
+          lines.push("");
+        } else if (tag === "blockquote") {
+          lines.push("> " + inline(child).trim(), "");
+        } else if (tag === "hr") {
+          lines.push("---", "");
+        } else if (tag === "div" || tag === "p") {
+          const text = inline(child).trim();
+          if (child.children.length && !text) walk(child, depth);
+          else lines.push(text, "");
+        } else {
+          lines.push(inline(child).trim(), "");
+        }
+      }
+    };
+
+    walk(root, 0);
+    if (!lines.length) lines.push(root.textContent || "");
+    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  function saveAs(text, ext, mime) {
     const t = activeTab();
-    const blob = new Blob([t.text || ""], {
-      type: "text/plain;charset=utf-8",
-    });
+    const blob = new Blob([text], { type: mime + ";charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     const slug =
       (t.title || "notes").replace(/[^a-z0-9]+/gi, "-").toLowerCase() ||
       "notes";
-    a.download = `eshaaltab-${slug}-${new Date().toLocaleDateString("sv")}.txt`;
+    a.download =
+      "eshaaltab-" +
+      slug +
+      "-" +
+      new Date().toLocaleDateString("sv") +
+      "." +
+      ext;
     a.click();
-    URL.revokeObjectURL(a.href);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function exportTxt(format = "txt") {
+    const t = activeTab();
+    const html = t.text || "";
+    if (format === "html") {
+      const title = escapeHtml(t.title || "Notes");
+      saveAs(
+        '<!doctype html>\n<meta charset="utf-8">\n<title>' +
+          title +
+          '</title>\n<body style="font:16px/1.6 system-ui,sans-serif;max-width:42rem;margin:3rem auto;padding:0 1rem">\n<h1>' +
+          title +
+          "</h1>\n" +
+          html +
+          "\n</body>",
+        "html",
+        "text/html",
+      );
+      return;
+    }
+    const md = toMarkdown(html);
+    if (format === "md") saveAs(md, "md", "text/markdown");
+    else
+      saveAs(
+        md.replace(/^#{1,6} /gm, "").replace(/\*\*|~~|[*_`]/g, ""),
+        "txt",
+        "text/plain",
+      );
   }
   return {
     get,

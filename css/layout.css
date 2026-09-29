@@ -2467,24 +2467,22 @@ body.pins-pos-bottom .et-view-home.active > .et-home-center {
   margin-block: auto 0;
 }
 
-body.pins-pos-left:is(.clock-pos-top-left, .clock-pos-bottom-left) .et-home-clock {
-  left: calc(var(--pins-dock-w, 0px) + (20px * var(--ui-scale)) + var(--sp-4));
+body:is(.pins-pos-left, .pins-pos-right) .dock-pin-icon {
+  width: calc(38px * var(--ui-scale));
+  height: calc(38px * var(--ui-scale));
 }
 
-body.pins-pos-right:is(.clock-pos-top-right, .clock-pos-bottom-right) .et-home-clock {
-  right: calc(var(--pins-dock-w, 0px) + (20px * var(--ui-scale)) + var(--sp-4));
+body:is(.pins-pos-left, .pins-pos-right) .dock-pin-fav {
+  width: calc(19px * var(--ui-scale));
+  height: calc(19px * var(--ui-scale));
 }
 
-body.pins-pos-left .et-view-home.active {
-  padding-left: calc(
-    var(--pins-dock-w, 0px) + (20px * var(--ui-scale)) + var(--sp-4)
-  );
+body:is(.pins-pos-left, .pins-pos-right) #homePinned {
+  gap: calc(6px * var(--ui-scale));
 }
 
-body.pins-pos-right .et-view-home.active {
-  padding-right: calc(
-    var(--pins-dock-w, 0px) + (20px * var(--ui-scale)) + var(--sp-4)
-  );
+body:is(.pins-pos-left, .pins-pos-right) .dock-pin-label {
+  display: none;
 }
 
 body.solid-mode .et-wx [fill] {

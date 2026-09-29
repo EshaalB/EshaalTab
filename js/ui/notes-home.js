@@ -997,6 +997,11 @@ const NotesRenderer = (() => {
     }
   }
 
+  function runExport(format, message) {
+    NotesManager.exportTxt(format);
+    ToastSystem.success(message);
+  }
+
   function render() {
     const area = $("notesArea");
     if (!area) return;
@@ -1099,10 +1104,25 @@ const NotesRenderer = (() => {
         ToastSystem.success("Notes saved");
       });
 
-      $("notesExportBtn")?.addEventListener("click", () => {
+      $("notesExportBtn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
         NotesManager.set(readEditor());
-        NotesManager.exportTxt();
-        ToastSystem.success("Notes exported");
+        const btn = e.currentTarget;
+        const r = btn.getBoundingClientRect();
+        ContextMenu.openList(r.left, r.bottom + 6, [
+          {
+            label: "Plain text (.txt)",
+            onClick: () => runExport("txt", "Notes exported as text"),
+          },
+          {
+            label: "Markdown (.md)",
+            onClick: () => runExport("md", "Notes exported as Markdown"),
+          },
+          {
+            label: "Formatted page (.html)",
+            onClick: () => runExport("html", "Notes exported as a web page"),
+          },
+        ]);
       });
     }
   }
