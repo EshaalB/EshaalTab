@@ -260,12 +260,8 @@ textarea::placeholder {
     var(--accent-color) 16%,
     color-mix(in srgb, #ffffff 12%, var(--page-bg, #11131a))
   );
-  --search-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.44),
-    0 12px 32px -14px rgba(0, 0, 0, 0.7);
-  --search-shadow-raised:
-    0 2px 4px rgba(0, 0, 0, 0.46),
-    0 18px 44px -16px rgba(0, 0, 0, 0.78);
+  --search-shadow: 0 1px 1px rgba(0, 0, 0, 0.22);
+  --search-shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.3);
 
   --surface-panel: rgba(255, 255, 255, 0.05);
   --surface-panel-2: rgba(255, 255, 255, 0.08);
@@ -424,12 +420,8 @@ body.theme-light {
   --surface-card: rgba(var(--board-rgb), var(--board-opacity, 0.08));
 
   --search-surface: color-mix(in srgb, var(--accent-color) 16%, #ffffff);
-  --search-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.07),
-    0 10px 28px -12px rgba(16, 24, 40, 0.26);
-  --search-shadow-raised:
-    0 2px 5px rgba(16, 24, 40, 0.09),
-    0 16px 40px -14px rgba(16, 24, 40, 0.32);
+  --search-shadow: 0 1px 1px rgba(16, 24, 40, 0.04);
+  --search-shadow-raised: 0 1px 3px rgba(16, 24, 40, 0.07);
 
   --surface-panel: rgba(0, 0, 0, 0.05);
   --surface-panel-2: rgba(0, 0, 0, 0.08);
