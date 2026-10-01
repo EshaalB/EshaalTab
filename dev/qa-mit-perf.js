@@ -1,26 +1,7 @@
-/* EshaalTab MIT-Level 8-Step Web Performance Audit Suite.
-   
-   Implements the 8-Step Performance Engineering Workflow:
-   [1] CWV Baseline (Lighthouse/WebPageTest class metrics)
-   [2] DevTools Network & Critical Path Resource Audit
-   [3] Rendering & Main-Thread Long-Task Profiling
-   [4] Server & Load Timing Audit (Extension Boot Latency)
-   [5] Storage & Query Analysis (storage.local & IndexedDB payload inspection)
-   [6] JS Heap, DOM Depth & Style Rule Analysis
-   [7] Fix & Measure (Weighted 0-100 Performance Index)
-   [8] Budget Enforcement & Target Verification
-
-   HOW TO RUN:
-   1. Open a new tab (EshaalTab page).
-   2. Press F12, open the Console tab.
-   3. Paste this entire script and press Enter.
-   4. Wait ~5 seconds for "AUDIT COMPLETE". Results will auto-copy to clipboard.
-*/
-
 (async () => {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const round = (n, d = 1) => Math.round(n * 10 ** d) / 10 ** d;
-  
+
   const report = {
     step1_cwv: [],
     step2_network: [],
@@ -46,17 +27,14 @@
 
   console.log('%c🚀 Starting MIT 8-Step Web Performance Audit...', 'color: #6366f1; font-weight: bold; font-size: 14px;');
 
-  // ==========================================
-  // STEP 1: CWV Baseline (Lighthouse Metrics)
-  // ==========================================
   const nav = performance.getEntriesByType('navigation')[0];
   const paintEntries = Object.fromEntries(performance.getEntriesByType('paint').map(p => [p.name, p.startTime]));
 
   const fp = paintEntries['first-paint'] ?? 0;
   const fcp = paintEntries['first-contentful-paint'] ?? 0;
-  
+
   let lcp = 0, cls = 0, longTasksCount = 0, totalBlockingTime = 0;
-  
+
   try {
     new PerformanceObserver(l => { for (const e of l.getEntries()) lcp = e.startTime; })
       .observe({ type: 'largest-contentful-paint', buffered: true });
@@ -76,7 +54,7 @@
     }).observe({ type: 'longtask', buffered: true });
   } catch {}
 
-  await sleep(500); // Allow LCP observer to settle
+  await sleep(500);
 
   const ttfb = nav ? nav.responseStart - nav.requestStart : 0;
 
@@ -87,13 +65,10 @@
   addMetric('step1_cwv', 'Cumulative Layout Shift (CLS)', round(cls, 3), 'score', 0.1, 'Visual layout stability');
   addMetric('step1_cwv', 'Total Blocking Time (TBT)', totalBlockingTime, 'ms', 150, 'Main thread block duration > 50ms');
 
-  // ==========================================
-  // STEP 2: DevTools Network & Critical Path
-  // ==========================================
   const resources = performance.getEntriesByType('resource');
   const totalTransferred = resources.reduce((acc, r) => acc + (r.transferSize || 0), 0);
   const totalDecoded = resources.reduce((acc, r) => acc + (r.decodedBodySize || 0), 0);
-  
+
   const thirdPartyReqs = resources.map(r => r.name).filter(u => /^https?:\/\//.test(u) && !u.startsWith(location.origin));
   const slowestResource = resources.slice().sort((a, b) => b.duration - a.duration)[0];
 
@@ -103,12 +78,8 @@
   addMetric('step2_network', 'Third-Party Requests', thirdPartyReqs.length, 'reqs', 0, thirdPartyReqs.length ? thirdPartyReqs.join(', ') : 'None (Strict Zero Telemetry)');
   addMetric('step2_network', 'Slowest Critical Resource', slowestResource ? slowestResource.duration : 0, 'ms', 250, slowestResource ? slowestResource.name.split('/').pop() : 'n/a');
 
-  // ==========================================
-  // STEP 3: Rendering & Main Thread Profiling
-  // ==========================================
   addMetric('step3_rendering', 'Long Tasks (>50ms)', longTasksCount, 'count', 2, 'Main thread stalling events');
-  
-  // Frame Rate & Render Throughput Test
+
   let frameStart = performance.now();
   let frameTime = 0;
   await new Promise(r => requestAnimationFrame(now => {
@@ -117,7 +88,6 @@
   }));
   addMetric('step3_rendering', 'Initial Frame Latency', frameTime, 'ms', 33.3, 'Target >= 30-60 FPS');
 
-  // Measure View Switch Throughput
   try {
     const tSwitch0 = performance.now();
     if (typeof ViewController !== 'undefined') {
@@ -129,18 +99,12 @@
     addMetric('step3_rendering', 'View Switching', 'FAILED', '', null, e.message);
   }
 
-  // ==========================================
-  // STEP 4: Server / Extension Load Timing
-  // ==========================================
   if (nav) {
     addMetric('step4_server_load', 'DOM Interactive', nav.domInteractive, 'ms', 300, 'DOM parsing complete');
     addMetric('step4_server_load', 'DOMContentLoaded', nav.domContentLoadedEventEnd, 'ms', 500, 'Scripts executed');
     addMetric('step4_server_load', 'Load Complete', nav.loadEventEnd, 'ms', 700, 'Page and subresources fully loaded');
   }
 
-  // ==========================================
-  // STEP 5: Storage & Query Analysis ("DB")
-  // ==========================================
   try {
     const tStorageRead0 = performance.now();
     const bag = await EXT.storage.local.get(['data', 'settings']);
@@ -160,7 +124,6 @@
       addMetric('step5_storage_db', 'Storage Footprint', bytesUsed / 1048576, 'MB', 20.0, 'Total storage.local footprint');
     }
 
-    // Wallpaper resolve benchmark
     const settings = bag.settings || {};
     if (settings.backgroundValue && String(settings.backgroundValue).startsWith('ref:')) {
       const tMedia0 = performance.now();
@@ -171,9 +134,6 @@
     addMetric('step5_storage_db', 'Storage Query Audit', 'FAILED', '', null, e.message);
   }
 
-  // ==========================================
-  // STEP 6: JS Heap, DOM Depth & Style Analysis
-  // ==========================================
   if (performance.memory) {
     addMetric('step6_js_dom', 'JS Heap Used', performance.memory.usedJSHeapSize / 1048576, 'MB', 30.0, 'Active memory allocation');
     addMetric('step6_js_dom', 'JS Heap Limit', performance.memory.jsHeapSizeLimit / 1048576, 'MB', null, 'Max allocation ceiling');
@@ -182,7 +142,6 @@
   const domNodes = document.getElementsByTagName('*').length;
   addMetric('step6_js_dom', 'DOM Node Count', domNodes, 'nodes', 1500, 'Total element count in document');
 
-  // DOM Max Depth
   const getDepth = el => el.children.length ? 1 + Math.max(...[...el.children].map(getDepth)) : 1;
   const maxDomDepth = getDepth(document.documentElement);
   addMetric('step6_js_dom', 'Max DOM Depth', maxDomDepth, 'levels', 15, 'Tree nesting complexity');
@@ -192,15 +151,12 @@
   }, 0);
   addMetric('step6_js_dom', 'CSS Style Rules', cssRules, 'rules', 3000, 'Loaded CSS rule count');
 
-  // ==========================================
-  // STEP 7: Fix & Measure (Performance Score Index)
-  // ==========================================
   const cwvPasses = report.step1_cwv.filter(m => m.verdict === 'PASS').length;
   const cwvTotal = report.step1_cwv.filter(m => m.verdict !== '').length;
-  
+
   const budgetPasses = report.step8_budgets.filter(m => m.verdict === 'PASS').length;
   const budgetTotal = report.step8_budgets.length;
-  
+
   const overallScore = Math.round((budgetPasses / Math.max(1, budgetTotal)) * 100);
 
   report.step7_scores = {
@@ -209,9 +165,6 @@
     status: overallScore >= 90 ? 'OPTIMAL (A+)' : overallScore >= 75 ? 'GOOD (B)' : 'NEEDS OPTIMIZATION'
   };
 
-  // ==========================================
-  // STEP 8: Report Generation & Formatting
-  // ==========================================
   const formatSection = (title, items) => {
     const lines = [title, '-'.repeat(70)];
     for (const item of items) {

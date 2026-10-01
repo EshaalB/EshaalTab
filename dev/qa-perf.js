@@ -1,20 +1,3 @@
-/* EshaalTab performance benchmark.
-
-   Lighthouse cannot audit a chrome-extension:// page, so this measures the same
-   class of metrics from inside the running new tab: paint timings, layout
-   stability, long tasks, storage latency, render throughput and memory.
-
-   A new tab page is opened dozens of times a day, so the number that matters
-   most is time-to-first-paint, not total load.
-
-   HOW TO RUN
-   1. Open a new tab (the EshaalTab page).
-   2. F12, Console tab.
-   3. Paste this whole file, press Enter.
-   4. Wait for "BENCHMARK COMPLETE" (about 8 seconds), then paste the report back.
-
-   Read-only. It writes one throwaway storage key and removes it. */
-
 (async () => {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const round = (n, d = 1) => Math.round(n * 10 ** d) / 10 ** d;
@@ -25,7 +8,6 @@
     rows.push({ metric, value: num, unit, budget: budget == null ? '' : budget, verdict, note: note || '' });
   };
 
-  // ---------- paint + navigation ----------
   const nav = performance.getEntriesByType('navigation')[0];
   const paints = Object.fromEntries(performance.getEntriesByType('paint').map(p => [p.name, p.startTime]));
   add('First Paint', paints['first-paint'] ?? 0, 'ms', 300, 'boot.js paints bg pre-CSS');
@@ -37,7 +19,6 @@
     add('DOM processing', nav.domComplete - nav.domInteractive, 'ms', 400);
   }
 
-  // ---------- largest contentful paint + layout shift ----------
   let lcp = 0, cls = 0, longTasks = 0, longTaskMs = 0;
   try {
     new PerformanceObserver(l => { for (const e of l.getEntries()) lcp = e.startTime; })
@@ -57,7 +38,6 @@
   add('Long tasks (>50ms)', longTasks, 'count', 2);
   add('Long task total', longTaskMs, 'ms', 200, 'main-thread blocking');
 
-  // ---------- payload ----------
   const res = performance.getEntriesByType('resource');
   const bytes = res.reduce((a, r) => a + (r.transferSize || 0), 0);
   const decoded = res.reduce((a, r) => a + (r.decodedBodySize || 0), 0);
@@ -71,7 +51,6 @@
   add('Slowest resource', slowest ? slowest.duration : 0, 'ms', 300,
     slowest ? slowest.name.split('/').pop().slice(0, 40) : '');
 
-  // ---------- memory + DOM ----------
   if (performance.memory) {
     add('JS heap used', performance.memory.usedJSHeapSize / 1048576, 'MB', 25);
     add('JS heap limit', performance.memory.jsHeapSizeLimit / 1048576, 'MB', null);
@@ -80,7 +59,6 @@
   add('Stylesheet rules', [...document.styleSheets].reduce((a, s) => { try { return a + s.cssRules.length; } catch { return a; } }, 0), 'count', 3000);
   add('Event listeners (approx)', typeof getEventListeners === 'function' ? 'devtools-only' : 'n/a', '', null);
 
-  // ---------- storage latency (the real cost on every new tab) ----------
   try {
     const t0 = performance.now();
     await EXT.storage.local.get(['data', 'settings']);
@@ -97,10 +75,9 @@
     }
   } catch (e) { add('storage.local read', 'FAILED', '', null, e.message); }
 
-  // ---------- app render throughput ----------
   const bench = (label, fn, n, budget) => {
     try {
-      fn(); // warm
+      fn();
       const t0 = performance.now();
       for (let i = 0; i < n; i++) fn();
       add(label, (performance.now() - t0) / n, 'ms', budget);
@@ -112,7 +89,6 @@
   bench('applyWidgetVisibility()', () => WidgetsRenderer.applyWidgetVisibility(), 30, 3);
   bench('searchAll("a")', () => BookmarkManager.searchAll('a'), 30, 5);
 
-  // renderBoards is rAF-driven, so measure the real frame cost
   try {
     const t0 = performance.now();
     BoardRenderer.renderBoards();
@@ -121,7 +97,6 @@
       `${BoardManager.getAll().length} boards / ${BoardManager.getAll().reduce((a, b) => a + (b.bookmarks || []).length, 0)} links`);
   } catch (e) { add('renderBoards()', 'FAILED', '', null, e.message); }
 
-  // ---------- view switching (perceived responsiveness) ----------
   try {
     const t0 = performance.now();
     for (const v of ['boards', 'notes', 'home']) ViewController.show(v);
@@ -129,7 +104,6 @@
     add('View switch x3', performance.now() - t0, 'ms', 60);
   } catch (e) { add('View switch', 'FAILED', '', null, e.message); }
 
-  // ---------- wallpaper cost ----------
   try {
     const s = StorageManager.getSettings();
     const wp = StorageManager.getData().wallpapers || [];
@@ -151,7 +125,6 @@
 
   await sleep(300);
 
-  // ---------- report ----------
   const w = [Math.max(...rows.map(r => r.metric.length), 6), 10, 6, 7, 7];
   const line = r => [
     r.metric.padEnd(w[0]),

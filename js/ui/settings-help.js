@@ -15,10 +15,6 @@
 
     return `
       <div class="st-container">
-        <div class="help-intro">
-          EshaalTab puts your boards, notes, focus timer and quick save on one page.
-          Here is how each part works.
-        </div>
 
         <div class="st-group-title">Save a page from anywhere</div>
         <div class="st-card help-card">
@@ -59,7 +55,7 @@
 
         <div class="st-group-title">Your data</div>
         <div class="st-card help-card">
-          ${item("Backup and restore", "In <b>Privacy &amp; data</b> you can export a full JSON backup, including locally stored wallpapers, restore one, or import from Chrome or Raindrop. Duplicate cleanup keeps the first copy of a repeated URL.")}
+          ${item("Backup and restore", "In <b>Privacy &amp; data</b> you can export a full JSON backup, including locally stored wallpapers, restore one, or import bookmarks from Chrome or from a CSV or JSON file. Duplicate cleanup keeps the first copy of a repeated URL.")}
           ${item("What leaves your browser", "Your boards and notes stay on your device. There is no EshaalTab account, analytics service or server. A search is sent only when you submit it to your chosen search or AI provider. A wallpaper URL contacts that site when you add it. <b>Load icons from the web</b> is off by default and contacts Google and DuckDuckGo when enabled. Weather contacts Open-Meteo after you set a city.")}
         </div>
       </div>`;

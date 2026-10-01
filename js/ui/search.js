@@ -7,7 +7,6 @@ const SearchRenderer = (() => {
   const searchSideBtn = $("searchSideBtn");
   let selIndex = -1;
 
-  /** Puts the one highlight on `index`, optionally scrolling it into view. */
   function selectAt(items, index, scroll = true) {
     if (!items.length) return;
     selIndex = Math.max(0, Math.min(items.length - 1, index));
@@ -31,7 +30,6 @@ const SearchRenderer = (() => {
   }
 
   function init() {
-    // The list's key handling, reachable from outside the field as well.
     let onInputKey = () => {};
 
     if (searchSideBtn) {
@@ -56,13 +54,10 @@ const SearchRenderer = (() => {
           e.preventDefault();
           moveSel(items, -1);
         } else if (e.key === "PageDown" || e.key === "PageUp") {
-          // A page at a time, without wrapping - wrapping on a jump lands
-          // somewhere unrelated to where you were heading.
           e.preventDefault();
           if (items.length)
             selectAt(items, (selIndex < 0 ? 0 : selIndex) + (e.key === "PageDown" ? 5 : -5));
         } else if ((e.ctrlKey || e.metaKey) && (e.key === "Home" || e.key === "End")) {
-          // Plain Home/End stay with the text field, where they move the caret.
           e.preventDefault();
           if (items.length) selectAt(items, e.key === "Home" ? 0 : items.length - 1);
         } else if (e.key === "Enter") {
@@ -88,11 +83,6 @@ const SearchRenderer = (() => {
     }
 
     if (resultsContainer) {
-      /* The pointer and the keyboard share one selection. Hover used to be a
-         second, independent highlight, so after arrowing down and nudging the
-         mouse two rows were lit and Enter went to the one you were not looking
-         at. Moving over a row now selects it; no scroll, since the row is
-         already under the pointer. */
       resultsContainer.addEventListener(
         "pointermove",
         (e) => {
@@ -122,9 +112,6 @@ const SearchRenderer = (() => {
         if (isOpen()) close();
         else open();
       } else if (isOpen()) {
-        // A click in the list moves focus off the field, and the arrow keys
-        // used to stop working until the field was clicked again. They now
-        // bring focus back and carry on moving through the results.
         if (
           input &&
           document.activeElement !== input &&
@@ -251,13 +238,13 @@ const SearchRenderer = (() => {
           desc: "Open the wallpaper controls",
           action: () => {
             close();
-            SettingsRenderer.openSideSheet("theme", "wallpaper");
+            SettingsRenderer.openSideSheet("wallpaper");
           },
         },
         {
           cmd: "/import",
           label: "Import bookmarks",
-          desc: "Import from Chrome or Raindrop",
+          desc: "Import from Chrome, CSV or JSON",
           action: () => {
             close();
             SettingsRenderer.openSideSheet("data");
@@ -269,7 +256,7 @@ const SearchRenderer = (() => {
           desc: "Choose what appears on Home",
           action: () => {
             close();
-            SettingsRenderer.openSideSheet("widgets");
+            SettingsRenderer.openSideSheet("home");
           },
         },
         {
@@ -451,9 +438,7 @@ const SearchRenderer = (() => {
     }
 
     const token = ++searchToken;
-    // `@` narrows the palette to boards and the links inside them - the
-    // browser's tabs and history are left out, which is what makes it the
-    // quick way to find something you saved rather than something you saw.
+
     if (trimmed.startsWith("@")) renderMixed(trimmed.slice(1).trim(), token, "boards");
     else renderMixed(trimmed, token);
   }
@@ -569,10 +554,6 @@ const SearchRenderer = (() => {
     ]);
     const history = hist.filter((h) => !seen.has(h.url));
 
-    // Something to do with whatever was typed, even when nothing saved
-    // matches: a web address can be opened and any text searched for. The
-    // palette used to answer "github.com" with "No results", which left the
-    // mouse and the browser's address bar as the only way on.
     const looksLikeUrl =
       !/\s/.test(trimmed) &&
       (/^https?:\/\//i.test(trimmed) ||
@@ -599,7 +580,6 @@ const SearchRenderer = (() => {
           ]
         : [];
 
-    // Search across every note tab, not just the active one.
     const noteHits =
       !boardsOnly && typeof NotesManager !== "undefined"
         ? NotesManager.list()
@@ -675,10 +655,7 @@ const SearchRenderer = (() => {
     );
 
     const items = [...resultsContainer.querySelectorAll(".search-result-item")];
-    // The first result is selected on arrival. Enter already opened it, so the
-    // highlight only makes visible what the key was going to do anyway - and
-    // the first ArrowDown now moves to the second result instead of spending a
-    // press on selecting the first.
+
     if (items.length) selectAt(items, selIndex < 0 ? 0 : selIndex, false);
     else selIndex = -1;
 
@@ -701,12 +678,7 @@ const SearchRenderer = (() => {
           const noteId = el.dataset.noteId;
           if (noteId && noteId !== NotesManager.getActiveId())
             NotesRenderer.switchTo(noteId);
-          const area = $("notesArea");
-          if (area) {
-            const idx = area.value.toLowerCase().indexOf(trimmed.toLowerCase());
-            area.focus();
-            if (idx >= 0) area.setSelectionRange(idx, idx + trimmed.length);
-          }
+          $("notesArea")?.focus();
           return;
         } else if (el.dataset.act === "board") {
           close();

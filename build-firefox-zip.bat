@@ -19,7 +19,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$zipStream = [System.IO.File]::Open($destPath, [System.IO.FileMode]::Create);" ^
   "$archive = New-Object System.IO.Compression.ZipArchive($zipStream, [System.IO.Compression.ZipArchiveMode]::Create);" ^
   "[System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, (Join-Path $rootDir 'manifest.firefox.json'), 'manifest.json') | Out-Null;" ^
-  "$excludeDirs = @('.git', '.github', '.claude', '.impeccable', '.vscode', 'node_modules', 'dev', 'release-zips');" ^
+  "$excludeDirs = @('.git', '.github', '.claude', '.impeccable', '.vscode', 'node_modules', 'dev', 'release-zips', 'screenshot-gen');" ^
   "$excludeFiles = @('.gitignore', '.DS_Store', 'Thumbs.db', 'manifest.json', 'manifest.firefox.json', 'build-zip.bat', 'build-firefox-zip.bat');" ^
   "$shipped = 1;" ^
   "Get-ChildItem -Path $rootDir -Recurse -File | ForEach-Object {" ^

@@ -31,7 +31,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "  $zipStream = [System.IO.File]::Open($destPath, [System.IO.FileMode]::Create);" ^
   "  $archive = New-Object System.IO.Compression.ZipArchive($zipStream, [System.IO.Compression.ZipArchiveMode]::Create);" ^
   "  $rootDir = (Get-Location).Path;" ^
-  "  $excludeDirs = @('.git', '.github', '.claude', '.impeccable', '.vscode', 'node_modules', 'dev', 'release-zips');" ^
+  "  $excludeDirs = @('.git', '.github', '.claude', '.impeccable', '.vscode', 'node_modules', 'dev', 'release-zips', 'screenshot-gen');" ^
   "  $excludeFiles = @('.gitignore', '.DS_Store', 'Thumbs.db', 'build-zip.bat', 'build-firefox-zip.bat', 'manifest.firefox.json');" ^
   "  $excludeGlobs = @('*.zip', '*.md');" ^
   "  $shipped = 0; $skipped = 0;" ^

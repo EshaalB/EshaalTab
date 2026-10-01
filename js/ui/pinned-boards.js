@@ -1,14 +1,5 @@
 "use strict";
 
-/**
- * Pinned boards on Home.
- *
- * Any board can be pinned from its menu. Pinned boards open from a board button
- * at the end of the pinned links: a panel with a tab per board and that board's
- * links in a grid, so a whole set of links - every AI tool, every social site -
- * is two clicks away without taking room from the clock and the search bar.
- * Pinned links stay the one-click row; this is for the sets.
- */
 const PinnedBoards = (() => {
   const MAX_PINNED = 6;
   let activeId = null;
@@ -22,16 +13,8 @@ const PinnedBoards = (() => {
 
   const isPinned = (id) => !!BoardManager.find(id)?.pinnedToHome;
 
-  // What the panel shows: the pinned boards, or - until any are pinned -
-  // every board. Opening it goes straight to a board's heading and its links;
-  // an earlier version first showed a list of boards to pin, so seeing any
-  // links at all took a second click.
-  const shown = () => {
-    const list = pinned();
-    return list.length ? list : BoardManager.getAll().slice(0, MAX_PINNED);
-  };
+  const shown = () => pinned();
 
-  /** @returns {boolean|null} The new state, or null when nothing changed. */
   function togglePin(id) {
     const board = BoardManager.find(id);
     if (!board) return null;
@@ -48,14 +31,6 @@ const PinnedBoards = (() => {
 
   const isOpen = () => !!panelEl()?.classList.contains("open");
 
-  /**
-   * Closes the panel when the feature is off, and repaints it if it is open.
-   *
-   * The button follows the setting alone. It used to stay hidden until a board
-   * had been pinned, so switching the feature on showed nothing at all - and
-   * the only way to pin was a menu on another page nobody had reason to open.
-   * With nothing pinned yet, the panel offers the boards to pin instead.
-   */
   function render() {
     if (!enabled()) {
       close();
@@ -66,16 +41,22 @@ const PinnedBoards = (() => {
     if (isOpen()) paint();
   }
 
-  /** With no boards at all there is nothing to show but the way to make one. */
   function paintEmpty(panel) {
+    const boards = BoardManager.getAll();
+    const rows = boards.length
+      ? boards
+          .map(
+            (b) =>
+              `<button type="button" class="et-pb-pick-row" data-act="pin" data-board="${escapeHtml(b.id)}"><span class="et-pb-pick-name">${escapeHtml(b.name)}</span><span class="et-pb-pick-meta">Pin</span></button>`,
+          )
+          .join("")
+      : `<button type="button" class="et-pb-pick-row" data-act="go-boards"><span class="et-pb-pick-name">Go to Boards</span></button>`;
     setSafeHTML(
       panel,
       `
-      <div class="et-pb-head"><div class="et-pb-title">Pinned boards</div></div>
-      <div class="et-pb-intro">Make a board, and its links will open from here.</div>
-      <div class="et-pb-pick">
-        <button type="button" class="et-pb-pick-row" data-act="go-boards"><span class="et-pb-pick-name">Go to Boards</span></button>
-      </div>`,
+      <div class="et-pb-head"><div class="et-pb-title">Pin a board</div></div>
+      <div class="et-pb-intro">${boards.length ? "Pinned boards open right here on Home." : "Make a board first, then pin it here."}</div>
+      <div class="et-pb-pick">${rows}</div>`,
     );
   }
 
@@ -129,9 +110,7 @@ const PinnedBoards = (() => {
     PopoverRegistry.closeAll("pinned-boards");
     paint();
     panel.classList.add("open");
-    // Hung off the button wherever the pinned links are - under the search
-    // bar, down a side or along the bottom - and flipped above it in the
-    // lower half of the window.
+
     PopoverRegistry.position(panel, btn, {
       width: Math.min(480, window.innerWidth - 48),
     });
@@ -164,16 +143,20 @@ const PinnedBoards = (() => {
     const panel = panelEl();
     if (bound || !panel) return;
     bound = true;
-    // The button is rebuilt with the pinned links, so it is wired there; a
-    // resize would leave the panel hanging off where the button used to be.
+
     window.addEventListener("resize", () => close(), { passive: true });
 
     panel.addEventListener("click", (e) => {
-      // Picking a board or switching tabs repaints the panel, so by the time
-      // the click reaches the page's outside-click check its target is no
-      // longer inside the panel - and the panel closed on its own tab click.
-      // Handled clicks stop here instead.
-      if (e.target.closest(".et-pb-tab")) e.stopPropagation();
+      if (e.target.closest(".et-pb-tab, .et-pb-pick-row")) e.stopPropagation();
+      const pick = e.target.closest('[data-act="pin"]');
+      if (pick) {
+        if (togglePin(pick.dataset.board)) {
+          activeId = pick.dataset.board;
+          paint();
+          panel.querySelector(".et-pb-tab.is-active")?.focus();
+        }
+        return;
+      }
       if (e.target.closest('[data-act="go-boards"]')) {
         close();
         ViewController.show("boards");
@@ -191,7 +174,7 @@ const PinnedBoards = (() => {
         BoardRenderer.reveal(id);
         return;
       }
-      // A link navigates as a link does; the panel just gets out of the way.
+
       if (e.target.closest(".et-pb-link")) close();
     });
 
@@ -221,7 +204,7 @@ const PinnedBoards = (() => {
         panel.querySelector(".et-pb-link")?.focus();
         return;
       }
-      // The links are a two-column grid, and the arrows move through it.
+
       const link = e.target.closest?.(".et-pb-link");
       const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -2, ArrowDown: 2 }[e.key];
       if (link && step) {

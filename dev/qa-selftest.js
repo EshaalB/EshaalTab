@@ -1,20 +1,3 @@
-/* EshaalTab in-extension self test.
-
-   Everything Claude can test over http:// runs with HAS_EXT === false, so the
-   entire chrome.* surface (storage, tabs, bookmarks, history, favicons, the
-   service worker) is never exercised. This script runs INSIDE the installed
-   extension and reports on exactly that gap.
-
-   HOW TO RUN
-   1. Open a new tab (the EshaalTab page).
-   2. Press F12, open the Console tab.
-   3. Paste this whole file, press Enter.
-   4. Wait for "REPORT COMPLETE", then copy everything from the START marker
-      down and paste it back to Claude.
-
-   It is read-mostly: it writes one throwaway key (__qa_probe) and removes it.
-   Your boards, notes and settings are not touched. */
-
 (async () => {
   const R = [];
   const t = (name, pass, detail) => R.push({ name, pass: pass === true, skip: pass === 'skip', detail: detail == null ? '' : String(detail) });
@@ -28,14 +11,12 @@
   const onRej = e => noise.push('REJECTION: ' + (e.reason && e.reason.message || e.reason));
   addEventListener('error', onErr); addEventListener('unhandledrejection', onRej);
 
-  // ---------- environment ----------
   t('running on chrome-extension://', location.protocol === 'chrome-extension:', location.protocol);
   t('EXT bridge resolved', typeof EXT !== 'undefined' && !!EXT);
   t('HAS_EXT true', typeof HAS_EXT !== 'undefined' && HAS_EXT === true);
   const V = (EXT && EXT.runtime && EXT.runtime.getManifest) ? EXT.runtime.getManifest().version : '?';
   t('manifest version readable', V !== '?', V);
 
-  // ---------- storage.local ----------
   try {
     await EXT.storage.local.set({ __qa_probe: { n: 1, s: 'x' } });
     const got = (await EXT.storage.local.get('__qa_probe')).__qa_probe;
@@ -52,14 +33,12 @@
     t('local storage usage', true, bytes == null ? 'n/a' : (bytes / 1048576).toFixed(2) + ' MB');
   } catch (e) { t('real data present', false, e.message); }
 
-  // ---------- storage.sync (8KB per item is the usual failure) ----------
   try {
     const syncBag = await EXT.storage.sync.get('settings');
     const size = new Blob([JSON.stringify(syncBag.settings || {})]).size;
     t('sync settings under 8KB quota', size < 8192, size + ' bytes');
   } catch (e) { t('storage.sync readable', false, e.message); }
 
-  // ---------- permissions-backed APIs ----------
   for (const [label, fn] of [
     ['tabs.query', () => EXT.tabs.query({})],
     ['history.search', () => EXT.history.search({ text: '', maxResults: 1, startTime: 0 })],
@@ -69,7 +48,6 @@
     catch (e) { t(label, false, e.message); }
   }
 
-  // ---------- favicon service ----------
   try {
     const u = extFaviconUrl('https://github.com');
     t('_favicon URL built', /^chrome-extension:\/\/.*_favicon\//.test(u), u.slice(0, 60));
@@ -77,13 +55,11 @@
     t('_favicon actually loads', ok);
   } catch (e) { t('_favicon URL built', false, e.message); }
 
-  // ---------- service worker ----------
   try {
     const res = await new Promise(r => { EXT.runtime.sendMessage({ __qa: 'ping' }, () => r(!EXT.runtime.lastError || EXT.runtime.lastError.message)); setTimeout(() => r('timeout'), 2000); });
     t('service worker reachable', res === true || /Receiving end does not exist/.test(res), String(res).slice(0, 60));
   } catch (e) { t('service worker reachable', false, e.message); }
 
-  // ---------- wallpaper: the part Claude cannot see ----------
   try {
     const s = StorageManager.getSettings();
     const d = StorageManager.getData();
@@ -92,9 +68,6 @@
     const wp = d.wallpapers || [];
     t('saved wallpapers <= 5', wp.length <= 5, wp.length + ' saved');
 
-    /* A wallpaper is either an uploaded file (stored as ref: -> data URL) or a
-       remote URL the user pasted. Both are valid; only an unresolved ref: or an
-       empty value is a real failure. */
     let uploaded = 0, remote = 0; const broken = [];
     for (const w of wp) {
       const src = await StorageManager.resolveMedia(w.value);
@@ -120,7 +93,6 @@
     } else { t('background layer active', 'skip', 'solid mode'); }
   } catch (e) { t('wallpaper checks', false, e.message); }
 
-  // ---------- widgets / pins ----------
   try {
     const s = StorageManager.getSettings();
     t('widget flags', true, JSON.stringify(s.widgets));
@@ -130,7 +102,6 @@
     t('pin opens in new tab', !pin || pin.getAttribute('target') === '_blank', pin ? pin.getAttribute('target') : 'no pins');
   } catch (e) { t('widget flags', false, e.message); }
 
-  // ---------- contrast ----------
   try {
     const cs = getComputedStyle(document.documentElement);
     const hex = h => { h = h.trim().replace('#', ''); if (h.length === 3) h = h.split('').map(x => x + x).join(''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };

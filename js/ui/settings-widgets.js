@@ -13,6 +13,14 @@
     applyWallpaperBlur,
   } = S;
   const renderSideSheetContent = (...a) => S.renderSideSheetContent(...a);
+
+  const currentInk = () => {
+    const style = getComputedStyle(document.body);
+    const wp = document.body.classList.contains("wallpaper-mode")
+      ? style.getPropertyValue("--wp-ink").trim()
+      : "";
+    return Contrast.toHex(Contrast.toRgb(wp || style.getPropertyValue("--text").trim() || "#ffffff"));
+  };
   const paintNextFrame = S.createFrameScheduler();
 
   function bindWidgetEvents() {
@@ -44,8 +52,7 @@
       const row = $("stWpOverlayOpacityRow");
       if (row) row.style.display = e.target.checked ? "flex" : "none";
       StorageManager.saveSettings();
-      // The wallpaper analysis folds the scrim into the ground it picks ink
-      // against, so dimming has to re-run the whole theme, not just the layer.
+
       applyTheme();
     });
 
@@ -191,7 +198,41 @@
       StorageManager.save();
       WidgetsRenderer.applyClockAppearance(live());
       renderSideSheetContent();
-      ToastSystem.info("Clock follows the accent colour again");
+      ToastSystem.info("Clock uses the default text colour again");
+    });
+
+    [
+      ["stClockScale", "clockScale"],
+      ["stGreetingScale", "greetingScale"],
+      ["stMetaScale", "metaScale"],
+    ].forEach(([id, key]) => {
+      $(id)?.addEventListener("input", (e) => {
+        live()[key] = parseInt(e.target.value, 10);
+        const label = $(`${id}Val`);
+        if (label) label.textContent = `${e.target.value}%`;
+        StorageManager.save();
+        paintNextFrame("clock-style", () =>
+          WidgetsRenderer.applyClockAppearance(live()),
+        );
+      });
+    });
+
+    [
+      ["stGreetingColor", "greetingColor"],
+      ["stMetaColor", "metaColor"],
+    ].forEach(([id, key]) => {
+      $(id)?.addEventListener("input", (e) => {
+        live()[key] = e.target.value;
+        StorageManager.save();
+        paintNextFrame("clock-style", () =>
+          WidgetsRenderer.applyClockAppearance(live()),
+        );
+      });
+      $(`${id}Reset`)?.addEventListener("click", () => {
+        live()[key] = "";
+        StorageManager.save();
+        WidgetsRenderer.applyClockAppearance(live());
+      });
     });
 
     $("stWpShadowOpacity")?.addEventListener("input", (e) => {
@@ -222,8 +263,7 @@
     WidgetsRenderer.attachCityPicker($("stWeatherCity"), {
       onPick: () => $("stWeatherApplyBtn")?.click(),
     });
-    // Enter with no list open saves what is typed. The picker takes Enter
-    // first when a list is showing, and marks it handled.
+
     $("stWeatherCity")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.defaultPrevented) $("stWeatherApplyBtn")?.click();
     });
@@ -240,9 +280,7 @@
 
   function render(settings, data) {
     const w = settings.widgets || {};
-    // Text halos and every wallpaper control below are wallpaper-only - solid
-    // mode strips every text-shadow in CSS and has no picture to crop - so on a
-    // solid background they would move stored numbers that nothing reads.
+
     const hasWallpaper = ["image", "video"].includes(settings.backgroundType);
     return `
         <div class="st-container">
@@ -323,8 +361,8 @@
                   <input type="range" class="se-slider" id="stWpVignetteAmount" min="0" max="100" step="5" value="${settings.wallpaperVignetteAmount ?? 45}" />
                 </div>
 
-                <label class="st-row" style="cursor:pointer;"><span class="st-label">Soften wallpaper</span><input type="checkbox" id="stWpBlurToggle" ${settings.wallpaperBlur ? "checked" : ""} /></label>
-                <div class="st-hint">Blurs the wallpaper so text stands out.</div>
+                <label class="st-row" style="cursor:pointer;"><span class="st-label">Soften wallpaper on Home</span><input type="checkbox" id="stWpBlurToggle" ${settings.wallpaperBlur ? "checked" : ""} /></label>
+                <div class="st-hint">Blurs the wallpaper on Home so text stands out. Boards and Notes always use a light blur so your content stays in focus.</div>
                 <div id="stWpBlurAmountRow" style="display:${settings.wallpaperBlur ? "flex" : "none"}; flex-direction:column; gap:6px;">
                   <div class="se-label" style="display:flex; justify-content:space-between;"><span>Softness</span><span id="stWpBlurAmountVal" data-slider-val="stWpBlurAmount" data-slider-suffix="%">${settings.wallpaperBlurAmount ?? 40}%</span></div>
                   <input type="range" class="se-slider" id="stWpBlurAmount" min="0" max="100" step="1" value="${settings.wallpaperBlurAmount ?? 40}" />
@@ -347,7 +385,7 @@
 
           <div class="st-accordion is-expanded" data-page="home">
             <button class="st-accordion-header" type="button">
-              <span class="st-group-title">Clock and text</span>
+              <span class="st-group-title">Clock, greeting and date</span>
               <svg class="st-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
             </button>
             <div class="st-accordion-body">
@@ -389,18 +427,8 @@
               <label class="st-label" for="stClockFont">Clock font</label>
               ${CustomSelect.render({
                 id: "stClockFont",
-                value: settings.clockFont || "system",
-                options: [
-                  { value: "system", label: "System" },
-                  { value: "outfit", label: "Outfit" },
-                  { value: "thin", label: "Thin (iOS style)" },
-                  { value: "light", label: "Light (Android style)" },
-                  { value: "default", label: "Digital (Orbitron)" },
-                  { value: "app", label: "Match app font" },
-                  { value: "serif", label: "Serif" },
-                  { value: "mono", label: "Monospace" },
-                  { value: "handwriting", label: "Handwriting" },
-                ],
+                value: clockFont(settings.clockFont).value,
+                options: CLOCK_FONTS.map(({ value, label }) => ({ value, label })),
                 style: "width:220px;",
               })}
             </div>
@@ -408,9 +436,35 @@
               <label class="st-label" for="stClockColor">Clock colour</label>
               <div style="display:flex; align-items:center; gap:6px;">
                 <input type="color" id="stClockColor" class="st-color"
-                       value="${/^#[0-9a-f]{6}$/i.test(settings.clockColor || "") ? settings.clockColor : effectiveAccent()}" />
-                <button id="stClockColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Use accent</button>
+                       value="${/^#[0-9a-f]{6}$/i.test(settings.clockColor || "") ? settings.clockColor : currentInk()}" />
+                <button id="stClockColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Default</button>
               </div>
+            </div>
+            <div class="st-slider-row">
+              <div class="se-label"><span>Clock size</span> <span id="stClockScaleVal">${settings.clockScale ?? 100}%</span></div>
+              <input type="range" class="se-slider" id="stClockScale" min="60" max="130" step="5" value="${settings.clockScale ?? 100}" />
+            </div>
+            <div class="st-row">
+              <label class="st-label" for="stGreetingColor">Greeting colour</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="color" id="stGreetingColor" class="st-color" value="${/^#[0-9a-f]{6}$/i.test(settings.greetingColor || "") ? settings.greetingColor : currentInk()}" />
+                <button id="stGreetingColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Auto</button>
+              </div>
+            </div>
+            <div class="st-slider-row">
+              <div class="se-label"><span>Greeting size</span> <span id="stGreetingScaleVal">${settings.greetingScale ?? 100}%</span></div>
+              <input type="range" class="se-slider" id="stGreetingScale" min="70" max="150" step="5" value="${settings.greetingScale ?? 100}" />
+            </div>
+            <div class="st-row">
+              <label class="st-label" for="stMetaColor">Date and weather colour</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="color" id="stMetaColor" class="st-color" value="${/^#[0-9a-f]{6}$/i.test(settings.metaColor || "") ? settings.metaColor : currentInk()}" />
+                <button id="stMetaColorReset" class="st-action-btn st-icon-reset" style="padding:6px 10px;">Auto</button>
+              </div>
+            </div>
+            <div class="st-slider-row">
+              <div class="se-label"><span>Date and weather size</span> <span id="stMetaScaleVal">${settings.metaScale ?? 100}%</span></div>
+              <input type="range" class="se-slider" id="stMetaScale" min="70" max="150" step="5" value="${settings.metaScale ?? 100}" />
             </div>`
                 : ""
             }
