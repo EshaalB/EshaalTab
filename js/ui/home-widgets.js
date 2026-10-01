@@ -330,9 +330,6 @@ const WidgetsRenderer = (() => {
           ${optionsHtml}
         </div>
         <input type="text" class="et-search-input" id="nsbInput" aria-label="Search or type a URL" placeholder="${hintFor(currentEngineKey)}" autocomplete="off" spellcheck="false" />
-        <button class="et-search-btn et-search-submit" id="nsbSearchBtn" title="Search" aria-label="Search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
       </div>`,
     );
     wireFavicons(bar);
@@ -340,7 +337,6 @@ const WidgetsRenderer = (() => {
     const input = $("nsbInput");
     const logoBtn = $("nsbEngLogo");
     const menu = $("nsbEngMenu");
-    const searchBtn = $("nsbSearchBtn");
 
     bar.onmousedown = (e) => {
       if (input && !e.target.closest("button, .nsb-eng-menu")) {
@@ -575,16 +571,6 @@ const WidgetsRenderer = (() => {
       else window.location.assign(targetUrl);
       input.value = "";
     };
-
-    if (searchBtn) {
-      searchBtn.addEventListener("click", executeSearch);
-      searchBtn.addEventListener("auxclick", (e) => {
-        if (e.button === 1) {
-          e.preventDefault();
-          executeSearch(e);
-        }
-      });
-    }
 
     if (input) {
       input.addEventListener("keydown", (e) => {

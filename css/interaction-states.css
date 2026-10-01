@@ -591,16 +591,6 @@ img.is-fallback {
   border: var(--border-tactile);
 }
 
-.et-search-pill {
-  border: var(--border-tactile);
-  background: var(--surface-search);
-}
-
-.et-search-pill:hover,
-.et-search-pill:focus-within {
-  border-color: var(--accent-color);
-}
-
 .et-board-card:hover {
   border-color: color-mix(in srgb, var(--board-accent) 45%, transparent);
 }

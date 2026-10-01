@@ -66,11 +66,11 @@ body.solid-mode .et-topbar .et-topbar-btn:hover svg {
   stroke: var(--accent-ink, var(--accent-color));
 }
 
-body.solid-mode .et-search-btn:not(.et-search-submit) {
+body.solid-mode .et-search-btn {
   color: var(--accent-ink, var(--accent-color));
 }
 
-body.solid-mode .et-search-btn:not(.et-search-submit) svg {
+body.solid-mode .et-search-btn svg {
   stroke: var(--accent-ink, var(--accent-color));
 }
 
