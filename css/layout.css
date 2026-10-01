@@ -1539,7 +1539,7 @@ body.wallpaper-mode.pins-plate .dock-pin-add .dock-pin-icon {
 
 .dock-pin-add .dock-pin-icon {
   background: rgba(var(--wp-ink-rgb, 255, 255, 255), 0.12) !important;
-  border: 1.5px dashed
+  border: 1.5px solid
     color-mix(
       in srgb,
       var(--accent-on-wp, var(--accent-ink, #6366f1)) 72%,

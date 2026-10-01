@@ -131,31 +131,14 @@
   position: relative;
 }
 
-.et-notes-binder-strip {
-  position: absolute;
-  top: 0;
-  inset-inline: 0;
-  height: 22px;
-  background: rgba(0, 0, 0, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: space-evenly;
-}
 
-.et-notes-binder-hole {
-  width: 9px;
-  height: 9px;
-  border-radius: var(--r-pill);
-  background: rgba(0, 0, 0, 0.35);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
-}
 
 .et-notes-header,
 .et-clip-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 28px var(--sp-6) var(--sp-3);
+  padding: var(--sp-4) var(--sp-6) var(--sp-3);
   border-bottom: 1px solid var(--border-soft);
 }
 
@@ -272,9 +255,9 @@
 
 .et-notes-tab-add {
   flex: 0 0 auto;
-  border: 1px dashed var(--border-soft);
+  border: 1px solid var(--border-soft);
   border-radius: var(--r-sm);
-  background: transparent;
+  background: var(--surface);
   color: var(--text-dim);
   font-family: inherit;
   font-size: var(--fs-xs);

@@ -671,7 +671,7 @@ body.radius-sharp .et-set-panel {
 }
 
 .st-surface-auto:disabled {
-  border-style: dashed;
+  border-style: solid;
   cursor: default;
 }
 
@@ -939,7 +939,7 @@ body.radius-sharp .et-set-panel {
   padding: var(--sp-2) var(--sp-4);
   border-radius: var(--r-sm);
   background: var(--surface-3);
-  border: 1px dashed var(--border-soft);
+  border: 1px solid var(--border-soft);
   color: var(--text);
   font-size: var(--fs-xs);
   font-weight: 600;
