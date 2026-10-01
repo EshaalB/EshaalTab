@@ -1529,7 +1529,7 @@ const HomeRenderer = (() => {
   const GRIP_SVG =
     '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="2.5" cy="3" r="1.4"/><circle cx="7.5" cy="3" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13" r="1.4"/><circle cx="7.5" cy="13" r="1.4"/></svg>';
   const chevronSvg = (up) =>
-    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="${up ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}"/></svg>`;
+    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="${up ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}"/></svg>`;
 
   function openTodoModal() {
     showCustomModal(
@@ -1908,7 +1908,7 @@ const HomeRenderer = (() => {
       btn.setAttribute("data-tooltip", "Pinned boards");
       setSafeHTML(
         btn,
-        `<span class="dock-pin-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v8"/><path d="M12 7.5v4.5"/><path d="M16 7.5v6.5"/></svg></span>`,
+        `<span class="dock-pin-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v8"/><path d="M12 7.5v4.5"/><path d="M16 7.5v6.5"/></svg></span>`,
       );
       btn.addEventListener("click", (e) => PinnedBoards.toggle(e.detail === 0));
       frag.appendChild(btn);

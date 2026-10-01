@@ -612,7 +612,7 @@ const SettingsRenderer = (() => {
             '<span class="st-picker-preview"></span>' +
             '<input type="text" class="st-picker-hex" maxlength="7" spellcheck="false" aria-label="Hex colour" />' +
             '<button type="button" class="st-picker-drop" title="Pick a colour: click, or drag this onto what you want" aria-label="Pick a colour from the page">' +
-            '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+            '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
             '<path d="m2 22 1.5-1.5h3l8-8"/><path d="M3.5 20.5v-3l8-8"/>' +
             '<path d="m14.5 6.5 3.2-3.2a2.1 2.1 0 1 1 3 3L17.5 9.5l.5.5a2 2 0 0 1-2.8 2.8l-4-4A2 2 0 0 1 14 6l.5.5Z"/></svg></button>' +
             "</div>" +

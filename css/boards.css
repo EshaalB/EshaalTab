@@ -452,7 +452,10 @@ body.theme-light .et-board-card:not(.has-own-color) {
 .et-board-tile-icon {
   width: 28px;
   height: 28px;
+  padding: 3px;
+  box-sizing: border-box;
   border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--board-ink, currentColor) 8%, transparent);
   object-fit: contain;
   flex-shrink: 0;
   transition: transform var(--dur-2) var(--ease-out);

@@ -1215,7 +1215,7 @@ const BoardRenderer = (() => {
         <div class="et-board-card-left">
           <button class="et-board-chevron" aria-expanded="${isExpanded}"
                   aria-label="${isExpanded ? "Collapse" : "Expand"} board ${escapeHtml(board.name)}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <span class="et-board-card-title">${escapeHtml(board.name)}</span>
           ${board.pinnedToHome ? `<span class="et-board-pinned" data-tooltip="Pinned to Home" role="img" aria-label="Pinned to Home">${icon("pinFilled", 12)}</span>` : ""}
@@ -1509,7 +1509,7 @@ function showConfirm(title, messageText, onConfirm, opts = {}) {
     tone === "danger",
     null,
     `<span class="dialog-icon is-${tone}" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
            stroke-linecap="round" stroke-linejoin="round">${glyph}</svg>
     </span>`,
   );

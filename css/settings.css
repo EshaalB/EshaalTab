@@ -452,7 +452,11 @@ body.radius-sharp .et-set-panel {
 
 .et-set-nav-item.is-active {
   background: color-mix(in srgb, var(--accent-color) 10%, transparent);
-  color: var(--accent-ink, var(--accent-color));
+  color: color-mix(
+    in srgb,
+    var(--accent-ink, var(--accent-color)) 72%,
+    var(--text)
+  );
   font-weight: var(--fw-semi);
 }
 
@@ -578,6 +582,28 @@ body.radius-sharp .et-set-panel {
 }
 .st-slider-row .se-slider {
   width: 100%;
+}
+
+.st-privacy-note {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+
+.st-privacy-note strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.st-privacy-note svg {
+  flex: 0 0 16px;
+  margin-top: 1px;
+  color: var(--accent-ink, var(--accent-color));
 }
 
 .st-row {
