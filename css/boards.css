@@ -251,8 +251,8 @@ body.theme-light .et-board-card:not(.has-own-color) {
 
 .board-pin-badge {
   position: absolute;
-  top: 1px;
-  right: 1px;
+  top: 2px;
+  right: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -320,9 +320,18 @@ body.theme-light .et-board-card:not(.has-own-color) {
 }
 
 .board-pin-badge svg {
-  width: 13px;
-  height: 13px;
+  width: 10px;
+  height: 10px;
   display: block;
+  opacity: 0.75;
+}
+
+.board-pin-badge.is-pinned svg {
+  opacity: 1;
+}
+
+.et-board-tile:not(:hover) .board-pin-badge:not(.is-pinned) {
+  opacity: 0;
 }
 
 .et-board-card-right {
@@ -709,6 +718,5 @@ html.is-lite body.wallpaper-mode.boards-glass .et-board-card {
 }
 
 .et-board-card {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 280px;
+  contain: layout paint style;
 }
