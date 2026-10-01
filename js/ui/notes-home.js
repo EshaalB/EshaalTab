@@ -1855,6 +1855,7 @@ const HomeRenderer = (() => {
         <span class="dock-pin-icon">
           <img class="dock-pin-fav" ${faviconAttr(bm.url)} alt="" width="26" height="26" />
         </span>
+        <span class="dock-pin-label">${escapeHtml(pinName)}</span>
       `,
       );
       wireFavicons(a);

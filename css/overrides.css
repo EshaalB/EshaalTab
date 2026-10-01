@@ -149,3 +149,45 @@ body.solid-mode .et-board-card:hover {
 body.solid-mode .dock-pin-menu-btn {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
+
+/* The pin dock earns its place: a chip you can see on a pale page, and a
+   name under it so the row carries information rather than six circles. */
+body.solid-mode .dock-pin-icon {
+  background: color-mix(in srgb, var(--accent-ink, var(--text)) 11%, transparent);
+}
+
+body.solid-mode .dock-pin-wrap:hover .dock-pin-icon {
+  background: color-mix(in srgb, var(--accent-ink, var(--text)) 18%, transparent);
+}
+
+.dock-pin-label {
+  display: block;
+  max-width: calc(68px * var(--ui-scale));
+  margin-top: calc(6px * var(--ui-scale));
+  overflow: hidden;
+  color: var(--wp-ink-mid, var(--text-dim));
+  font-size: calc(11px * var(--ui-scale));
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.wallpaper-mode .dock-pin-label {
+  text-shadow: 0 1px 3px rgba(var(--wp-shadow-rgb, 0, 0, 0), 0.55);
+}
+
+body:is(.pins-pos-left, .pins-pos-right) .dock-pin-label {
+  display: none;
+}
+
+/* A board pinned to Home reads as pinned on the board itself. */
+body.solid-mode .et-board-card.is-pinned-board {
+  box-shadow: inset 0 0 0 1.5px
+    color-mix(
+      in srgb,
+      var(--board-accent) calc(var(--board-ring) + 22%),
+      transparent
+    );
+}

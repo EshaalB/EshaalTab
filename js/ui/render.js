@@ -764,7 +764,9 @@ const BoardRenderer = (() => {
 
     const floor = measureMinColW();
     const colW = Math.max(floor, Math.min(preferredWidth, areaWidth - 24));
-    const numCols = Math.max(1, Math.floor((areaWidth + 16) / (colW + 16)));
+    const fits = Math.max(1, Math.floor((areaWidth + 16) / (colW + 16)));
+    const boardCount = (BoardManager.getAll() || []).length;
+    const numCols = Math.max(1, Math.min(fits, boardCount + 1));
     return { colW, numCols, measured: realWidth > 0 };
   }
 
@@ -1198,6 +1200,8 @@ const BoardRenderer = (() => {
     acc.setAttribute("data-id", board.id);
     acc.setAttribute("draggable", "true");
     acc.classList.toggle("hide-titles", !!board.hideTitles);
+
+    acc.classList.toggle("is-pinned-board", !!board.pinnedToHome);
 
     if (board.color) {
       acc.classList.add("has-own-color");
