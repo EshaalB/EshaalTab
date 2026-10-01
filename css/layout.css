@@ -1153,9 +1153,9 @@ body.wallpaper-mode .et-search-pill:hover {
 
 body.wallpaper-mode .et-search-pill:focus-within {
   box-shadow:
-    0 0 0 2px rgba(var(--wp-ink-rgb-mid, 255, 255, 255), 0.85),
-    0 3px 14px rgba(var(--wp-halo-mid, 0, 0, 0), 0.3),
-    0 20px 48px -18px rgba(var(--wp-halo-mid, 0, 0, 0), 0.56);
+    inset 0 0 0 2.5px var(--accent-ink, var(--accent-color)),
+    0 2px 10px rgba(var(--wp-halo-mid, 0, 0, 0), 0.24),
+    0 16px 40px -18px rgba(var(--wp-halo-mid, 0, 0, 0), 0.5);
 }
 
 body.wallpaper-mode:not(.theme-light) .et-search-engine {
